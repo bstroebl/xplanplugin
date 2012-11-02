@@ -27,7 +27,7 @@ def description():
 def version():
   return "Version 0.1"
 def qgisMinimumVersion():
-  return "1.6"
+  return "1.8"
 def classFactory(iface):
   from XPlan import XPlan
   return XPlan(iface, 'xplanung')
