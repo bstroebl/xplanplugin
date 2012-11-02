@@ -18,11 +18,11 @@
 
 PLUGINNAME = xplanung
 
-PY_FILES = XPlan.py tools/XPlanDialog.py __init__.py
+PY_FILES = XPlan.py XPlanDialog.py __init__.py
 
-EXTRAS = tools/icons/logo_xplanung.png #tools/icons/edit_add.png tools/icons/edit_data.png tools/icons/edit_remove.png
+EXTRAS = tools/icons/logo_xplanung.png
 
-UI_FILES = tools/Ui_LP_Objekt.py tools/Ui_LPlanSettings.py
+UI_FILES = Ui_Bereichsauswahl.py
 
 #RESOURCE_FILES = tools/resources_rc.py
 
@@ -45,7 +45,7 @@ deploy: compile
 	mkdir -p $(HOME)/.qgis/python/plugins/$(PLUGINNAME)/tools
 	mkdir -p $(HOME)/.qgis/python/plugins/$(PLUGINNAME)/tools/icons
 	cp -vf $(PY_FILES) $(HOME)/.qgis/python/plugins/$(PLUGINNAME)
-	cp -vf $(UI_FILES) $(HOME)/.qgis/python/plugins/$(PLUGINNAME)/tools
+	cp -vf $(UI_FILES) $(HOME)/.qgis/python/plugins/$(PLUGINNAME)
 	#cp -vf $(RESOURCE_FILES) $(HOME)/.qgis/python/plugins/$(PLUGINNAME)/tools
 	cp -vf $(EXTRAS) $(HOME)/.qgis/python/plugins/$(PLUGINNAME)/tools/icons
 
