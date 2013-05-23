@@ -10,7 +10,7 @@
 
 [general]
 name=FS XPlanung
-qgisMinimumVersion=1.8
+qgisMinimumVersion=1.9
 description=Fachschale XPlanung
 version=0.1
 
@@ -27,7 +27,7 @@ tags=
 homepage=
 tracker=
 repository=
-icon=logo_xplanung.png
+icon=tools/icons/logo_xplanung.png
 # experimental flag
 experimental=False
 

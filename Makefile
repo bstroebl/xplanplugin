@@ -22,7 +22,9 @@ PY_FILES = XPlan.py XPlanDialog.py __init__.py
 
 EXTRAS = tools/icons/logo_xplanung.png
 
-UI_FILES = Ui_Bereichsauswahl.py
+METADATA = metadata.txt
+
+UI_FILES = Ui_Bereichsauswahl.py Ui_Werkzeug.py
 
 #RESOURCE_FILES = tools/resources_rc.py
 
@@ -41,23 +43,24 @@ compile: $(UI_FILES)
 # the Python plugin directory is located at:
 # $HOME/.qgis/python/plugins
 deploy: compile
-	mkdir -p $(HOME)/.qgis/python/plugins/$(PLUGINNAME)
-	mkdir -p $(HOME)/.qgis/python/plugins/$(PLUGINNAME)/tools
-	mkdir -p $(HOME)/.qgis/python/plugins/$(PLUGINNAME)/tools/icons
-	cp -vf $(PY_FILES) $(HOME)/.qgis/python/plugins/$(PLUGINNAME)
-	cp -vf $(UI_FILES) $(HOME)/.qgis/python/plugins/$(PLUGINNAME)
+	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
+	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/tools
+	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/tools/icons
+	cp -vf $(PY_FILES) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
+	cp -vf $(UI_FILES) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
+	cp -vf $(METADATA) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
 	#cp -vf $(RESOURCE_FILES) $(HOME)/.qgis/python/plugins/$(PLUGINNAME)/tools
-	cp -vf $(EXTRAS) $(HOME)/.qgis/python/plugins/$(PLUGINNAME)/tools/icons
+	cp -vf $(EXTRAS) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/tools/icons
 
 # The dclean target removes compiled python files from plugin directory
 dclean:
-	find $(HOME)/.qgis/python/plugins/$(PLUGINNAME) -iname "*.pyc" -delete
+	find $(HOME)/.qgis2/python/plugins/$(PLUGINNAME) -iname "*.pyc" -delete
 
 # The zip target deploys the plugin and creates a zip file with the deployed
 # content. You can then upload the zip file on http://plugins.qgis.org
 zip: deploy dclean
 	rm -f $(PLUGINNAME).zip
-	cd $(HOME)/.qgis/python/plugins; zip -9r $(CURDIR)/$(PLUGINNAME).zip $(PLUGINNAME)
+	cd $(HOME)/.qgis2/python/plugins; zip -9r $(CURDIR)/$(PLUGINNAME).zip $(PLUGINNAME)
 
 # Create a zip package of the plugin named $(PLUGINNAME).zip.
 # This requires use of git (your plugin development directory must be a
