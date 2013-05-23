@@ -1,7 +1,6 @@
 XPlanung.e4p
-.eric4project/
+.eric5project/
 .ropeproject/
 tools/*.py
 images/
-ausgleich.zip
 Ui*.py

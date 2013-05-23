@@ -29,6 +29,37 @@ from qgis.gui import *
 # Initialize Qt resources from file resources.py
 import sys, os
 
+settings = QtCore.QSettings()
+settings.beginGroup(u"plugin_fachschale")
+kijLibPath = str(settings.value("kijLibPath").toString())
+settings.endGroup()
+libPathFound = False
+toolsPathFound = False
+
+if not kijLibPath:
+    # in settings eintragen
+    kijLibPath = 'V:/QuantumGIS/python'
+    settings.beginGroup(u"plugin_fachschale")
+    settings.setValue(u"kijLibPath", kijLibPath)
+    settings.endGroup()
+
+for p in sys.path:
+    if p == kijLibPath:
+        libPathFound = True
+    if p == os.path.abspath(os.path.dirname(__file__) + '/tools'):
+        toolsPathFound = True
+
+if not libPathFound:
+    #append the path
+    sys.path.append(kijLibPath)
+from masterplugin.ZMasterPlugin import Fachschale
+from zutils import zqgis
+from DataDrivenInputMask import ddui
+
+if not toolsPathFound:
+    # append the path to ./tools
+    sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/tools'))
+
 class XPlan(Fachschale):
     def __init__(self, iface):
         # Save reference to the QGIS interface

@@ -42,6 +42,7 @@ class DbHandler():
         return dbList
 
     def dbChoose(self):
+        pass
 
     def __dbGetSelected(self):
         settings = QtCore.QSettings()
