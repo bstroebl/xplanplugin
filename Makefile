@@ -18,13 +18,13 @@
 
 PLUGINNAME = xplanung
 
-PY_FILES = XPlan.py XPlanDialog.py __init__.py
+PY_FILES = XPlan.py XPlanDialog.py __init__.py HandleDb.py XPTools.py
 
 EXTRAS = tools/icons/logo_xplanung.png
 
 METADATA = metadata.txt
 
-UI_FILES = Ui_Bereichsauswahl.py Ui_Werkzeug.py
+UI_FILES = Ui_Bereichsauswahl.py
 
 #RESOURCE_FILES = tools/resources_rc.py
 
