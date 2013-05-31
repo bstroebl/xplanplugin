@@ -23,20 +23,19 @@ email                : bernhard.stroebl@jena.de
 from PyQt4 import QtCore, QtGui, QtSql
 from qgis.core import *
 from qgis.gui import *
-#from subprocess import * #Andere Programme aufrufen
-from zutils import zqt
-from masterplugin.ZMasterPlugin import ZMasterPlugin
 from Ui_Bereichsauswahl import Ui_Bereichsauswahl
 
 class BereichsauswahlDialog(QtGui.QDialog):
-    def __init__(self, iface, db, slAktiveBereiche):
+    def __init__(self, iface, db):
         QtGui.QDialog.__init__(self)
         # Set up the user interface from Designer.
         self.ui = Ui_Bereichsauswahl()
         self.ui.setupUi(self)
+        #self.ui.bereich.currentItemChanged.connect(self.enableOk)
         self.iface = iface
         self.db = db
-        self.slAktiveBereiche = slAktiveBereiche
+        self.okBtn = self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok)
+        self.okBtn.setEnabled(False)
         self.initializeValues()
 
     def initializeValues(self):
@@ -45,7 +44,7 @@ class BereichsauswahlDialog(QtGui.QDialog):
         lyPlanArt = planArt.layout() # Layout der QGroupBox planArt
         firstItem = lyPlanArt.itemAt(0)
 
-        loadPlanArt = (not bool(firstItem))
+        loadPlanArt = True #(not bool(firstItem))
 
         if not loadPlanArt:
             loadPlanArt = ('planart1' == firstItem.objectName())
@@ -53,9 +52,9 @@ class BereichsauswahlDialog(QtGui.QDialog):
 
         if loadPlanArt:
             query = QtSql.QSqlQuery(self.db)
-            query.prepare("SELECT DISTINCT \"planArt\"  \
-                        FROM \"XP_Basisobjekte\".\"XP_Plaene\" \
-                        ORDER BY\"planArt\";")
+            query.prepare("SELECT DISTINCT \"planart\"  \
+                        FROM \"QGIS\".\"XP_Bereiche\" \
+                        ORDER BY \"planart\";")
             query.exec_()
 
             if query.isActive():
@@ -71,9 +70,10 @@ class BereichsauswahlDialog(QtGui.QDialog):
                 self.showQueryError(query)
                 query.finish()
 
-        # model für den Bereichsbaum
         self.fillBereichTree()
-
+    
+    def debug(self,  msg):
+        QtGui.QMessageBox.information(None, "Debug",  msg)
     def fillBereichTree(self):
         planArt = self.ui.planArt
         lyPlanArt = planArt.layout() # Layout der QGroupBox planArt
@@ -96,9 +96,9 @@ class BereichsauswahlDialog(QtGui.QDialog):
             else:
                 break
 
-        sQuery = QtCore.QString("SELECT \"planGid\", \"planName\", gid, name FROM \"XP_Basisobjekte\".\"XP_Bereiche\"")
+        sQuery = QtCore.QString("SELECT plangid, planname, gid, bereichsname FROM \"QGIS\".\"XP_Bereiche\"")
         sQuery.append(whereClause)
-        sQuery.append(" ORDER BY \"planName\", name")
+        sQuery.append(" ORDER BY planname, bereichsname")
         query = QtSql.QSqlQuery(self.db)
         query.prepare(sQuery)
         query.exec_()
@@ -129,8 +129,21 @@ class BereichsauswahlDialog(QtGui.QDialog):
             self.showQueryError(query)
             query.finish()
 
+    #SLOTS
+    @QtCore.pyqtSlot()
+    def on_bereich_currentItemChanged(self):
+        self.debug("bereich_currentItemChanged")
+        
+    @QtCore.pyqtSlot()
+    def on_bereich_itemSelectionChanged(self):
+        self.debug("bereich_itemSelectionChanged")
+        
     def accept(self):
-        self.done(1)
+        thisBereichId = self.ui.bereich.currentItem().childId
+        self.done(thisBereichId)
+        
+    def reject(self):
+        self.done(-1)
 
     def showQueryError(self, query):
         QtGui.QMessageBox.warning(None, "Database Error", \

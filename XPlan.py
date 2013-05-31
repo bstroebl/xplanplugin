@@ -22,197 +22,103 @@ email                : bernhard.stroebl@jena.de
 # Import the PyQt and QGIS libraries
 # Import the PyQt and QGIS libraries
 from PyQt4 import QtCore, QtGui, QtSql
-from HandleDb import DbHandler
 # Initialize Qt resources from file resources.py
 from qgis.core import *
 from qgis.gui import *
 # Initialize Qt resources from file resources.py
-import sys, os
-
-settings = QtCore.QSettings()
-settings.beginGroup(u"plugin_fachschale")
-kijLibPath = str(settings.value("kijLibPath").toString())
-settings.endGroup()
-libPathFound = False
-toolsPathFound = False
-
-if not kijLibPath:
-    # in settings eintragen
-    kijLibPath = 'V:/QuantumGIS/python'
-    settings.beginGroup(u"plugin_fachschale")
-    settings.setValue(u"kijLibPath", kijLibPath)
-    settings.endGroup()
-
-for p in sys.path:
-    if p == kijLibPath:
-        libPathFound = True
-    if p == os.path.abspath(os.path.dirname(__file__) + '/tools'):
-        toolsPathFound = True
-
-if not libPathFound:
-    #append the path
-    sys.path.append(kijLibPath)
-from masterplugin.ZMasterPlugin import Fachschale
-from zutils import zqgis
+from HandleDb import DbHandler
+import XPTools
 from DataDrivenInputMask import ddui
 
-if not toolsPathFound:
-    # append the path to ./tools
-    sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/tools'))
-
-class XPlan(Fachschale):
+class XpError(object):
+    '''General error'''
+    def __init__(self,  value):
+        self.value = value
+        QtGui.QMessageBox.warning(None, "XPlanung",  value)
+    def __str__(self):
+        return repr(self.value)
+        
+class XPlan():
     def __init__(self, iface):
         # Save reference to the QGIS interface
         self.iface = iface
-        # initialize plugin directory
-        #ddManager = DdManager(self.iface)
-        #self.app = QgsApplication.instance()
-        #self.app.ddManager = ddManager
-        dbHandler = DbHandler()
-        # initialize locale
-
-        libPath = os.path.dirname(__file__)
-        libPathFound = False
-
-        for p in sys.path:
-            if p == libPath:
-                libPathFound = True
-                break
-
-        if not libPathFound:
-            sys.path.append(libPath)
+        self.app = QgsApplication.instance()
+        self.dbHandler = DbHandler()
+        self.db = None
+        self.tools = XPTools(self.iface)
+        
+        try:
+            self.app.ddManager
+        except AttributeError:
+            ddManager = ddui.DdManager(self.iface)
+            self.app.ddManager = ddManager
 
     def initGui(self):
+        # Code von fTools
+        
+        self.xpMenu = QtGui.QMenu(u"XPlanung")
+        self.bpMenu = QtGui.QMenu(u"XP_BPlan")
+        self.fpMenu = QtGui.QMenu(u"XP_FPlan")
+        self.lpMenu = QtGui.QMenu(u"XP_LPlan")
+        
+        self.action1 = QtGui.QAction(u"Bereich laden", self.iface.mainWindow())
+        # connect the action to the run method
+        #QtCore.QObject.connect(self.action1, QtCore.SIGNAL("triggered()"), self.bereichLaden)
+        self.action1.triggered.connect(self.bereichLaden)
+
         # Create action that will start plugin configuration
-
-        self.action = QtGui.QAction("Bereichsauswahl", self.iface.mainWindow())
+        self.action2 = QtGui.QAction(u"Datenmaske initialisieren", self.iface.mainWindow())
         # connect the action to the run method
-        QtCore.QObject.connect(self.action, QtCore.SIGNAL("triggered()"), self.run)
-        self.menuLabel = QtCore.QString("XPlanung")
+        #QtCore.QObject.connect(self.action2, QtCore.SIGNAL("triggered()"), self.layerInitialize)
+        self.action2.triggered.connect(self.layerInitialize)
+        
+        self.xpMenu.addActions([self.action1,  self.action2])
         # Add toolbar button and menu item
-        self.iface.addPluginToMenu(self.menuLabel, self.action)
-
-         # Create action that will start plugin configuration
-        self.actionSel = QtGui.QAction("action2", self.iface.mainWindow())
-        # connect the action to the run method
-        QtCore.QObject.connect(self.actionSel, QtCore.SIGNAL("triggered()"), self.runSel)
-
-        # Add toolbar button and menu item
-        self.iface.addPluginToMenu(self.menuLabel, self.actionSel)
+        self.tmpAct = QtGui.QAction(self.iface.mainWindow())
+        self.iface.addPluginToVectorMenu("tmp", self.tmpAct) # sicherstellen, dass das VektorMenu da ist
+        self.vectorMenu = self.iface.vectorMenu()
+        self.vectorMenu.addMenu(self.xpMenu)
+        self.vectorMenu.addMenu(self.bpMenu)
+        self.vectorMenu.addMenu(self.fpMenu)
+        self.vectorMenu.addMenu(self.lpMenu)
+        self.iface.removePluginVectorMenu("tmp", self.tmpAct)
 
     def unload(self):
-        # Remove the plugin menu item and icon
         self.app.ddManager.quit()
-        #QtGui.QMessageBox.information(None, "", "unload")
-        self.iface.removePluginMenu(self.menuLabel, self.action)
-        self.iface.removePluginMenu(self.menuLabel, self.actionSel)
+        self.iface.addPluginToVectorMenu("tmp", self.tmpAct)
+        self.vectorMenu.removeAction(self.xpMenu.menuAction())
+        self.vectorMenu.removeAction(self.bpMenu.menuAction())
+        self.vectorMenu.removeAction(self.fpMenu.menuAction())
+        self.vectorMenu.removeAction(self.lpMenu.menuAction())
+        self.iface.removePluginVectorMenu("tmp", self.tmpAct)
 
-    def dbGetSelected(self):
-        settings = QtCore.QSettings()
-        selected = unicode(settings.value("/PostgreSQL/connections/selected").toString())
-        return selected
-
-    def dbConnectSelected(self,  thisPassword = None):
-        if len(self.listDatabases()) == 0:
-            QtGui.QMessageBox.information(None, "No connections", "No Conn")
-            return None
-
-        selected = self.dbGetSelected()
-        db = self.dbConnect(selected,  thisPassword)
-        return db
-
-    def dbConnect(self, selected,  thisPassword = None):
-        settings = QtCore.QSettings()
-
-        # if there's an open database already, get rid of it
-        if self.db:
-            self.dbDisconnect()
-
-        # get connection details from QSettings
-        #QMessageBox.information(None, "selected", str(selected))
-        settings.beginGroup(u"/PostgreSQL/connections/" + selected)
-
-        if not settings.contains("database"): # non-existent entry?
-            QtGui.QMessageBox.critical(None, self.msgBoxTitle,
-                "Unable to connect: there is no defined database connection \"%s\"." % selected)
-            return None
-
-        get_value_str = lambda x: unicode(settings.value(x).toString())
-        host, database, username, passwd = map(get_value_str, ["host", "database", "username", "password"])
-        port = settings.value("port").toInt()[0]
-
-        if thisPassword:
-            passwd = thisPassword
-        else:
-            if not (settings.value("save").toBool() or settings.value("savePassword").toBool()):
-                # qgis1.5 use 'savePassword' instead of 'save' setting
-                (passwd, ok) = QtGui.QInputDialog.getText(None, "Enter password", \
-                "Enter password for connection \"%s\":" % selected, QtGui.QLineEdit.Password)
-
-                if not ok:
-                    return None
-
-        settings.endGroup()
-
-        #self.statusBar.showMessage("Connecting to database (%s) ..." % selected)
-        #QApplication.processEvents() # give the user chance to see the message :)
-
-        if False: #host == "atlas.jena.de":
-            QtGui.QMessageBox.critical(None, self.msgBoxTitle,
-                u"Der Host \"atlas.jena.de\" wird demnächst umbenannt. \n" \
-                u"Bitte ändern Sie den Host der Datenbankverbindung \"%s\" auf \"pgsql.jena.de\"!" % selected)
-            return None
-
-        # connect to DB
-        db = QtSql.QSqlDatabase.addDatabase ("QPSQL")
-        db.setHostName(host)
-        #db.setHostName("foo")
-        db.setDatabaseName(database)
-        db.setUserName(username)
-        db.setPassword(passwd)
-        ok2 = db.open()
-
-        if not ok2:
-            QtGui.QMessageBox.critical(None, self.msgBoxTitle, u"Konnte keine Verbindung mit der Datenbank aufbauen")
-            return None
-        else:
-            # set as default in QSettings
-            settings.setValue("/PostgreSQL/connections/selected", QtCore.QVariant(selected))
-            self.dbInfo = selected
-
-            return db
-
-    def dbDisconnect(self):
-
-        if self.db:
-            self.db.close()
-
-        self.db = None
+    #Slots
 
     # run method that performs all the real work
-    def run(self):
+    def layerInitialize(self):
         layer = self.iface.activeLayer()
         if 0 != layer.type():   # not a vector layer
-            DdError(QtGui.QApplication.translate("DdError", "Layer is not a vector layer: ", None,
-                                                           QtGui.QApplication.UnicodeUTF8).append(layer.name()))
+            XpError("Der Layer " + layer.name() + " ist kein VektorLayer!")
         else:
             self.app.ddManager.initLayer(layer,  skip = [])
 
-    def runSel(self):
-        layer = self.iface.activeLayer()
-        if 0 != layer.type():   # not a vector layer
-            DdError(QtGui.QApplication.translate("DdError", "Layer is not a vector layer: ", None,
-                                                           QtGui.QApplication.UnicodeUTF8).append(layer.name()))
-        else:
-            sel = layer.selectedFeatures()
+    def bereichLaden(self):
+        if self.db == None:
+            self.db = self.dbHandler.dbConnectSelected()
+            
+        if self.db:
+            bereich = self.tools.chooseBereich(self.db)
 
-            if len(sel) > 0:
-                feature = sel[0]
-                self.app.ddManager.showFeatureForm(layer,  feature)
-            else:
-                DdError(QtGui.QApplication.translate("DdError", "No selection in layer: ", None,
-                                                               QtGui.QApplication.UnicodeUTF8).append(layer.name()))
-
+            if bereich >= 0:
+                # rausbekommen, welche Layer Elemente im Bereich haben
+                bereichTyp = self.tools.getBereichTyp(self.db,  bereich)
+                layers = self.tools.getLayerInBereich(self.db,  bereichTyp)
+                # eine Gruppe für den Bereich machen
+                # qml für Layer aus DB holen
+                # Layer in die Gruppe laden und features entsprechend einschränken
+            
+            self.dbHandler.dbDisconnect()
+            
     def action01Slot(self):
         '''gebundenes Präsentationsobjekt
         Voraussetzung: aktives Layer ist XPlan-Layer und hat
@@ -1019,5 +925,4 @@ class XPlan(Fachschale):
             return False
 
     def showQueryError(self, query):
-        QtGui.QMessageBox.warning(None, "Database Error", \
-            QtCore.QString("%1 \n %2").arg(query.lastError().text()).arg(query.lastQuery()))
+        self.tools.showQueryError(query)
