@@ -57,9 +57,9 @@ class XPlan():
         # Code von fTools
         
         self.xpMenu = QtGui.QMenu(u"XPlanung")
-        self.bpMenu = QtGui.QMenu(u"XP_BPlan")
-        self.fpMenu = QtGui.QMenu(u"XP_FPlan")
-        self.lpMenu = QtGui.QMenu(u"XP_LPlan")
+        self.bpMenu = QtGui.QMenu(u"BPlan")
+        self.fpMenu = QtGui.QMenu(u"FPlan")
+        self.lpMenu = QtGui.QMenu(u"LPlan")
         
         self.action1 = QtGui.QAction(u"Bereich laden", self.iface.mainWindow())
         # connect the action to the run method
