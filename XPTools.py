@@ -57,6 +57,55 @@ class XPTools():
             query.finish()
             return None
         
+    def getLayerStyle(self,  db,  layer,  bereichGid = -9999):
+        '''gibt den Style für einen Layers für den Bereich mit der übergebenen gid zurück,
+        wenn es für diesen Bereich keinen Stil gibt, wird der allgemeine Stil zurückgegeben
+        (XP_Bereich_gid = NULL), falls es den auch nicht gibt wird None zurückgegeben'''
+        
+        relation = self.getPostgresRelation(layer)
+        style = None
+        
+        if relation: 
+            sel = "SELECT style \
+            FROM \"QGIS\".\"layer\" \
+            WHERE schemaname = \':schema\' \
+                AND tablename = \':table\' \
+                AND (\"XP_Bereich_gid\" = :bereichGid \
+                     OR \"XP_Bereich_gid\" IS NULL) \
+             ORDER BY \"XP_Bereich_gid\" NULLS LAST" 
+            query = QtSql.QSqlQuery(db)
+            query.prepare(sel)
+            query.bindValue(":schema", QtCore.QVariant(relation[0]))
+            query.bindValue(":table", QtCore.QVariant(relation[1]))
+            query.bindValue(":bereichGid", QtCore.QVariant(bereichGid))
+            query.exec_()
+
+            if query.isActive():
+
+                while query.next(): # returns false when all records are done
+                    style = query.value(0).toString()
+                    break
+                query.finish()
+            else:
+                self.showQueryError(query)
+                query.finish()
+        
+        return style
+    
+    def getPostgresRelation(self,  layer):
+        '''gibt die Relation [schema, relation] eines PostgreSQL-Layers zurück'''
+        retValue = None
+
+        if isinstance(layer, QgsVectorLayer):
+            if layer.dataProvider().storageType().contains(QtCore.QString("PostgreSQL")):
+                
+                for s in ayer.source().split(" "):
+                    if s.startsWith("table="):
+                        retValue = s.remove("table=").split(".")
+                        break
+        
+        return retValue
+    
     def getLayerInBereich(self,  db,  bereichGid):
         '''gibt ein Array mit Arrays (Punkt, Linie, Fläche) aller Layer zurück, die Elemente
         im XP_Bereich mit der übergebenen gid haben'''
@@ -107,19 +156,21 @@ class XPTools():
 
         for layer in layerList:
             if isinstance(layer, QgsVectorLayer):
-                src = layer.source()
+                if layer.dataProvider().storageType().contains(QtCore.QString("PostgreSQL")):
+                    src = layer.source()
 
-                if src.contains(tableName) and \
-                    src.contains(dbName) and \
-                    src.contains(dbServer):
-                    
-                    if aliasName:
-                        if QtCore.QString(aliasName) != layer.name():
-                            continue
-                            
-                    procLayer = layer
-                    break
-            return procLayer
+                    if src.contains(tableName) and \
+                        src.contains(dbName) and \
+                        src.contains(dbServer):
+                        
+                        if aliasName:
+                            if QtCore.QString(aliasName) != layer.name():
+                                continue
+                                
+                        procLayer = layer
+                        break
+        
+        return procLayer
     
     def loadPostGISLayer(self,  db, schemaName, tableName, displayName = None,
         geomColumn = QtCore.QString(), whereClause = None, keyColumn = None):
