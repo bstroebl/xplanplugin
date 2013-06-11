@@ -30,47 +30,55 @@ from XPlanDialog import BereichsauswahlDialog
 class XPTools():
     def __init__(self,  iface):
         self.iface = iface
-    
+        self.bereiche = {}
+        # dictionary, um den Typ eines Bereichs zu speichern, so dass nur einmal pro Session und Bereich eine SQL-Abfrage nötig ist
+
     def chooseBereich(self,  db,  multiSelect = False,  title = "Bereichsauswahl"):
         '''Starte Dialog zur Bereichsauswahl'''
         dlg = BereichsauswahlDialog(self.iface,  db,  multiSelect,  title)
         dlg.show()
         result = dlg.exec_()
-        
+
         if result == 0:
             return [-1]
         else:
             return dlg.selected
-        
+
     def getBereichTyp(self,  db,  bereichGid):
         '''gibt den Typ (FP, BP etc) des Bereichs mit der übergebenen gid zurück'''
-        sel = "SELECT substring(\"Objektart\",1,2) FROM \"XP_Basisobjekte\".\"XP_Bereiche\" WHERE gid = :bereichGid"
-        query = QtSql.QSqlQuery(db)
-        query.prepare(sel)
-        query.bindValue(":bereichGid", QtCore.QVariant(bereichGid))
-        query.exec_()
+        bereichTyp = None
 
-        if query.isActive():
+        try:
+            bereichTyp = self.bereiche[bereichGid]
+        except KeyError:
+            sel = "SELECT substring(\"Objektart\",1,2) FROM \"XP_Basisobjekte\".\"XP_Bereiche\" WHERE gid = :bereichGid"
+            query = QtSql.QSqlQuery(db)
+            query.prepare(sel)
+            query.bindValue(":bereichGid", QtCore.QVariant(bereichGid))
+            query.exec_()
 
-            while query.next(): # returns false when all records are done
-                bereichTyp = query.value(0).toString()
-            
-            query.finish()
-            return bereichTyp
-        else:
-            self.showQueryError(query)
-            query.finish()
-            return None
-        
+            if query.isActive():
+                while query.next(): # returns false when all records are done
+                    bereichTyp = query.value(0).toString()
+
+                query.finish()
+                self.bereiche[bereichGid]  = bereichTyp
+            else:
+                self.showQueryError(query)
+                query.finish()
+                bereichTyp = None
+
+        return bereichTyp
+
     def getLayerStyle(self,  db,  layer,  bereichGid = -9999):
         '''gibt den Style für einen Layers für den Bereich mit der übergebenen gid zurück,
         wenn es für diesen Bereich keinen Stil gibt, wird der allgemeine Stil zurückgegeben
         (XP_Bereich_gid = NULL), falls es den auch nicht gibt wird None zurückgegeben'''
-        
+
         relation = self.getPostgresRelation(layer)
         style = None
-        
-        if relation: 
+
+        if relation:
             sel = "SELECT style \
             FROM \"QGIS\".\"layer\" \
             WHERE schemaname = \':schema\' \
@@ -78,12 +86,12 @@ class XPTools():
                 AND (\"XP_Bereich_gid\" = :bereichGid \
                      OR \"XP_Bereich_gid\" IS NULL) \
              ORDER BY \"XP_Bereich_gid\" NULLS "
-            
+
             if bereichGid == -9999:
                 sel = sel + "FIRST"
             else:
                 sel = sel + "LAST"
-                
+
             query = QtSql.QSqlQuery(db)
             query.prepare(sel)
             query.bindValue(":schema", QtCore.QVariant(relation[0]))
@@ -100,9 +108,9 @@ class XPTools():
             else:
                 self.showQueryError(query)
                 query.finish()
-        
+
         return style
-    
+
     def getPostgresRelation(self,  layer):
         '''gibt die Relation [schema, relation, Name_der_Geometriespalte] eines PostgreSQL-Layers zurück'''
         retValue = None
@@ -117,17 +125,17 @@ class XPTools():
                         if layer.geometryType() == 4: # geometrielos
                             retValue.append("")
                             break
-                        
+
                     elif s.startswith("("):
                         retValue.append(s.replace("(", "").replace(")", ""))
-                        
+
         return retValue
-    
+
     def getLayerInBereich(self,  db,  bereichGid):
         '''gibt ein Array mit Arrays (Punkt, Linie, Fläche) aller Layer zurück, die Elemente
         im XP_Bereich mit der übergebenen gid haben'''
         bereichTyp = self.getBereichTyp(db,  bereichGid)
-        
+
         if bereichTyp:
             sel = "SELECT \"Objektart\",  \
             CASE \"Objektart\" LIKE \'%Punkt\' WHEN true THEN \'Punkt\' ELSE \
@@ -150,21 +158,21 @@ class XPTools():
                 while query.next(): # returns false when all records are done
                     layer = query.value(0).toString()
                     art = query.value(1).toString()
-                    
+
                     if art == QtCore.QString("Punkt"):
                         punktLayer.append(layer)
                     elif art == QtCore.QString("Linie"):
                         linienLayer.append(layer)
                     elif art == QtCore.QString("Flaeche"):
                         flaechenLayer.append(layer)
-                
+
                 query.finish()
                 return [punktLayer,  linienLayer,  flaechenLayer]
         else:
             self.showQueryError(query)
             query.finish()
-            return None                                         
-    
+            return None
+
     def findPostgresLayer(self, tableName, dbName, dbServer, aliasName = None):
         '''Finde einen PostgreSQL-Layer, mit Namen aliasName (optional)'''
         layerList = self.iface.legendInterface().layers()
@@ -178,20 +186,20 @@ class XPTools():
                     if src.contains(tableName) and \
                         src.contains(dbName) and \
                         src.contains(dbServer):
-                        
+
                         if aliasName:
                             if QtCore.QString(aliasName) != layer.name():
                                 continue
-                                
+
                         procLayer = layer
                         break
-        
+
         return procLayer
-    
+
     def loadPostGISLayer(self,  db, schemaName, tableName, displayName = None,
         geomColumn = QtCore.QString(), whereClause = None, keyColumn = None):
         '''Lade einen PostGIS-Layer aus der Datenbank db'''
-        
+
         if not displayName:
             displayName = schemaName + "." + tableName
 
@@ -215,7 +223,7 @@ class XPTools():
         vlayer = QgsVectorLayer(uri.uri(), displayName, "postgres")
         QgsMapLayerRegistry.instance().addMapLayers([vlayer])
         return vlayer
-    
+
     def styleLayer(self,  layer,  xmlStyle):
         '''wende den übergebenen Stil auf den übergebenen Layer an'''
         doc = QtXml.QDomDocument()
@@ -241,27 +249,27 @@ class XPTools():
                 return True
             else:
                 return False
-    
+
     def createFeature(self,  layer, fid = None):
         '''Ein Feature für den übergebenen Layer erzeugen'''
         if isinstance(layer, QgsVectorLayer):
             if fid:
                 newFeature = QgsFeature(fid)
             else:
-                newFeature = QgsFeature() 
-            
+                newFeature = QgsFeature()
+
             provider = layer.dataProvider()
             fields = layer.pendingFields()
-            
-            newFeature.initAttributes(fields.count())			
-            
+
+            newFeature.initAttributes(fields.count())
+
             for i in range(fields.count()):
                 newFeature.setAttribute(i,provider.defaultValue(i))
 
             return newFeature
         else:
             return None
-        
+
     def isXpDb(self,  db):
         retValue = False
         sel = "SELECT * FROM pg_namespace WHERE nspname = \'XP_Basisobjekte\'"
@@ -273,9 +281,9 @@ class XPTools():
             retValue = (query.size() == 1)
         else:
             self.showQueryError(query)
-        
+
         return retValue
-             
+
     def showQueryError(self, query):
         QtGui.QMessageBox.warning(None, "Database Error", \
             QtCore.QString("%1 \n %2").arg(query.lastError().text()).arg(query.lastQuery()))
