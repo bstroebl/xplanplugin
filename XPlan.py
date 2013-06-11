@@ -75,6 +75,8 @@ class XPlan():
         # Code von fTools
         
         self.xpMenu = QtGui.QMenu(u"XPlanung")
+        self.bereichMenu = QtGui.QMenu(u"XP_Bereich")
+        self.bereichMenu.setToolTip(u"Ein Planbereich fasst die Inhalte eines Plans nach bestimmten Kriterien zusammen.")
         self.bpMenu = QtGui.QMenu(u"BPlan")
         self.fpMenu = QtGui.QMenu(u"FPlan")
         self.lpMenu = QtGui.QMenu(u"LPlan")
@@ -82,18 +84,31 @@ class XPlan():
         self.action0 = QtGui.QAction(u"Initialisieren", self.iface.mainWindow())
         self.action0.triggered.connect(self.initialize)
         self.action1 = QtGui.QAction(u"Bereich laden", self.iface.mainWindow())
+        self.action1.setToolTip(u"Alle zu einem Bereich gehörenden Elemente laden und nach PlZVO darstellen")
         self.action1.triggered.connect(self.bereichLaden)
         self.action2 = QtGui.QAction(u"Layer initialisieren", self.iface.mainWindow())
+        self.action2.setToolTip(u"aktiver Layer: Eingabemaske erzeugen, neue Features den aktiven Bereichen zuweisen.")
         self.action2.triggered.connect(self.layerInitializeSlot)
         self.action3 = QtGui.QAction(u"Aktive Bereiche festlegen", self.iface.mainWindow())
+        self.action3.setToolTip(u"Elemente von Layern können automatisch oder händisch den aktiven Bereichen zugewiesen werden. \
+                                Damit werden sie zum originären Inhalt des Planbereichs.")
         self.action3.triggered.connect(self.aktiveBereicheFestlegen)
+        self.action4 = QtGui.QAction(u"Auswahl den aktiven Bereichen zuordnen", self.iface.mainWindow())
+        self.action4.setToolTip(u"aktiver Layer: ausgewählte Elemente den aktiven Bereichen zuweisen. \
+                                Damit werden sie zum originären Inhalt des Planbereichs.")
+        self.action4.triggered.connect(self.aktiveBereicheFestlegen)
+        self.action5 = QtGui.QAction(u"Auswahl nachrichtlich übernehmen", self.iface.mainWindow())
+        self.action5.setToolTip(u"aktiver Layer: ausgewählte Elemente nachrichtlich den aktiven Bereichen zuweisen.")
+        self.action5.triggered.connect(self.aktiveBereicheFestlegen)
         
-        self.xpMenu.addActions([self.action0,  self.action2,  self.action3,  self.action1])
+        self.xpMenu.addActions([self.action0,  self.action2])
+        self.bereichMenu.addActions([self.action1,  self.action3,  self.action4,  self.action5])
         # Add toolbar button and menu item
         self.tmpAct = QtGui.QAction(self.iface.mainWindow())
         self.iface.addPluginToVectorMenu("tmp", self.tmpAct) # sicherstellen, dass das VektorMenu da ist
         self.vectorMenu = self.iface.vectorMenu()
         self.vectorMenu.addMenu(self.xpMenu)
+        self.vectorMenu.addMenu(self.bereichMenu)
         self.vectorMenu.addMenu(self.bpMenu)
         self.vectorMenu.addMenu(self.fpMenu)
         self.vectorMenu.addMenu(self.lpMenu)
@@ -103,6 +118,7 @@ class XPlan():
         self.app.ddManager.quit()
         self.iface.addPluginToVectorMenu("tmp", self.tmpAct)
         self.vectorMenu.removeAction(self.xpMenu.menuAction())
+        self.vectorMenu.removeAction(self.bereichMenu.menuAction())
         self.vectorMenu.removeAction(self.bpMenu.menuAction())
         self.vectorMenu.removeAction(self.fpMenu.menuAction())
         self.vectorMenu.removeAction(self.lpMenu.menuAction())
@@ -124,6 +140,8 @@ class XPlan():
                 Sie dann erneut.")
                 self.dbHandler.dbDisconnect()
                 self.db = None
+            else:
+                self.aktiveBereicheFestlegen()
         
     def aktiveBereicheFestlegen(self):
         '''Auswahl der Bereiche, in die neu gezeichnete Elemente eingefügt werden sollen'''
@@ -131,7 +149,7 @@ class XPlan():
             self.initialize()
             
         if self.db:
-            bereichsAuswahl = self.tools.chooseBereich(self.db,  True)
+            bereichsAuswahl = self.tools.chooseBereich(self.db,  True,  u"Aktive Bereiche festlegen")
             
             if len(bereichsAuswahl) > 0: # Auswahl wurde getroffen oder es wurde abgebrochen
                 if bereichsAuswahl[0] != -1: # Auswahl vorhanden, da [-1] = Abbruch; 
@@ -158,7 +176,7 @@ class XPlan():
                 if layerRelation[2]: # Geometrielayer
                     schema = layerRelation[0]
                     table = layerRelation[1]
-                    self.debug("schema " + schema + " typ " + schema[:2])
+                    
                     if schema !="XP_Praesentationsobjekte":
                         schemaTyp = schema[:2]
 
@@ -167,6 +185,7 @@ class XPlan():
                                 layer.committedFeaturesAdded.connect(self.featuresAdded)
                                 layer.editingStopped.connect(self.editingHasStopped)
                                 self.addedGeometries[layer.id()] = []
+                                self.aktiverBereichLayerCheck(layer)
             else:
                 if msg:
                     XpError("Der Layer " + layer.name() + " ist kein PostgreSQL-Layer!")
@@ -174,26 +193,37 @@ class XPlan():
             if msg:
                 XpError("Der Layer " + layer.name() + " ist kein VektorLayer!")
            
-    def dummy(self):
-        details = "Aktive P_Bereiche:"
+    def aktiverBereichLayerCheck(self,  layer):
+        layerRelation = self.tools.getPostgresRelation(layer) 
+        
+        if layerRelation != None: # PostgreSQL-Layer
+            if layerRelation[2]: # Geometrielayer
+                schema = layerRelation[0]
+                if schema !="XP_Praesentationsobjekte":
+                    schemaTyp = schema[:2]
+        
+                    if len(self.aktiveBereiche) == 0:
+                        thisChoice = QtGui.QMessageBox.question(None, "Keine aktiven Bereiche", 
+                        u"Wollen Sie aktive Bereiche festlegen? ",
+                        QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
 
-        for i in range(len(self.aktiveLP_Bereiche)):
-            details = details + "\n" + self.aktiveLP_Bereiche[i][1]
+                        if thisChoice == QtGui.QMessageBox.Yes:
+                            self.aktiveBereicheFestlegen()
+                            
+                    if len(self.aktiveBereiche) > 0:
+                        bereichTyp = self.tools.getBereichTyp(self.db,  self.aktiveBereiche[0]) 
+                        
+                        if bereichTyp != schemaTyp:
+                            thisChoice = QtGui.QMessageBox.question(None, "Falscher Objektbereich", 
+                            u"Die momentan aktiven Bereiche und der Layer stammen aus unterschiedlichen \
+                Objektbereichen: aktive Bereiche = " + bereichTyp + ", " + layer.name() + " = " +
+                            schemaTyp + ". Wollen Sie die aktiven Bereiche ändern? ",
+                            QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
 
-        msgBox = QtGui.QMessageBox(QtGui.QMessageBox.Question,
-            "Speichern", u"Sollen die neuen Features den aktiven Bereichen zugewiesen werden?",
-            QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
-
-        msgBox.setDetailedText(details)
-        applyBereich = msgBox.exec_()
-
-        if applyBereich == QtGui.QMessageBox.Yes:
-            while len(self.aktiveLP_Bereiche) == 0:
-                QtGui.QMessageBox.warning(None,"","Es sind keine LP_Bereiche aktiviert!")
-                if self.LP_Settings() == 0:
-                    return None
-            layer = QgsMapLayerRegistry.instance().mapLayer(layerId)
-            self.setLP_Bereich(layer)
+                            if thisChoice == QtGui.QMessageBox.Yes:
+                                self.aktiveBereicheFestlegen()
+    
+  
 
     def bereichLaden(self):
         '''Laden aller Layer, die Elemente in einem auszuwählenden Bereich haben'''
@@ -212,7 +242,6 @@ class XPlan():
                     # Layer in die Gruppe laden und features entsprechend einschränken
                         
     def editingHasStopped(self):
-        self.debug(str(len(self.aktiveBereiche)))
         if len(self.aktiveBereiche) > 0:
             selLayers = self.iface.legendInterface().selectedLayers()
             
@@ -271,7 +300,6 @@ class XPlan():
                         XpError(u"Konnte Änderungen am Layer " + gehoertZuLayer.name() + " nicht speichern!")
                     
     def featuresAdded(self,  layerId,  featureList):
-        self.debug("featuresAdded")
         newGeoms = []
         
         for aFeature in featureList:

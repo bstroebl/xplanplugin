@@ -31,9 +31,9 @@ class XPTools():
     def __init__(self,  iface):
         self.iface = iface
     
-    def chooseBereich(self,  db,  multiSelect = False):
+    def chooseBereich(self,  db,  multiSelect = False,  title = "Bereichsauswahl"):
         '''Starte Dialog zur Bereichsauswahl'''
-        dlg = BereichsauswahlDialog(self.iface,  db,  multiSelect)
+        dlg = BereichsauswahlDialog(self.iface,  db,  multiSelect,  title)
         dlg.show()
         result = dlg.exec_()
         

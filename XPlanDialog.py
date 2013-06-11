@@ -26,11 +26,12 @@ from qgis.gui import *
 from Ui_Bereichsauswahl import Ui_Bereichsauswahl
 
 class BereichsauswahlDialog(QtGui.QDialog):
-    def __init__(self, iface, db,  multiSelect):
+    def __init__(self, iface, db,  multiSelect,  title = "Bereichsauswahl"):
         QtGui.QDialog.__init__(self)
         # Set up the user interface from Designer.
         self.ui = Ui_Bereichsauswahl()
         self.ui.setupUi(self)
+        self.setWindowTitle(title)
         #self.ui.bereich.currentItemChanged.connect(self.enableOk)
         self.iface = iface
         self.db = db
