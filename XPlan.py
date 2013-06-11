@@ -5,8 +5,8 @@ XPlan
 A QGIS plugin
 Fachschale XPlan für XPlanung
                              -------------------
-begin                : 2011-03-08
-copyright            : (C) 2011 by Bernhard Stroebl, KIJ/DV
+begin                : 2013-03-08
+copyright            : (C) 2013 by Bernhard Stroebl, KIJ/DV
 email                : bernhard.stroebl@jena.de
  ***************************************************************************/
 
@@ -20,15 +20,12 @@ email                : bernhard.stroebl@jena.de
  ***************************************************************************/
 """
 # Import the PyQt and QGIS libraries
-# Import the PyQt and QGIS libraries
 from PyQt4 import QtCore, QtGui, QtSql
-# Initialize Qt resources from file resources.py
 from qgis.core import *
 from qgis.gui import *
-# Initialize Qt resources from file resources.py
+import sys
 from HandleDb import DbHandler
-import XPTools
-from DataDrivenInputMask import ddui
+from XPTools import XPTools
 
 class XpError(object):
     '''General error'''
@@ -46,12 +43,33 @@ class XPlan():
         self.dbHandler = DbHandler()
         self.db = None
         self.tools = XPTools(self.iface)
+        self.aktiveBereiche = []
+        self.addedGeometries = {}
+        
+        #importiere DataDrivenInputMask
+        pluginDir = QtCore.QFileInfo(QgsApplication.qgisUserDbFilePath()).path() + "/python/plugins/"
+        maskDir = pluginDir + "DataDrivenInputMask"
+        maskFound = False
+
+        for p in sys.path:
+            if p == maskDir:
+                maskFound = True
+                break
+
+        if not maskFound:
+            sys.path.append(maskDir)
         
         try:
-            self.app.ddManager
-        except AttributeError:
-            ddManager = ddui.DdManager(self.iface)
-            self.app.ddManager = ddManager
+            from DataDrivenInputMask import ddui
+            
+            try:
+                self.app.ddManager
+            except AttributeError:
+                ddManager = ddui.DdManager(self.iface)
+                self.app.ddManager = ddManager
+        except ImportError:
+            self.unload()
+            XpError("Bitte installieren Sie das Plugin DataDrivenInputMask aus dem QGIS Official Repository!")
 
     def initGui(self):
         # Code von fTools
@@ -61,18 +79,16 @@ class XPlan():
         self.fpMenu = QtGui.QMenu(u"FPlan")
         self.lpMenu = QtGui.QMenu(u"LPlan")
         
+        self.action0 = QtGui.QAction(u"Initialisieren", self.iface.mainWindow())
+        self.action0.triggered.connect(self.initialize)
         self.action1 = QtGui.QAction(u"Bereich laden", self.iface.mainWindow())
-        # connect the action to the run method
-        #QtCore.QObject.connect(self.action1, QtCore.SIGNAL("triggered()"), self.bereichLaden)
         self.action1.triggered.connect(self.bereichLaden)
-
-        # Create action that will start plugin configuration
-        self.action2 = QtGui.QAction(u"Datenmaske initialisieren", self.iface.mainWindow())
-        # connect the action to the run method
-        #QtCore.QObject.connect(self.action2, QtCore.SIGNAL("triggered()"), self.layerInitialize)
-        self.action2.triggered.connect(self.layerInitialize)
+        self.action2 = QtGui.QAction(u"Layer initialisieren", self.iface.mainWindow())
+        self.action2.triggered.connect(self.layerInitializeSlot)
+        self.action3 = QtGui.QAction(u"Aktive Bereiche festlegen", self.iface.mainWindow())
+        self.action3.triggered.connect(self.aktiveBereicheFestlegen)
         
-        self.xpMenu.addActions([self.action1,  self.action2])
+        self.xpMenu.addActions([self.action0,  self.action2,  self.action3,  self.action1])
         # Add toolbar button and menu item
         self.tmpAct = QtGui.QAction(self.iface.mainWindow())
         self.iface.addPluginToVectorMenu("tmp", self.tmpAct) # sicherstellen, dass das VektorMenu da ist
@@ -81,7 +97,7 @@ class XPlan():
         self.vectorMenu.addMenu(self.bpMenu)
         self.vectorMenu.addMenu(self.fpMenu)
         self.vectorMenu.addMenu(self.lpMenu)
-        self.iface.removePluginVectorMenu("tmp", self.tmpAct)
+        self.iface.removePluginVectorMenu("tmp", self.tmpAct)   
 
     def unload(self):
         self.app.ddManager.quit()
@@ -91,34 +107,177 @@ class XPlan():
         self.vectorMenu.removeAction(self.fpMenu.menuAction())
         self.vectorMenu.removeAction(self.lpMenu.menuAction())
         self.iface.removePluginVectorMenu("tmp", self.tmpAct)
-
+    
+    def debug(self,  msg):
+        QtGui.QMessageBox.information(None, "Debug",  msg)
+        
     #Slots
-
-    # run method that performs all the real work
-    def layerInitialize(self):
+    
+    def initialize(self):
+        self.db = self.dbHandler.dbConnectSelected()
+        
+        if self.db != None:
+            if not self.tools.isXpDb(self.db):
+                QtGui.QMessageBox.warning(None, "Falsche Datenbank",
+                u"Die aktive Datenbank ist keine XPlan-Datenbank. Bitte \
+                verbinden Sie sich mit einer solchen und initialisieren \
+                Sie dann erneut.")
+                self.dbHandler.dbDisconnect()
+                self.db = None
+        
+    def aktiveBereicheFestlegen(self):
+        '''Auswahl der Bereiche, in die neu gezeichnete Elemente eingefügt werden sollen'''
+        if self.db == None:
+            self.initialize()
+            
+        if self.db:
+            bereichsAuswahl = self.tools.chooseBereich(self.db,  True)
+            
+            if len(bereichsAuswahl) > 0: # Auswahl wurde getroffen oder es wurde abgebrochen
+                if bereichsAuswahl[0] != -1: # Auswahl vorhanden, da [-1] = Abbruch; 
+                                                            #bei Abbruch bleiben die bisherigen aktiven Bereiche
+                    self.aktiveBereiche = bereichsAuswahl
+            else:
+                self.aktiveBereiche = bereichsAuswahl # keine Auswahl => keine aktiven Bereiche
+    
+    def layerInitializeSlot(self):
         layer = self.iface.activeLayer()
-        if 0 != layer.type():   # not a vector layer
-            XpError("Der Layer " + layer.name() + " ist kein VektorLayer!")
-        else:
-            self.app.ddManager.initLayer(layer,  skip = [])
+        
+        if layer != None:
+            self.layerInitialize(layer)
+        
+    def layerInitialize(self,  layer,  msg = False):
+        '''einen XP_Layer initialisieren'''
+        
+        if 0 == layer.type(): # Vektorlayer
+            layerRelation = self.tools.getPostgresRelation(layer) 
+
+            if layerRelation != None: # PostgreSQL-Layer
+                self.app.ddManager.initLayer(layer,  skip = [])
+                
+                if layerRelation[2]: # Geometrielayer
+                    schema = layerRelation[0]
+                    table = layerRelation[1]
+                    self.debug("schema " + schema + " typ " + schema[:2])
+                    if schema !="XP_Praesentationsobjekte":
+                        schemaTyp = schema[:2]
+
+                        if  table != schemaTyp + "_Plan" and table != schemaTyp + "_Bereich":
+                            if schemaTyp == "FP" or schemaTyp == "BP" or schemaTyp == "LP":
+                                layer.committedFeaturesAdded.connect(self.featuresAdded)
+                                layer.editingStopped.connect(self.editingHasStopped)
+                                self.addedGeometries[layer.id()] = []
+            else:
+                if msg:
+                    XpError("Der Layer " + layer.name() + " ist kein PostgreSQL-Layer!")
+        else: # not a vector layer
+            if msg:
+                XpError("Der Layer " + layer.name() + " ist kein VektorLayer!")
+           
+    def dummy(self):
+        details = "Aktive P_Bereiche:"
+
+        for i in range(len(self.aktiveLP_Bereiche)):
+            details = details + "\n" + self.aktiveLP_Bereiche[i][1]
+
+        msgBox = QtGui.QMessageBox(QtGui.QMessageBox.Question,
+            "Speichern", u"Sollen die neuen Features den aktiven Bereichen zugewiesen werden?",
+            QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+
+        msgBox.setDetailedText(details)
+        applyBereich = msgBox.exec_()
+
+        if applyBereich == QtGui.QMessageBox.Yes:
+            while len(self.aktiveLP_Bereiche) == 0:
+                QtGui.QMessageBox.warning(None,"","Es sind keine LP_Bereiche aktiviert!")
+                if self.LP_Settings() == 0:
+                    return None
+            layer = QgsMapLayerRegistry.instance().mapLayer(layerId)
+            self.setLP_Bereich(layer)
 
     def bereichLaden(self):
+        '''Laden aller Layer, die Elemente in einem auszuwählenden Bereich haben'''
         if self.db == None:
             self.db = self.dbHandler.dbConnectSelected()
             
         if self.db:
             bereich = self.tools.chooseBereich(self.db)
+            if len(bereich) > 0:
+                if bereich[0] >= 0:
+                    # rausbekommen, welche Layer Elemente im Bereich haben
+                    bereichTyp = self.tools.getBereichTyp(self.db,  bereich)
+                    layers = self.tools.getLayerInBereich(self.db,  bereichTyp)
+                    # eine Gruppe für den Bereich machen
+                    # qml für Layer aus DB holen
+                    # Layer in die Gruppe laden und features entsprechend einschränken
+                        
+    def editingHasStopped(self):
+        self.debug(str(len(self.aktiveBereiche)))
+        if len(self.aktiveBereiche) > 0:
+            selLayers = self.iface.legendInterface().selectedLayers()
+            
+            if self.db == None:
+                    self.initialize()
+                        
+            if self.db:
+                bereichTyp = self.tools.getBereichTyp(self.db,  self.aktiveBereiche[0]) #
+                # da nur Bereiche einer Art ausgewählt werden können, reicht es den Typ des ersten Bereiches festzustellen
+                gehoertZuSchema = bereichTyp + "_Basisobjekte"
+                gehoertZuTable = "gehoertZu" + bereichTyp + "_Bereich"
+                gehoertZuLayer = self.tools.findPostgresLayer(gehoertZuSchema + "." + gehoertZuTable,  self.db.databaseName(),  self.db.hostName())
+                
+                if gehoertZuLayer == None:
+                    gehoertZuLayer = self.tools.loadPostGISLayer(self.db,  gehoertZuSchema,  gehoertZuTable)
+                    
+                if gehoertZuLayer.startEditing():
+                    newGids = []
+                    
+                    for layer in selLayers:
+                        layerSchema = self.tools.getPostgresRelation(layer)[0]
+                        
+                        if layerSchema[:2] != bereichTyp:
+                            QtGui.QMessageBox.information(None, "XPlan",  u"Die Bereichszuordnung für die neuen Features des \
+                            Layers " + layer.name() + u"kann nicht durchgeführt werden, weil beide nicht aus dem \
+                            selben Fachschema stammen! Der aktive Bereich stammt aus dem Fachschema " + bereichTyp + ".")
+                        else:
+                            try:
+                                newGeoms = self.addedGeometries[layer.id()]
+                                layer.reload()
 
-            if bereich >= 0:
-                # rausbekommen, welche Layer Elemente im Bereich haben
-                bereichTyp = self.tools.getBereichTyp(self.db,  bereich)
-                layers = self.tools.getLayerInBereich(self.db,  bereichTyp)
-                # eine Gruppe für den Bereich machen
-                # qml für Layer aus DB holen
-                # Layer in die Gruppe laden und features entsprechend einschränken
-            
-            self.dbHandler.dbDisconnect()
-            
+                                for aGeom in newGeoms:
+                                    layer.removeSelection()
+                                    layer.select(aGeom.boundingBox(),  True)
+
+                                    for selFeature in layer.selectedFeatures():
+                                        if selFeature.geometry().isGeosEqual(aGeom):
+                                            newGid = selFeature["gid"].toInt()[0]
+                                            newGids.append(newGid)
+                                            break
+                                
+                            except KeyError:
+                                continue
+                    
+                    for aNewGid in newGids:
+                        for aBereichGid in self.aktiveBereiche:
+                            newFeat = self.tools.createFeature(gehoertZuLayer)
+                            gehoertZuLayer.addFeature(newFeat,  False)
+                            newFeat.setAttribute(bereichTyp + "_Bereich_gid",  QtCore.QVariant(aBereichGid))
+                            newFeat.setAttribute(bereichTyp + "_Objekt_gid",  QtCore.QVariant(aNewGid))
+                            
+                            
+                    if not gehoertZuLayer.commitChanges():
+                        XpError(u"Konnte Änderungen am Layer " + gehoertZuLayer.name() + " nicht speichern!")
+                    
+    def featuresAdded(self,  layerId,  featureList):
+        self.debug("featuresAdded")
+        newGeoms = []
+        
+        for aFeature in featureList:
+            newGeoms.append(QgsGeometry(aFeature.geometry())) # Kopie der Geometrie
+        
+        self.addedGeometries[layerId] = newGeoms
+        
+    
     def action01Slot(self):
         '''gebundenes Präsentationsobjekt
         Voraussetzung: aktives Layer ist XPlan-Layer und hat

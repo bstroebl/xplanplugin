@@ -5,8 +5,8 @@ XPlan
 A QGIS plugin
 Fachschale XPlan für XPlanung
                              -------------------
-begin                : 2011-03-08
-copyright            : (C) 2011 by Bernhard Stroebl, KIJ/DV
+begin                : 2013-03-08
+copyright            : (C) 2013 by Bernhard Stroebl, KIJ/DV
 email                : bernhard.stroebl@jena.de
  ***************************************************************************/
 
@@ -31,11 +31,16 @@ class XPTools():
     def __init__(self,  iface):
         self.iface = iface
     
-    def chooseBereich(self,  db):
+    def chooseBereich(self,  db,  multiSelect = False):
         '''Starte Dialog zur Bereichsauswahl'''
-        dlg = BereichsauswahlDialog(self.iface,  db)
+        dlg = BereichsauswahlDialog(self.iface,  db,  multiSelect)
         dlg.show()
-        return dlg.exec_()
+        result = dlg.exec_()
+        
+        if result == 0:
+            return [-1]
+        else:
+            return dlg.selected
         
     def getBereichTyp(self,  db,  bereichGid):
         '''gibt den Typ (FP, BP etc) des Bereichs mit der übergebenen gid zurück'''
@@ -72,7 +77,13 @@ class XPTools():
                 AND tablename = \':table\' \
                 AND (\"XP_Bereich_gid\" = :bereichGid \
                      OR \"XP_Bereich_gid\" IS NULL) \
-             ORDER BY \"XP_Bereich_gid\" NULLS LAST" 
+             ORDER BY \"XP_Bereich_gid\" NULLS "
+            
+            if bereichGid == -9999:
+                sel = sel + "FIRST"
+            else:
+                sel = sel + "LAST"
+                
             query = QtSql.QSqlQuery(db)
             query.prepare(sel)
             query.bindValue(":schema", QtCore.QVariant(relation[0]))
@@ -93,17 +104,23 @@ class XPTools():
         return style
     
     def getPostgresRelation(self,  layer):
-        '''gibt die Relation [schema, relation] eines PostgreSQL-Layers zurück'''
+        '''gibt die Relation [schema, relation, Name_der_Geometriespalte] eines PostgreSQL-Layers zurück'''
         retValue = None
 
         if isinstance(layer, QgsVectorLayer):
-            if layer.dataProvider().storageType().contains(QtCore.QString("PostgreSQL")):
-                
-                for s in ayer.source().split(" "):
-                    if s.startsWith("table="):
-                        retValue = s.remove("table=").split(".")
-                        break
-        
+            if layer.dataProvider().storageType().contains("PostgreSQL"):
+                retValue = []
+                for s in str(layer.source()).split(" "):
+                    if s.startswith("table="):
+                        for val in s.replace("table=", "").split("."):
+                            retValue.append(val.replace('"',  ''))
+                        if layer.geometryType() == 4: # geometrielos
+                            retValue.append("")
+                            break
+                        
+                    elif s.startswith("("):
+                        retValue.append(s.replace("(", "").replace(")", ""))
+                        
         return retValue
     
     def getLayerInBereich(self,  db,  bereichGid):
@@ -150,7 +167,6 @@ class XPTools():
     
     def findPostgresLayer(self, tableName, dbName, dbServer, aliasName = None):
         '''Finde einen PostgreSQL-Layer, mit Namen aliasName (optional)'''
-        
         layerList = self.iface.legendInterface().layers()
         procLayer = None # ini
 
@@ -226,6 +242,40 @@ class XPTools():
             else:
                 return False
     
+    def createFeature(self,  layer, fid = None):
+        '''Ein Feature für den übergebenen Layer erzeugen'''
+        if isinstance(layer, QgsVectorLayer):
+            if fid:
+                newFeature = QgsFeature(fid)
+            else:
+                newFeature = QgsFeature() 
+            
+            provider = layer.dataProvider()
+            fields = layer.pendingFields()
+            
+            newFeature.initAttributes(fields.count())			
+            
+            for i in range(fields.count()):
+                newFeature.setAttribute(i,provider.defaultValue(i))
+
+            return newFeature
+        else:
+            return None
+        
+    def isXpDb(self,  db):
+        retValue = False
+        sel = "SELECT * FROM pg_namespace WHERE nspname = \'XP_Basisobjekte\'"
+        query = QtSql.QSqlQuery(db)
+        query.prepare(sel)
+        query.exec_()
+
+        if query.isActive():
+            retValue = (query.size() == 1)
+        else:
+            self.showQueryError(query)
+        
+        return retValue
+             
     def showQueryError(self, query):
         QtGui.QMessageBox.warning(None, "Database Error", \
             QtCore.QString("%1 \n %2").arg(query.lastError().text()).arg(query.lastQuery()))
