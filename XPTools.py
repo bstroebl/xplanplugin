@@ -20,7 +20,6 @@ email                : bernhard.stroebl@jena.de
  ***************************************************************************/
 """
 # Import the PyQt and QGIS libraries
-# Import the PyQt and QGIS libraries
 from PyQt4 import QtCore, QtGui, QtSql,  QtXml
 # Initialize Qt resources from file resources.py
 from qgis.core import *
@@ -69,6 +68,45 @@ class XPTools():
                 bereichTyp = None
 
         return bereichTyp
+
+    def getBereicheFuerFeatures(self,  db,  bereichTyp,  fids):
+        retValue = {}
+        sel = "SELECT gid, \"" + bereichTyp + "_Bereich_gid\"  \
+            FROM \"" + bereichTyp + "_Basisobjekte\".\"" + bereichTyp + "_Objekte\" "
+        whereClause = ""
+
+        for aFid in fids:
+            if whereClause == "":
+                whereClause = "WHERE \"" + bereichTyp + "_Bereich_gid\" IS NOT NULL AND (gid=" + str(aFid)
+            else:
+                whereClause += " OR gid=" + str(aFid)
+
+        sel += whereClause + ") ORDER BY gid"
+
+        query = QtSql.QSqlQuery(db)
+        query.prepare(sel)
+        query.exec_()
+
+        if query.isActive():
+            lastGid = -9999
+            bereiche = []
+
+            while query.next(): # returns false when all records are done
+                gid = query.value(0).toInt()[0]
+
+                if gid != lastGid:
+                    retValue[lastGid] = bereiche
+                    lastGid = gid
+                    bereiche = []
+
+                bereiche.append(query.value(1).toInt()[0])
+            retValue[lastGid] = bereiche # letzten noch rein
+            query.finish()
+        else:
+            self.showQueryError(query)
+            query.finish()
+
+        return retValue
 
     def getLayerStyle(self,  db,  layer,  bereichGid = -9999):
         '''gibt den Style für einen Layers für den Bereich mit der übergebenen gid zurück,
@@ -195,7 +233,7 @@ class XPTools():
         return procLayer
 
     def loadPostGISLayer(self,  db, schemaName, tableName, displayName = None,
-        geomColumn = QtCore.QString(), whereClause = None, keyColumn = None):
+        geomColumn = "", whereClause = None, keyColumn = None):
         '''Lade einen PostGIS-Layer aus der Datenbank db'''
 
         if not displayName:
