@@ -257,13 +257,15 @@ class XPlan():
                             except KeyError:
                                 continue
                     
+                    bereichFld = gehoertZuLayer.fieldNameIndex(bereichTyp + "_Bereich_gid")
+                    objektFld = gehoertZuLayer.fieldNameIndex(bereichTyp + "_Objekt_gid")
+                    
                     for aNewGid in newGids:
                         for aBereichGid in self.aktiveBereiche:
                             newFeat = self.tools.createFeature(gehoertZuLayer)
                             gehoertZuLayer.addFeature(newFeat,  False)
-                            newFeat.setAttribute(bereichTyp + "_Bereich_gid",  QtCore.QVariant(aBereichGid))
-                            newFeat.setAttribute(bereichTyp + "_Objekt_gid",  QtCore.QVariant(aNewGid))
-                            
+                            gehoertZuLayer.changeAttributeValue(newFeat.id(),  bereichFld, aBereichGid)
+                            gehoertZuLayer.changeAttributeValue(newFeat.id(),  objektFld, aNewGid)
                             
                     if not gehoertZuLayer.commitChanges():
                         XpError(u"Konnte Änderungen am Layer " + gehoertZuLayer.name() + " nicht speichern!")
