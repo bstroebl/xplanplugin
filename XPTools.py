@@ -173,7 +173,7 @@ class XPTools():
             query.finish()
             return None
 
-    def findPostgresLayer(self, tableName, dbName, dbServer, aliasName = None):
+    def findPostgresLayer(self, schemaName,  tableName, dbName, dbServer, aliasName = None):
         '''Finde einen PostgreSQL-Layer, mit Namen aliasName (optional)'''
         layerList = self.iface.legendInterface().layers()
         procLayer = None # ini
@@ -183,9 +183,7 @@ class XPTools():
                 if layer.dataProvider().storageType().contains(QtCore.QString("PostgreSQL")):
                     src = layer.source()
 
-                    if src.contains(tableName) and \
-                        src.contains(dbName) and \
-                        src.contains(dbServer):
+                    if src.contains(schemaName) and src.contains(tableName) and src.contains(dbName) and src.contains(dbServer):
 
                         if aliasName:
                             if QtCore.QString(aliasName) != layer.name():
@@ -287,3 +285,6 @@ class XPTools():
     def showQueryError(self, query):
         QtGui.QMessageBox.warning(None, "Database Error", \
             QtCore.QString("%1 \n %2").arg(query.lastError().text()).arg(query.lastQuery()))
+
+    def debug(self,  msg):
+        QtGui.QMessageBox.information(None, "Debug",  msg)
