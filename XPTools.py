@@ -53,12 +53,12 @@ class XPTools():
             sel = "SELECT substring(\"Objektart\",1,2) FROM \"XP_Basisobjekte\".\"XP_Bereiche\" WHERE gid = :bereichGid"
             query = QtSql.QSqlQuery(db)
             query.prepare(sel)
-            query.bindValue(":bereichGid", QtCore.QVariant(bereichGid))
+            query.bindValue(":bereichGid", bereichGid)
             query.exec_()
 
             if query.isActive():
                 while query.next(): # returns false when all records are done
-                    bereichTyp = query.value(0).toString()
+                    bereichTyp = query.value(0)
 
                 query.finish()
                 self.bereiche[bereichGid]  = bereichTyp
@@ -92,14 +92,14 @@ class XPTools():
             bereiche = []
 
             while query.next(): # returns false when all records are done
-                gid = query.value(0).toInt()[0]
+                gid = query.value(0)
 
                 if gid != lastGid:
                     retValue[lastGid] = bereiche
                     lastGid = gid
                     bereiche = []
 
-                bereiche.append(query.value(1).toInt()[0])
+                bereiche.append(query.value(1))
             retValue[lastGid] = bereiche # letzten noch rein
             query.finish()
         else:
@@ -132,15 +132,15 @@ class XPTools():
 
             query = QtSql.QSqlQuery(db)
             query.prepare(sel)
-            query.bindValue(":schema", QtCore.QVariant(relation[0]))
-            query.bindValue(":table", QtCore.QVariant(relation[1]))
-            query.bindValue(":bereichGid", QtCore.QVariant(bereichGid))
+            query.bindValue(":schema", relation[0])
+            query.bindValue(":table", relation[1])
+            query.bindValue(":bereichGid", bereichGid)
             query.exec_()
 
             if query.isActive():
 
                 while query.next(): # returns false when all records are done
-                    style = query.value(0).toString()
+                    style = query.value(0)
                     break
                 query.finish()
             else:
@@ -154,7 +154,7 @@ class XPTools():
         retValue = None
 
         if isinstance(layer, QgsVectorLayer):
-            if layer.dataProvider().storageType().contains("PostgreSQL"):
+            if layer.dataProvider().storageType().find("PostgreSQL") != -1:
                 retValue = []
                 for s in str(layer.source()).split(" "):
                     if s.startswith("table="):
@@ -185,7 +185,7 @@ class XPTools():
             WHERE \"XP_Bereich_gid\" = :bereichGid) foo"
             query = QtSql.QSqlQuery(db)
             query.prepare(sel)
-            query.bindValue(":bereichGid", QtCore.QVariant(bereichGid))
+            query.bindValue(":bereichGid", bereichGid)
             query.exec_()
 
             if query.isActive():
@@ -194,14 +194,14 @@ class XPTools():
                 flaechenLayer = []
 
                 while query.next(): # returns false when all records are done
-                    layer = query.value(0).toString()
-                    art = query.value(1).toString()
+                    layer = query.value(0)
+                    art = query.value(1)
 
-                    if art == QtCore.QString("Punkt"):
+                    if art == "Punkt":
                         punktLayer.append(layer)
-                    elif art == QtCore.QString("Linie"):
+                    elif art == "Linie":
                         linienLayer.append(layer)
-                    elif art == QtCore.QString("Flaeche"):
+                    elif art == "Flaeche":
                         flaechenLayer.append(layer)
 
                 query.finish()
@@ -218,10 +218,10 @@ class XPTools():
 
         for layer in layerList:
             if isinstance(layer, QgsVectorLayer):
-                if layer.dataProvider().storageType().contains(QtCore.QString("PostgreSQL")):
+                if layer.dataProvider().storageType().find("PostgreSQL") != -1:
                     src = layer.source()
 
-                    if src.contains(schemaName) and src.contains(tableName) and src.contains(dbName) and src.contains(dbServer):
+                    if (src.find(schemaName) != -1) and (src.find(tableName) != -1) and (src.find(dbName) != -1) and (src.find(dbServer) != -1):
 
                         if aliasName:
                             if QtCore.QString(aliasName) != layer.name():
@@ -266,21 +266,21 @@ class XPTools():
 
         if doc.setContent(xmlStyle):
             rootNode = doc.firstChildElement()
-            if layer.readSymbology(rootNode, QtCore.QString("Fehler beim Anwenden")):
+            if layer.readSymbology(rootNode, "Fehler beim Anwenden"):
 
                 if rootNode.hasAttributes():
                     attrs = rootNode.attributes()
 
-                    if attrs.contains(QtCore.QString("minimumScale")):
-                        minScaleAttr = attrs.namedItem(QtCore.QString("minimumScale"))
+                    if attrs.find("minimumScale") != -1:
+                        minScaleAttr = attrs.namedItem("minimumScale")
                         layer.setMinimumScale(float(minScaleAttr.nodeValue()))
 
-                    if attrs.contains(QtCore.QString("maximumScale")):
-                        maxScaleAttr = attrs.namedItem(QtCore.QString("maximumScale"))
+                    if attrs.find("maximumScale") != -1:
+                        maxScaleAttr = attrs.namedItem("maximumScale")
                         layer.setMaximumScale(float(maxScaleAttr.nodeValue()))
 
-                    if attrs.contains(QtCore.QString("hasScaleBasedVisibilityFlag")):
-                        scaleBasedVisAttr = attrs.namedItem(QtCore.QString("hasScaleBasedVisibilityFlag"))
+                    if attrs.find("hasScaleBasedVisibilityFlag") != -1:
+                        scaleBasedVisAttr = attrs.namedItem("hasScaleBasedVisibilityFlag")
                         layer.toggleScaleBasedVisibility(scaleBasedVisAttr.nodeValue() == "1")
                 return True
             else:
@@ -296,7 +296,6 @@ class XPTools():
 
             provider = layer.dataProvider()
             fields = layer.pendingFields()
-
             newFeature.initAttributes(fields.count())
 
             for i in range(fields.count()):
@@ -321,8 +320,8 @@ class XPTools():
         return retValue
 
     def showQueryError(self, query):
-        QtGui.QMessageBox.warning(None, "Database Error", \
-            QtCore.QString("%1 \n %2").arg(query.lastError().text()).arg(query.lastQuery()))
+        QtGui.QMessageBox.warning(None, "DBError",  "Database Error: \
+            %(error)s \n %(query)s" % {"error": query.lastError().text(),  "query": query.lastQuery()})
 
     def debug(self,  msg):
         QtGui.QMessageBox.information(None, "Debug",  msg)

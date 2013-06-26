@@ -20,7 +20,7 @@ email                : bernhard.stroebl@jena.de
  ***************************************************************************/
 """
 # Import the PyQt and QGIS libraries
-from PyQt4 import QtCore, QtGui, QtSql
+from PyQt4 import QtCore, QtGui
 from qgis.core import *
 from qgis.gui import *
 import sys
@@ -129,7 +129,7 @@ class XPlan():
 
     #Slots
 
-    def initialize(self):
+    def initialize(self,  aktiveBereiche = True):
         self.db = self.dbHandler.dbConnectSelected()
 
         if self.db != None:
@@ -141,12 +141,13 @@ class XPlan():
                 self.dbHandler.dbDisconnect()
                 self.db = None
             else:
-                self.aktiveBereicheFestlegen()
+                if aktiveBereiche:
+                    self.aktiveBereicheFestlegen()
 
     def aktiveBereicheFestlegen(self):
         '''Auswahl der Bereiche, in die neu gezeichnete Elemente eingefügt werden sollen'''
         if self.db == None:
-            self.initialize()
+            self.initialize(False)
 
         if self.db:
             bereichsAuswahl = self.tools.chooseBereich(self.db,  True,  u"Aktive Bereiche festlegen")
@@ -166,7 +167,6 @@ class XPlan():
 
     def layerInitialize(self,  layer,  msg = False):
         '''einen XP_Layer initialisieren'''
-
         if 0 == layer.type(): # Vektorlayer
             layerRelation = self.tools.getPostgresRelation(layer)
 

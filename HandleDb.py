@@ -46,7 +46,7 @@ class DbHandler():
 
     def __dbGetSelected(self):
         settings = QtCore.QSettings()
-        selected = unicode(settings.value("/PostgreSQL/connections/selected").toString())
+        selected = unicode(settings.value("/PostgreSQL/connections/selected",  "",  type=str))
         return selected
 
     def dbConnectSelected(self,  thisPassword = None):
@@ -73,14 +73,14 @@ class DbHandler():
                 "Unable to connect: there is no defined database connection \"%s\"." % selected)
             return None
 
-        get_value_str = lambda x: unicode(settings.value(x).toString())
+        get_value_str = lambda x: unicode(settings.value(x,  type=str))
         host, database, username, passwd = map(get_value_str, ["host", "database", "username", "password"])
-        port = settings.value("port").toInt()[0]
+        port = settings.value("port",  5432,  type=int)
 
         if thisPassword:
             passwd = thisPassword
         else:
-            if not (settings.value("save").toBool() or settings.value("savePassword").toBool()):
+            if not (settings.value("save", False, type=bool) or settings.value("savePassword", False,  type=bool)):
                 # qgis1.5 use 'savePassword' instead of 'save' setting
                 (passwd, ok) = QtGui.QInputDialog.getText(None, "Enter password", \
                 "Enter password for connection \"%s\":" % selected, QtGui.QLineEdit.Password)
@@ -104,7 +104,7 @@ class DbHandler():
             return None
         else:
             # set as default in QSettings
-            settings.setValue("/PostgreSQL/connections/selected", QtCore.QVariant(selected))
+            settings.setValue("/PostgreSQL/connections/selected", selected)
             return db
 
     def dbDisconnect(self):

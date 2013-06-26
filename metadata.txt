@@ -10,7 +10,7 @@
 
 [general]
 name=FS XPlanung
-qgisMinimumVersion=1.9
+qgisMinimumVersion=2.0
 description=Fachschale XPlanung
 version=0.1
 

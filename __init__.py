@@ -20,17 +20,7 @@ email                : bernhard.stroebl@jena.de
  ***************************************************************************/
  This script initializes the plugin, making it known to QGIS.
 """
-def name():
-  return u"XPlanung"
-def description():
-  return u"Arbeiten mit XPlanung in PostGIS"
-def version():
-  return "Version 0.1"
-def qgisMinimumVersion():
-  return "1.9"
+
 def classFactory(iface):
   from XPlan import XPlan
   return XPlan(iface)
-def icon(): # new QGIS 1.7
-    return "tools/icons/logo_xplanung.png"
-

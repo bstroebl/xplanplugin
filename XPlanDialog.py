@@ -38,10 +38,10 @@ class BereichsauswahlDialog(QtGui.QDialog):
         self.selected = []
         self.okBtn = self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok)
         self.okBtn.setEnabled(False)
-        
+
         if multiSelect:
             self.ui.bereich.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
-            
+
         self.initializeValues()
 
     def initializeValues(self):
@@ -66,14 +66,14 @@ class BereichsauswahlDialog(QtGui.QDialog):
             if query.isActive():
                 firstRecord = True
                 while query.next():
-                    aPlanArt = query.value(0).toString()
+                    aPlanArt = query.value(0)
                     radPlanArt = QtGui.QRadioButton(aPlanArt,  planArt)
                     radPlanArt.setObjectName(aPlanArt)
-                    
+
                     if firstRecord:
                         radPlanArt.setChecked(True)
                         firstRecord = False
-                        
+
                     radPlanArt.toggled.connect(self.on_anyRadioButton_toggled)
                     lyPlanArt.addWidget(radPlanArt)
 
@@ -84,15 +84,15 @@ class BereichsauswahlDialog(QtGui.QDialog):
                 query.finish()
 
         self.fillBereichTree()
-    
+
     def debug(self,  msg):
         QtGui.QMessageBox.information(None, "Debug",  msg)
-        
+
     def fillBereichTree(self):
         self.ui.bereich.clear()
         planArt = self.ui.planArt
         lyPlanArt = planArt.layout() # Layout der QGroupBox planArt
-        
+
         if lyPlanArt.count() > 0:
             whereClause = ""
 
@@ -112,8 +112,8 @@ class BereichsauswahlDialog(QtGui.QDialog):
                         whereClause += planArtWidget.objectName() + "\'"
                 else:
                     break
-            
-            if not whereClause.isEmpty(): # PlanArt ausgewählt
+
+            if whereClause != "": # PlanArt ausgewählt
                 sQuery = "SELECT plangid, planname, gid, bereichsname FROM \"QGIS\".\"XP_Bereiche\""
                 sQuery += whereClause
                 sQuery += " ORDER BY planname, bereichsname"
@@ -125,19 +125,19 @@ class BereichsauswahlDialog(QtGui.QDialog):
                     lastParentId = -9999
 
                     while query.next():
-                        parentId = query.value(0).toInt()[0]
-                        parent = query.value(1).toString()
-                        childId = query.value(2).toInt()[0]
-                        child = query.value(3).toString()
+                        parentId = query.value(0)
+                        parent = query.value(1)
+                        childId = query.value(2)
+                        child = query.value(3)
 
                         if parentId != lastParentId:
-                            parentItem = QtGui.QTreeWidgetItem(QtCore.QStringList(parent))
+                            parentItem = QtGui.QTreeWidgetItem([parent])
                             parentItem.parentId = parentId
                             parentItem.childId = None
                             self.ui.bereich.addTopLevelItem(parentItem)
                             lastParentId = parentId
 
-                        childItem = QtGui.QTreeWidgetItem(QtCore.QStringList(child))
+                        childItem = QtGui.QTreeWidgetItem([child])
                         childItem.parentId = None
                         childItem.childId = childId
                         parentItem.addChild(childItem)
@@ -150,11 +150,11 @@ class BereichsauswahlDialog(QtGui.QDialog):
     #@QtCore.pyqtSlot()
     #def on_bereich_currentItemChanged(self):
     #    self.debug("bereich_currentItemChanged")
-        
+
     #@QtCore.pyqtSlot()
     #def on_bereich_itemSelectionChanged(self):
     #   self.debug("bereich_itemSelectionChanged")
-    
+
     @QtCore.pyqtSlot(QtGui.QTreeWidgetItem,  int)
     def on_bereich_itemDoubleClicked(self,  thisItem,  thisColumn):
         if thisItem.childId == None:
@@ -164,25 +164,25 @@ class BereichsauswahlDialog(QtGui.QDialog):
                 self.ui.bereich.expandItem(thisItem)
         else:
             self.accept()
-        
+
     @QtCore.pyqtSlot(   )
     def on_bereich_itemSelectionChanged(self):
         self.okBtn.setEnabled(len(self.ui.bereich.selectedItems()) > 0)
-        
+
     def on_anyRadioButton_toggled(self,  isChecked):
         self.fillBereichTree()
-    
+
     def accept(self):
         for item in self.ui.bereich.selectedItems():
             if item.childId:
                 self.selected.append(item.childId)
-        
+
         self.done(1)
-        
+
     def reject(self):
         self.done(0)
 
     def showQueryError(self, query):
-        QtGui.QMessageBox.warning(None, "Database Error", \
-            QtCore.QString("%1 \n %2").arg(query.lastError().text()).arg(query.lastQuery()))
+        QtGui.QMessageBox.warning(None, "DBError",  "Database Error: \
+            %(error)s \n %(query)s" % {"error": query.lastError().text(),  "query": query.lastQuery()})
 
