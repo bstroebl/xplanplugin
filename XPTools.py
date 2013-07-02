@@ -38,8 +38,8 @@ class XPTools():
         dlg.show()
         result = dlg.exec_()
 
-        if result == 0:
-            return [-1]
+        if result == 0: #Abbruch
+            return {-1: -1}
         else:
             return dlg.selected
 
@@ -114,13 +114,14 @@ class XPTools():
         (XP_Bereich_gid = NULL), falls es den auch nicht gibt wird None zurückgegeben'''
 
         relation = self.getPostgresRelation(layer)
+        self.debug(str(relation))
         style = None
 
         if relation:
             sel = "SELECT style \
             FROM \"QGIS\".\"layer\" \
-            WHERE schemaname = \':schema\' \
-                AND tablename = \':table\' \
+            WHERE schemaname = :schema \
+                AND tablename = :table \
                 AND (\"XP_Bereich_gid\" = :bereichGid \
                      OR \"XP_Bereich_gid\" IS NULL) \
              ORDER BY \"XP_Bereich_gid\" NULLS "
@@ -179,30 +180,44 @@ class XPTools():
             CASE \"Objektart\" LIKE \'%Punkt\' WHEN true THEN \'Punkt\' ELSE \
                 CASE \"Objektart\" LIKE \'%Linie\' WHEN true THEN \'Linie\' ELSE \'Flaeche\' \
                 END \
-            END as typ FROM ( \
-            SELECT DISTINCT \"Objektart\" \
+            END as typ, \
+            \"Objektartengruppe\" FROM ( \
+            SELECT DISTINCT \"Objektart\", \"Objektartengruppe\" \
             FROM \"" + bereichTyp +"_Basisobjekte\".\"" + bereichTyp + "_Objekte\" \
-            WHERE \"XP_Bereich_gid\" = :bereichGid) foo"
+            WHERE \"" + bereichTyp +"_Bereich_gid\" = :bereichGid) foo"
             query = QtSql.QSqlQuery(db)
             query.prepare(sel)
             query.bindValue(":bereichGid", bereichGid)
             query.exec_()
 
             if query.isActive():
-                punktLayer = []
-                linienLayer = []
-                flaechenLayer = []
+                punktLayer = {}
+                linienLayer = {}
+                flaechenLayer = {}
 
                 while query.next(): # returns false when all records are done
                     layer = query.value(0)
                     art = query.value(1)
+                    gruppe = query.value(2)
 
                     if art == "Punkt":
-                        punktLayer.append(layer)
+                        try:
+                            pLayerList = punktLayer[gruppe]
+                            pLayerList.append(layer)
+                        except KeyError:
+                            punktLayer[gruppe] = [layer]
                     elif art == "Linie":
-                        linienLayer.append(layer)
+                        try:
+                            lLayerList = linienLayer[gruppe]
+                            lLayerList.append(layer)
+                        except KeyError:
+                            linienLayer[gruppe] = [layer]
                     elif art == "Flaeche":
-                        flaechenLayer.append(layer)
+                        try:
+                            fLayerList = flaechenLayer[gruppe]
+                            fLayerList.append(layer)
+                        except KeyError:
+                            flaechenLayer[gruppe] = [layer]
 
                 query.finish()
                 return [punktLayer,  linienLayer,  flaechenLayer]
@@ -235,7 +250,6 @@ class XPTools():
     def loadPostGISLayer(self,  db, schemaName, tableName, displayName = None,
         geomColumn = "", whereClause = None, keyColumn = None):
         '''Lade einen PostGIS-Layer aus der Datenbank db'''
-
         if not displayName:
             displayName = schemaName + "." + tableName
 
@@ -271,20 +285,33 @@ class XPTools():
                 if rootNode.hasAttributes():
                     attrs = rootNode.attributes()
 
-                    if attrs.find("minimumScale") != -1:
+                    if attrs.contains("minimumScale"):
                         minScaleAttr = attrs.namedItem("minimumScale")
                         layer.setMinimumScale(float(minScaleAttr.nodeValue()))
 
-                    if attrs.find("maximumScale") != -1:
+                    if attrs.contains("maximumScale"):
                         maxScaleAttr = attrs.namedItem("maximumScale")
                         layer.setMaximumScale(float(maxScaleAttr.nodeValue()))
 
-                    if attrs.find("hasScaleBasedVisibilityFlag") != -1:
+                    if attrs.contains("hasScaleBasedVisibilityFlag"):
                         scaleBasedVisAttr = attrs.namedItem("hasScaleBasedVisibilityFlag")
                         layer.toggleScaleBasedVisibility(scaleBasedVisAttr.nodeValue() == "1")
+                self.iface.legendInterface().refreshLayerSymbology(layer)
                 return True
             else:
                 return False
+
+    def getGroupIndex(self,  groupName):
+        '''Finde den Gruppenindex für Gruppe groupName'''
+        retValue = -1
+        groups = self.iface.legendInterface().groups()
+
+        for i in range(len(groups)):
+            if groups[i] == groupName:
+                retValue = i
+                break
+
+        return retValue
 
     def createFeature(self,  layer, fid = None):
         '''Ein Feature für den übergebenen Layer erzeugen'''

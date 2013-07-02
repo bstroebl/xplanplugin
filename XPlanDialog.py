@@ -35,7 +35,7 @@ class BereichsauswahlDialog(QtGui.QDialog):
         #self.ui.bereich.currentItemChanged.connect(self.enableOk)
         self.iface = iface
         self.db = db
-        self.selected = []
+        self.selected = {} # dict, das id: Name der ausgewählten Bereiche enthält
         self.okBtn = self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok)
         self.okBtn.setEnabled(False)
 
@@ -175,7 +175,7 @@ class BereichsauswahlDialog(QtGui.QDialog):
     def accept(self):
         for item in self.ui.bereich.selectedItems():
             if item.childId:
-                self.selected.append(item.childId)
+                self.selected[item.childId] = item.data(0,  0)
 
         self.done(1)
 

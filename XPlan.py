@@ -45,6 +45,8 @@ class XPlan():
         self.tools = XPTools(self.iface)
         self.aktiveBereiche = []
         self.addedGeometries = {}
+        # Liste der implementierten Fachschemata
+        self.implementedSchemas = ["FP"]
 
         #importiere DataDrivenInputMask
         pluginDir = QtCore.QFileInfo(QgsApplication.qgisUserDbFilePath()).path() + "/python/plugins/"
@@ -78,8 +80,11 @@ class XPlan():
         self.bereichMenu = QtGui.QMenu(u"XP_Bereich")
         self.bereichMenu.setToolTip(u"Ein Planbereich fasst die Inhalte eines Plans nach bestimmten Kriterien zusammen.")
         self.bpMenu = QtGui.QMenu(u"BPlan")
+        self.bpMenu.setToolTip(u"Fachschema BPlan für Bebauungspläne")
         self.fpMenu = QtGui.QMenu(u"FPlan")
+        self.fpMenu.setToolTip(u"Fachschema FPlan für Flächennutzungspläne")
         self.lpMenu = QtGui.QMenu(u"LPlan")
+        self.lpMenu.setToolTip(u"Fachschema LPlan für Landschaftspläne")
 
         self.action0 = QtGui.QAction(u"Initialisieren", self.iface.mainWindow())
         self.action0.triggered.connect(self.initialize)
@@ -153,8 +158,9 @@ class XPlan():
             bereichsAuswahl = self.tools.chooseBereich(self.db,  True,  u"Aktive Bereiche festlegen")
 
             if len(bereichsAuswahl) > 0: # Auswahl wurde getroffen oder es wurde abgebrochen
-                if bereichsAuswahl[0] != -1: # Auswahl vorhanden, da [-1] = Abbruch;
-                                                            #bei Abbruch bleiben die bisherigen aktiven Bereiche
+                try:
+                    bereichsAuswahl[-1] #Abbruch; bisherigen aktive Bereiche bleiben aktiv
+                except KeyError:
                     self.aktiveBereiche = bereichsAuswahl
             else:
                 self.aktiveBereiche = bereichsAuswahl # keine Auswahl => keine aktiven Bereiche
@@ -181,7 +187,7 @@ class XPlan():
                         schemaTyp = schema[:2]
 
                         if  table != schemaTyp + "_Plan" and table != schemaTyp + "_Bereich":
-                            if schemaTyp == "FP" or schemaTyp == "BP" or schemaTyp == "LP":
+                            if self.implementedSchemas.find(schemaTyp) != -1:
                                 layer.committedFeaturesAdded.connect(self.featuresAdded)
                                 layer.editingStopped.connect(self.editingHasStopped)
                                 self.addedGeometries[layer.id()] = []
@@ -203,7 +209,7 @@ class XPlan():
                 schema = layerRelation[0]
 
                 if schema !="XP_Praesentationsobjekte":
-                    schemaTyp = schema[:2]
+                    schemaTyp = schema[:2] # z.B. FP, LP
 
                     while(True):
                         if len(self.aktiveBereiche) == 0:
@@ -217,7 +223,11 @@ class XPlan():
                                 break
 
                         if len(self.aktiveBereiche) > 0:
-                            bereichTyp = self.tools.getBereichTyp(self.db,  self.aktiveBereiche[0])
+                            for k in self.aktiveBereiche.iterkeys():
+                                bereichGid = k
+                                break
+
+                            bereichTyp = self.tools.getBereichTyp(self.db,  bereichGid)
 
                             if bereichTyp == schemaTyp:
                                 retValue = True
@@ -248,7 +258,11 @@ class XPlan():
 
         if self.db:
             if self.aktiverBereichLayerCheck(layer):
-                bereichTyp = self.tools.getBereichTyp(self.db,  self.aktiveBereiche[0]) #
+                for k in self.aktiveBereiche.iterkeys():
+                    bereichGid = k
+                    break
+
+                bereichTyp = self.tools.getBereichTyp(self.db,  bereichGid) #
                 # da nur Bereiche einer Art ausgewählt werden können, reicht es den Typ des ersten Bereiches festzustellen
                 gehoertZuSchema = bereichTyp + "_Basisobjekte"
                 gehoertZuTable = "gehoertZu" + bereichTyp + "_Bereich"
@@ -319,15 +333,43 @@ class XPlan():
             self.db = self.dbHandler.dbConnectSelected()
 
         if self.db:
-            bereich = self.tools.chooseBereich(self.db)
-            if len(bereich) > 0:
-                if bereich[0] >= 0:
+            bereichDict = self.tools.chooseBereich(self.db)
+            if len(bereichDict) > 0:
+                for k in bereichDict.iterkeys():
+                    bereich = k
+                    break
+
+                if bereich >= 0:
                     # rausbekommen, welche Layer Elemente im Bereich haben
-                    bereichTyp = self.tools.getBereichTyp(self.db,  bereich)
-                    layers = self.tools.getLayerInBereich(self.db,  bereichTyp)
+                    layers = self.tools.getLayerInBereich(self.db,  bereich)
+                    #rausbekommen, welche Layer nachrichtlich Elemente im Bereich haben?
                     # eine Gruppe für den Bereich machen
-                    # qml für Layer aus DB holen
+                    lIface = self.iface.legendInterface()
+                    lIface.addGroup(bereichDict[bereich],  False)
+                    groupIdx = self.tools.getGroupIndex(bereichDict[bereich])
+
+                    if groupIdx == -1:
+                        return None
+
+                    lIface.setGroupExpanded(groupIdx, False)
+
                     # Layer in die Gruppe laden und features entsprechend einschränken
+                    bereichTyp = self.tools.getBereichTyp(self.db,  bereich)
+                    filter = "gid IN (SELECT \"" + bereichTyp + "_Objekt_gid\" " + \
+                        "FROM \""+ bereichTyp + "_Basisobjekte\".\"gehoertZu" + bereichTyp + "_Bereich\" " + \
+                        "WHERE \"" + bereichTyp + "_Bereich_gid\" = " + str(bereich) + ")"
+                    for aLayerType in layers:
+                        for aKey in aLayerType.iterkeys():
+                            for aRelName in aLayerType[aKey]:
+                                aLayer = self.tools.loadPostGISLayer(self.db,  aKey,  aRelName, geomColumn = 'position',
+                                                                whereClause = filter)
+                                # Stil des Layers aus der DB holen und anwenden
+                                aStyle = self.tools.getLayerStyle(self.db,  aLayer,  bereich)
+                                if aStyle:
+                                    if not self.tools.styleLayer(aLayer,  aStyle):
+                                        break
+                                lIface.moveLayer(aLayer,  groupIdx)
+                                lIface.setLayerVisible(aLayer,  True)
 
     def editingHasStopped(self):
         if len(self.aktiveBereiche) > 0:
