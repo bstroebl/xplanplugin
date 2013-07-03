@@ -187,7 +187,7 @@ class XPlan():
                         schemaTyp = schema[:2]
 
                         if  table != schemaTyp + "_Plan" and table != schemaTyp + "_Bereich":
-                            if self.implementedSchemas.find(schemaTyp) != -1:
+                            if self.implementedSchemas.count(schemaTyp) > 0:
                                 layer.committedFeaturesAdded.connect(self.featuresAdded)
                                 layer.editingStopped.connect(self.editingHasStopped)
                                 self.addedGeometries[layer.id()] = []
