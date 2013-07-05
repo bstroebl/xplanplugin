@@ -26,6 +26,7 @@ from qgis.core import *
 from qgis.gui import *
 from XPlanDialog import BereichsauswahlDialog
 
+
 class XPTools():
     def __init__(self,  iface):
         self.iface = iface
@@ -108,13 +109,30 @@ class XPTools():
 
         return retValue
 
+
+    def joinLayer(self,  sourceLayer,  joinLayer,  targetField = "gid",  joinField = "gid", memoryCache = False):
+        '''Zwei Layer joinen
+        sourceLayer ist der Layer, an den der joinLayer angeknüpft wird
+        targetField ist das Feld im sourceLayer, an das geknüpft wird, joinField
+        ist das Feld im joinLayer'''
+
+        for aJoinInfo in sourceLayer.vectorJoins():
+            if aJoinInfo.joinLayerId == joinLayer.id():
+                sourceLayer.removeJoin(joinLayer.id())
+
+        joinInfo = QgsVectorJoinInfo()
+        joinInfo.targetField = sourceLayer.fieldNameIndex(targetField)
+        joinInfo.joinField = joinLayer.fieldNameIndex(joinField)
+        joinInfo.joinLayerId = joinLayer.id()
+        joinInfo.memoryCache = memoryCache
+        sourceLayer.addJoin(joinInfo)
+
     def getLayerStyle(self,  db,  layer,  bereichGid = -9999):
-        '''gibt den Style für einen Layers für den Bereich mit der übergebenen gid zurück,
+        '''gibt den Style für einen Layer für den Bereich mit der übergebenen gid zurück,
         wenn es für diesen Bereich keinen Stil gibt, wird der allgemeine Stil zurückgegeben
         (XP_Bereich_gid = NULL), falls es den auch nicht gibt wird None zurückgegeben'''
 
         relation = self.getPostgresRelation(layer)
-        self.debug(str(relation))
         style = None
 
         if relation:

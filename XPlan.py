@@ -63,6 +63,7 @@ class XPlan():
 
         try:
             from DataDrivenInputMask import ddui
+            self.ddUi = ddui.DataDrivenUi(self.iface)
 
             try:
                 self.app.ddManager
@@ -169,7 +170,10 @@ class XPlan():
         layer = self.iface.activeLayer()
 
         if layer != None:
+            if self.db == None:
+                self.initialize(False)
             self.layerInitialize(layer)
+            self.iface.mapCanvas().refresh() # neuzeichnen
 
     def layerInitialize(self,  layer,  msg = False):
         '''einen XP_Layer initialisieren'''
@@ -177,7 +181,24 @@ class XPlan():
             layerRelation = self.tools.getPostgresRelation(layer)
 
             if layerRelation != None: # PostgreSQL-Layer
-                self.app.ddManager.initLayer(layer,  skip = [])
+                aStyle = self.tools.getLayerStyle(self.db,  layer)
+                ddInit = self.app.ddManager.initLayer(layer,  skip = [], createAction = False,  db = self.db)
+
+                if aStyle:
+                    if ddInit:
+                        ddTable = self.app.ddManager.ddLayers[layer.id()][0]
+                        parents = self.ddUi.getParents(ddTable,  self.db)
+
+                        if len(parents) > 0:
+                            parentLayer = self.app.ddManager.findPostgresLayer(self.db,  parents[0])
+
+                            if parentLayer == None:
+                                parentLayer = self.app.ddManager.loadPostGISLayer(self.db,  parents[0])
+
+                            self.tools.joinLayer(layer,  parentLayer,  memoryCache = False)
+
+                    self.tools.styleLayer(layer,  aStyle)
+                    self.app.ddManager.addAction(layer, actionName = "XP_Sachdaten")
 
                 if layerRelation[2]: # Geometrielayer
                     schema = layerRelation[0]
@@ -306,8 +327,6 @@ class XPlan():
                                 gehoertZuLayer.addFeature(newFeat,  False)
                                 gehoertZuLayer.changeAttributeValue(newFeat.id(),  bereichFld, aBereichGid)
                                 gehoertZuLayer.changeAttributeValue(newFeat.id(),  objektFld, aGid)
-
-                self.debug(str(newFeat))
 
                 if newFeat == None: # keine neuen Einträge
                     gehoertZuLayer.destroyEditCommand()
