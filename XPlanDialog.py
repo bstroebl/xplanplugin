@@ -167,7 +167,14 @@ class BereichsauswahlDialog(QtGui.QDialog):
 
     @QtCore.pyqtSlot(   )
     def on_bereich_itemSelectionChanged(self):
-        self.okBtn.setEnabled(len(self.ui.bereich.selectedItems()) > 0)
+        enable = len(self.ui.bereich.selectedItems()) > 0
+
+        for item in self.ui.bereich.selectedItems():
+            if item.parentId:
+                enable = False
+                break
+
+        self.okBtn.setEnabled(enable)
 
     def on_anyRadioButton_toggled(self,  isChecked):
         self.fillBereichTree()

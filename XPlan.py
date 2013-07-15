@@ -106,8 +106,11 @@ class XPlan():
         self.action5 = QtGui.QAction(u"Auswahl nachrichtlich übernehmen", self.iface.mainWindow())
         self.action5.setToolTip(u"aktiver Layer: ausgewählte Elemente nachrichtlich den aktiven Bereichen zuweisen.")
         self.action5.triggered.connect(self.aktivenBereichenNachrichtlichZuordnenSlot)
+        self.action6 = QtGui.QAction(u"Layer PlZVO-konform darstellen", self.iface.mainWindow())
+        self.action6.setToolTip(u"aktiver Layer: gespeicherten Stil anwenden")
+        self.action6.triggered.connect(self.layerStyleSlot)
 
-        self.xpMenu.addActions([self.action0,  self.action2])
+        self.xpMenu.addActions([self.action0,  self.action2,  self.action6])
         self.bereichMenu.addActions([self.action1,  self.action3,  self.action4,  self.action5])
         # Add toolbar button and menu item
         self.tmpAct = QtGui.QAction(self.iface.mainWindow())
@@ -173,34 +176,55 @@ class XPlan():
             if self.db == None:
                 self.initialize(False)
             self.layerInitialize(layer)
+            self.app.ddManager.addAction(layer, actionName = "XP_Sachdaten")
             self.iface.mapCanvas().refresh() # neuzeichnen
 
-    def layerInitialize(self,  layer,  msg = False):
-        '''einen XP_Layer initialisieren'''
+    def layerStyleSlot(self):
+        layer = self.iface.activeLayer()
+
+        if layer != None:
+            if self.db == None:
+                self.initialize(False)
+            ddInit = self.layerInitialize(layer)
+            aStyle = self.tools.getLayerStyle(self.db,  layer)
+
+            if aStyle:
+                if ddInit:
+                    self.layerJoinParent(layer)
+                self.tools.styleLayer(layer,  aStyle)
+
+            if ddInit:
+                self.app.ddManager.addAction(layer, actionName = "XP_Sachdaten")
+
+            self.iface.mapCanvas().refresh() # neuzeichnen
+
+    def layerJoinParent(self,  layer):
+        ddTable = self.app.ddManager.ddLayers[layer.id()][0]
+        parents = self.ddUi.getParents(ddTable,  self.db)
+
+        if len(parents) > 0:
+            parentLayer = self.app.ddManager.findPostgresLayer(self.db,  parents[0])
+
+            if parentLayer == None:
+                parentLayer = self.app.ddManager.loadPostGISLayer(self.db,  parents[0])
+
+            self.tools.joinLayer(layer,  parentLayer,  memoryCache = True)
+
+    def layerInitialize(self,  layer,  msg = False,  layerCheck = True):
+        '''einen XP_Layer initialisieren, gibt Boolschen Wert zurück'''
+        ddInit = False
+
         if 0 == layer.type(): # Vektorlayer
             layerRelation = self.tools.getPostgresRelation(layer)
 
             if layerRelation != None: # PostgreSQL-Layer
-                aStyle = self.tools.getLayerStyle(self.db,  layer)
-                ddInit = self.app.ddManager.initLayer(layer,  skip = [], createAction = False,  db = self.db)
+                try:
+                    self.app.ddManager.ddLayers[layer.id()] # bereits initialisiert
+                    ddInit = True
+                except KeyError:
+                    ddInit = self.app.ddManager.initLayer(layer,  skip = [], createAction = False,  db = self.db)
 
-                if aStyle:
-                    if ddInit:
-                        ddTable = self.app.ddManager.ddLayers[layer.id()][0]
-                        parents = self.ddUi.getParents(ddTable,  self.db)
-
-                        if len(parents) > 0:
-                            parentLayer = self.app.ddManager.findPostgresLayer(self.db,  parents[0])
-
-                            if parentLayer == None:
-                                parentLayer = self.app.ddManager.loadPostGISLayer(self.db,  parents[0])
-
-                            self.tools.joinLayer(layer,  parentLayer,  memoryCache = False)
-
-                    self.tools.styleLayer(layer,  aStyle)
-                    self.app.ddManager.addAction(layer, actionName = "XP_Sachdaten")
-
-                if layerRelation[2]: # Geometrielayer
+                if layerRelation[2]: # Layer hat Geometrien
                     schema = layerRelation[0]
                     table = layerRelation[1]
 
@@ -212,13 +236,17 @@ class XPlan():
                                 layer.committedFeaturesAdded.connect(self.featuresAdded)
                                 layer.editingStopped.connect(self.editingHasStopped)
                                 self.addedGeometries[layer.id()] = []
-                                self.aktiverBereichLayerCheck(layer)
+
+                                if layerCheck:
+                                    self.aktiverBereichLayerCheck(layer)
             else:
                 if msg:
                     XpError("Der Layer " + layer.name() + " ist kein PostgreSQL-Layer!")
         else: # not a vector layer
             if msg:
                 XpError("Der Layer " + layer.name() + " ist kein VektorLayer!")
+
+        return ddInit
 
     def aktiverBereichLayerCheck(self,  layer):
         '''Prüfung, ob übergebener Layer und aktive Bereiche dem selben Objektbereich entsammen'''
@@ -353,6 +381,7 @@ class XPlan():
 
         if self.db:
             bereichDict = self.tools.chooseBereich(self.db)
+
             if len(bereichDict) > 0:
                 for k in bereichDict.iterkeys():
                     bereich = k
@@ -377,20 +406,32 @@ class XPlan():
                     filter = "gid IN (SELECT \"" + bereichTyp + "_Objekt_gid\" " + \
                         "FROM \""+ bereichTyp + "_Basisobjekte\".\"gehoertZu" + bereichTyp + "_Bereich\" " + \
                         "WHERE \"" + bereichTyp + "_Bereich_gid\" = " + str(bereich) + ")"
+
                     for aLayerType in layers:
                         for aKey in aLayerType.iterkeys():
                             for aRelName in aLayerType[aKey]:
                                 aLayer = self.tools.loadPostGISLayer(self.db,  aKey,  aRelName, geomColumn = 'position',
                                                                 whereClause = filter)
-                                # Stil des Layers aus der DB holen und anwenden
-                                aStyle = self.tools.getLayerStyle(self.db,  aLayer,  bereich)
-                                if aStyle:
-                                    if not self.tools.styleLayer(aLayer,  aStyle):
-                                        break
+
+                                # layer initialisieren
+                                if self.layerInitialize(aLayer,  msg=True,  layerCheck = False):
+                                    # Stil des Layers aus der DB holen und anwenden
+                                    aStyle = self.tools.getLayerStyle(self.db,  aLayer,  bereich)
+
+                                    if aStyle:
+                                        self.layerJoinParent(aLayer)
+
+                                        if not self.tools.styleLayer(aLayer,  aStyle):
+                                            break
+
+                                    self.app.ddManager.addAction(aLayer, actionName = "XP_Sachdaten")
+
                                 lIface.moveLayer(aLayer,  groupIdx)
                                 lIface.setLayerVisible(aLayer,  True)
+            self.iface.mapCanvas().refresh() # neuzeichnen
 
     def editingHasStopped(self):
+        self.debug("editingHasStopped")
         if len(self.aktiveBereiche) > 0:
             selLayers = self.iface.legendInterface().selectedLayers()
             for layer in selLayers:
@@ -405,7 +446,7 @@ class XPlan():
 
                         for selFeature in layer.selectedFeatures():
                             if selFeature.geometry().isGeosEqual(aGeom):
-                                newGid = selFeature["gid"].toInt()[0]
+                                newGid = selFeature["gid"]
                                 newGids.append(newGid)
                                 break
 
@@ -417,6 +458,8 @@ class XPlan():
                             XpError(u"Konnte Änderungen am Layer " + gehoertZuLayer.name() + " nicht speichern!")
                 except KeyError:
                     continue
+
+        self.iface.mapCanvas().refresh() # neuzeichnen
 
     def featuresAdded(self,  layerId,  featureList):
         newGeoms = []
