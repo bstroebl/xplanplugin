@@ -62,13 +62,13 @@ class XPlan():
             sys.path.append(maskDir)
 
         try:
-            from DataDrivenInputMask import ddui
+            from DataDrivenInputMask import ddui,  ddmanager
             self.ddUi = ddui.DataDrivenUi(self.iface)
 
             try:
                 self.app.ddManager
             except AttributeError:
-                ddManager = ddui.DdManager(self.iface)
+                ddManager = ddmanager.DdManager(self.iface)
                 self.app.ddManager = ddManager
         except ImportError:
             self.unload()
@@ -191,6 +191,7 @@ class XPlan():
             if aStyle:
                 if ddInit:
                     self.layerJoinParent(layer)
+                    self.layerJoinXP_Objekt(layer)
                 self.tools.styleLayer(layer,  aStyle)
 
             if ddInit:
@@ -209,6 +210,13 @@ class XPlan():
                 parentLayer = self.app.ddManager.loadPostGISLayer(self.db,  parents[0])
 
             self.tools.joinLayer(layer,  parentLayer,  memoryCache = True)
+
+    def layerJoinXP_Objekt(self,  layer):
+        '''den Layer XP_Objekt an den Layer joinen'''
+        xpObjektLayer = self.tools.findPostgresLayer("XP_Basisobjekte",  "XP_Objekt", self.db.databaseName(), self.db.hostName())
+
+        if xpObjektLayer:
+            self.tools.joinLayer(layer,  xpObjektLayer,  memoryCache = True)
 
     def layerInitialize(self,  layer,  msg = False,  layerCheck = True):
         '''einen XP_Layer initialisieren, gibt Boolschen Wert zurück'''
@@ -431,7 +439,6 @@ class XPlan():
             self.iface.mapCanvas().refresh() # neuzeichnen
 
     def editingHasStopped(self):
-        self.debug("editingHasStopped")
         if len(self.aktiveBereiche) > 0:
             selLayers = self.iface.legendInterface().selectedLayers()
             for layer in selLayers:

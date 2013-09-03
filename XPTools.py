@@ -159,7 +159,7 @@ class XPTools():
             if query.isActive():
 
                 while query.next(): # returns false when all records are done
-                    style = query.value(0)
+                    style = unicode(query.value(0))
                     break
                 query.finish()
             else:
@@ -253,8 +253,10 @@ class XPTools():
             if isinstance(layer, QgsVectorLayer):
                 if layer.dataProvider().storageType().find("PostgreSQL") != -1:
                     src = layer.source()
+                    lookFor = "table=\"" + schemaName + "\".\"" + tableName + "\""
 
-                    if (src.find(schemaName) != -1) and (src.find(tableName) != -1) and (src.find(dbName) != -1) and (src.find(dbServer) != -1):
+                    #if (src.find(schemaName) != -1) and (src.find(tableName) != -1) and (src.find(dbName) != -1) and (src.find(dbServer) != -1):
+                    if (src.find(lookFor) != -1) and (src.find(dbName) != -1) and (src.find(dbServer) != -1):
 
                         if aliasName:
                             if QtCore.QString(aliasName) != layer.name():
