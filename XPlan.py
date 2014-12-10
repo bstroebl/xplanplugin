@@ -26,6 +26,7 @@ from qgis.gui import *
 import sys
 from HandleDb import DbHandler
 from XPTools import XPTools
+from XPlanDialog import XPlanungConf
 
 class XpError(object):
     '''General error'''
@@ -40,7 +41,7 @@ class XPlan():
         # Save reference to the QGIS interface
         self.iface = iface
         self.app = QgsApplication.instance()
-        self.dbHandler = DbHandler()
+        self.dbHandler = DbHandler(self.iface)
         self.db = None
         self.tools = XPTools(self.iface)
         self.aktiveBereiche = []
@@ -87,6 +88,8 @@ class XPlan():
         self.lpMenu = QtGui.QMenu(u"LPlan")
         self.lpMenu.setToolTip(u"Fachschema LPlan für Landschaftspläne")
 
+        self.action_1 = QtGui.QAction(u"Einstellungen", self.iface.mainWindow())
+        self.action_1.triggered.connect(self.setSettings)
         self.action0 = QtGui.QAction(u"Initialisieren", self.iface.mainWindow())
         self.action0.triggered.connect(self.initialize)
         self.action1 = QtGui.QAction(u"Bereich laden", self.iface.mainWindow())
@@ -110,7 +113,7 @@ class XPlan():
         self.action6.setToolTip(u"aktiver Layer: gespeicherten Stil anwenden")
         self.action6.triggered.connect(self.layerStyleSlot)
 
-        self.xpMenu.addActions([self.action0,  self.action2,  self.action6])
+        self.xpMenu.addActions([self.action_1, self.action0,  self.action2,  self.action6])
         self.bereichMenu.addActions([self.action1,  self.action3,  self.action4,  self.action5])
         # Add toolbar button and menu item
         self.tmpAct = QtGui.QAction(self.iface.mainWindow())
@@ -138,16 +141,24 @@ class XPlan():
 
     #Slots
 
+    def setSettings(self):
+        dlg = XPlanungConf(self.dbHandler)
+        dlg.show()
+        result = dlg.exec_()
+
+        if result == 1:
+            pass
+
     def initialize(self,  aktiveBereiche = True):
-        self.db = self.dbHandler.dbConnectSelected()
+        self.db = self.dbHandler.dbConnect()
 
         if self.db != None:
             if not self.tools.isXpDb(self.db):
-                QtGui.QMessageBox.warning(None, "Falsche Datenbank",
+                self.iface.messageBar().pushMessage("Falsche Datenbank",
                 u"Die aktive Datenbank ist keine XPlan-Datenbank. Bitte \
                 verbinden Sie sich mit einer solchen und initialisieren \
-                Sie dann erneut.")
-                self.dbHandler.dbDisconnect()
+                Sie dann erneut.", level=QgsMessageBar.CRITICAL)
+                self.dbHandler.dbDisconnect(self.db)
                 self.db = None
             else:
                 if aktiveBereiche:
@@ -385,7 +396,7 @@ class XPlan():
     def bereichLaden(self):
         '''Laden aller Layer, die Elemente in einem auszuwählenden Bereich haben'''
         if self.db == None:
-            self.db = self.dbHandler.dbConnectSelected()
+            self.db = self.dbHandler.dbConnect()
 
         if self.db:
             bereichDict = self.tools.chooseBereich(self.db)

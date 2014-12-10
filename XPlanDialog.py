@@ -24,6 +24,37 @@ from PyQt4 import QtCore, QtGui, QtSql
 from qgis.core import *
 from qgis.gui import *
 from Ui_Bereichsauswahl import Ui_Bereichsauswahl
+from Ui_conf import Ui_conf
+
+class XPlanungConf(QtGui.QDialog):
+    def __init__(self, dbHandler):
+        QtGui.QDialog.__init__(self)
+        self.dbHandler = dbHandler
+        self.ui = Ui_conf()
+        self.ui.setupUi(self)
+
+        s = QtCore.QSettings( "XPlanung", "XPlanung-Erweiterung" )
+        self.ui.leSERVICE.setText( s.value( "service", "" ) )
+        self.ui.leHOST.setText( s.value( "host", "" ) )
+        self.ui.lePORT.setText( s.value( "port", "5432" ) )
+        self.ui.leDBNAME.setText( s.value( "dbname", "" ) )
+        self.ui.leUID.setText( s.value( "uid", "" ) )
+        self.ui.lePWD.setText( s.value( "pwd", "" ) )
+
+    def accept(self):
+        s = QtCore.QSettings( "XPlanung", "XPlanung-Erweiterung" )
+        s.setValue( "service", self.ui.leSERVICE.text() )
+        s.setValue( "host", self.ui.leHOST.text() )
+        s.setValue( "port", self.ui.lePORT.text() )
+        s.setValue( "dbname", self.ui.leDBNAME.text() )
+        s.setValue( "uid", self.ui.leUID.text() )
+        s.setValue( "pwd", self.ui.lePWD.text() )
+
+        db = self.dbHandler.dbConnect()
+
+        if db != None:
+            self.dbHandler.dbDisconnect(db)
+            self.done(1)
 
 class BereichsauswahlDialog(QtGui.QDialog):
     def __init__(self, iface, db,  multiSelect,  title = "Bereichsauswahl"):
