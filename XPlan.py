@@ -27,6 +27,7 @@ import sys
 from HandleDb import DbHandler
 from XPTools import XPTools
 from XPlanDialog import XPlanungConf
+from XPlanDialog import LoadObjektart
 
 class XpError(object):
     '''General error'''
@@ -63,7 +64,7 @@ class XPlan():
             sys.path.append(maskDir)
 
         try:
-            from DataDrivenInputMask import ddui,  ddmanager
+            from DataDrivenInputMask import ddui, ddmanager
             self.ddUi = ddui.DataDrivenUi(self.iface)
 
             try:
@@ -80,13 +81,17 @@ class XPlan():
 
         self.xpMenu = QtGui.QMenu(u"XPlanung")
         self.bereichMenu = QtGui.QMenu(u"XP_Bereich")
-        self.bereichMenu.setToolTip(u"Ein Planbereich fasst die Inhalte eines Plans nach bestimmten Kriterien zusammen.")
+        self.bereichMenu.setToolTip(u"Ein Planbereich fasst die Inhalte eines Plans " +\
+            u"nach bestimmten Kriterien zusammen.")
         self.bpMenu = QtGui.QMenu(u"BPlan")
         self.bpMenu.setToolTip(u"Fachschema BPlan für Bebauungspläne")
         self.fpMenu = QtGui.QMenu(u"FPlan")
         self.fpMenu.setToolTip(u"Fachschema FPlan für Flächennutzungspläne")
         self.lpMenu = QtGui.QMenu(u"LPlan")
         self.lpMenu.setToolTip(u"Fachschema LPlan für Landschaftspläne")
+        self.soMenu = QtGui.QMenu(u"SonstigePlanwerke")
+        self.soMenu.setToolTip(u"Fachschema zur Modellierung nachrichtlicher Übernahmen " + \
+            u"aus anderen Rechtsbereichen und sonstiger raumbezogener Pläne nach BauGB. ")
 
         self.action_1 = QtGui.QAction(u"Einstellungen", self.iface.mainWindow())
         self.action_1.triggered.connect(self.setSettings)
@@ -96,15 +101,16 @@ class XPlan():
         self.action1.setToolTip(u"Alle zu einem Bereich gehörenden Elemente laden und nach PlZVO darstellen")
         self.action1.triggered.connect(self.bereichLaden)
         self.action2 = QtGui.QAction(u"Layer initialisieren", self.iface.mainWindow())
-        self.action2.setToolTip(u"aktiver Layer: Eingabemaske erzeugen, neue Features den aktiven Bereichen zuweisen.")
+        self.action2.setToolTip(u"aktiver Layer: Eingabemaske erzeugen, neue Features den aktiven " +\
+            u"Bereichen zuweisen.")
         self.action2.triggered.connect(self.layerInitializeSlot)
         self.action3 = QtGui.QAction(u"Aktive Bereiche festlegen", self.iface.mainWindow())
-        self.action3.setToolTip(u"Elemente von Layern können automatisch oder händisch den aktiven Bereichen zugewiesen werden. \
-                                Damit werden sie zum originären Inhalt des Planbereichs.")
+        self.action3.setToolTip(u"Elemente von Layern können automatisch oder händisch den aktiven " +\
+            u"Bereichen zugewiesen werden. Damit werden sie zum originären Inhalt des Planbereichs.")
         self.action3.triggered.connect(self.aktiveBereicheFestlegen)
         self.action4 = QtGui.QAction(u"Auswahl den aktiven Bereichen zuordnen", self.iface.mainWindow())
-        self.action4.setToolTip(u"aktiver Layer: ausgewählte Elemente den aktiven Bereichen zuweisen. \
-                                Damit werden sie zum originären Inhalt des Planbereichs.")
+        self.action4.setToolTip(u"aktiver Layer: ausgewählte Elemente den aktiven Bereichen zuweisen. " +\
+                                u"Damit werden sie zum originären Inhalt des Planbereichs.")
         self.action4.triggered.connect(self.aktivenBereichenZuordnenSlot)
         self.action5 = QtGui.QAction(u"Auswahl nachrichtlich übernehmen", self.iface.mainWindow())
         self.action5.setToolTip(u"aktiver Layer: ausgewählte Elemente nachrichtlich den aktiven Bereichen zuweisen.")
@@ -113,8 +119,23 @@ class XPlan():
         self.action6.setToolTip(u"aktiver Layer: gespeicherten Stil anwenden")
         self.action6.triggered.connect(self.layerStyleSlot)
 
-        self.xpMenu.addActions([self.action_1, self.action0,  self.action2,  self.action6])
+        self.action20 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
+        self.action20.triggered.connect(self.loadXP)
+        self.action21 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
+        self.action21.triggered.connect(self.loadBP)
+        self.action22 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
+        self.action22.triggered.connect(self.loadFP)
+        self.action23 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
+        self.action23.triggered.connect(self.loadLP)
+        self.action24 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
+        self.action24.triggered.connect(self.loadSO)
+
+        self.xpMenu.addActions([self.action_1, self.action0, self.action20, self.action2, self.action6])
         self.bereichMenu.addActions([self.action1,  self.action3,  self.action4,  self.action5])
+        self.bpMenu.addActions([self.action21])
+        self.fpMenu.addActions([self.action22])
+        self.lpMenu.addActions([self.action23])
+        self.soMenu.addActions([self.action24])
         # Add toolbar button and menu item
         self.tmpAct = QtGui.QAction(self.iface.mainWindow())
         self.iface.addPluginToVectorMenu("tmp", self.tmpAct) # sicherstellen, dass das VektorMenu da ist
@@ -124,6 +145,7 @@ class XPlan():
         self.vectorMenu.addMenu(self.bpMenu)
         self.vectorMenu.addMenu(self.fpMenu)
         self.vectorMenu.addMenu(self.lpMenu)
+        self.vectorMenu.addMenu(self.soMenu)
         self.iface.removePluginVectorMenu("tmp", self.tmpAct)
 
     def unload(self):
@@ -147,7 +169,7 @@ class XPlan():
         result = dlg.exec_()
 
         if result == 1:
-            pass
+            self.initialize()
 
     def initialize(self,  aktiveBereiche = True):
         self.db = self.dbHandler.dbConnect()
@@ -155,14 +177,48 @@ class XPlan():
         if self.db != None:
             if not self.tools.isXpDb(self.db):
                 self.iface.messageBar().pushMessage("Falsche Datenbank",
-                u"Die aktive Datenbank ist keine XPlan-Datenbank. Bitte \
-                verbinden Sie sich mit einer solchen und initialisieren \
-                Sie dann erneut.", level=QgsMessageBar.CRITICAL)
+                u"Die konfigurierte Datenbank ist keine XPlan-Datenbank. Bitte " +\
+                u"konfigurieren Sie eine solche und initialisieren " +\
+                u"Sie dann erneut.", level=QgsMessageBar.CRITICAL)
                 self.dbHandler.dbDisconnect(self.db)
                 self.db = None
+                self.setSettings()
             else:
                 if aktiveBereiche:
                     self.aktiveBereicheFestlegen()
+
+    def loadObjektart(self, objektart):
+        if self.db == None:
+            self.initialize(False)
+
+        if self.db != None:
+            dlg = LoadObjektart(objektart, self.db)
+            dlg.show()
+            result = dlg.exec_()
+
+            if result == 1:
+                schemaName = dlg.schemaName
+                tableName = dlg.tableName
+                geomColumn = dlg.geomColumn
+                description = dlg.description
+                layer = self.tools.loadPostGISLayer(self.db, schemaName, tableName, geomColumn = geomColumn)
+                layer.setTitle(tableName)
+                layer.setAbstract(description)
+
+    def loadXP(self):
+        self.loadObjektart("XP")
+
+    def loadBP(self):
+        self.loadObjektart("BP")
+
+    def loadFP(self):
+        self.loadObjektart("FP")
+
+    def loadLP(self):
+        self.loadObjektart("LP")
+
+    def loadSO(self):
+        self.loadObjektart("SO")
 
     def aktiveBereicheFestlegen(self):
         '''Auswahl der Bereiche, in die neu gezeichnete Elemente eingefügt werden sollen'''
@@ -302,10 +358,10 @@ class XPlan():
                                 break
                             else:
                                 thisChoice = QtGui.QMessageBox.question(None, "Falscher Objektbereich",
-                                u"Die momentan aktiven Bereiche und der Layer stammen aus unterschiedlichen \
-                    Objektbereichen: aktive Bereiche = " + bereichTyp + ", " + layer.name() + " = " +
-                                schemaTyp + ". Wollen Sie die aktiven Bereiche ändern? ",
-                                QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+                                    u"Die momentan aktiven Bereiche und der Layer stammen aus unterschiedlichen " + \
+                                    "Objektbereichen: aktive Bereiche = " + bereichTyp + ", " + layer.name() + " = " + \
+                                    schemaTyp + ". Wollen Sie die aktiven Bereiche ändern? ",
+                                    QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
 
                                 if thisChoice == QtGui.QMessageBox.Yes:
                                     self.aktiveBereicheFestlegen()

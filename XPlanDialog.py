@@ -25,6 +25,104 @@ from qgis.core import *
 from qgis.gui import *
 from Ui_Bereichsauswahl import Ui_Bereichsauswahl
 from Ui_conf import Ui_conf
+from Ui_ObjektartLaden import Ui_ObjektartLaden
+
+class LoadObjektart(QtGui.QDialog):
+    def __init__(self, objektart, db):
+        QtGui.QDialog.__init__(self)
+        self.objektart = objektart
+        self.db = db
+        self.ui = Ui_ObjektartLaden()
+        self.ui.setupUi(self)
+        self.ui.buttonBox.accepted.connect(self.accept)
+        self.ui.buttonBox.rejected.connect(self.reject)
+        self.okBtn = self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok)
+        self.okBtn.setEnabled(False)
+        self.initialize()
+
+    def initialize(self):
+        sQuery = "select f_table_schema, f_table_name,f_geometry_column, COALESCE(description,\'\') \
+            from geometry_columns \
+            JOIN \
+            (SELECT c.oid,nspname,relname,description \
+                FROM pg_class c \
+                JOIN pg_namespace n ON c.relnamespace = n.oid \
+                LEFT JOIN pg_description d ON d.objoid = c.oid \
+                WHERE objsubid = 0 or objsubid IS NULL \
+            ) cl \
+                ON f_table_schema = nspname AND f_table_name = relname \
+            WHERE substring(f_table_schema,1,2) = :objektart \
+            order by f_table_schema, f_table_name"
+
+        query = QtSql.QSqlQuery(self.db)
+        query.prepare(sQuery)
+        query.bindValue(":objektart", self.objektart)
+        query.exec_()
+
+        if query.isActive():
+            lastParent = ""
+
+            while query.next():
+                parent = query.value(0)
+                child = query.value(1)
+                geomColumn = query.value(2)
+                description = query.value(3)
+
+                if parent != lastParent:
+                    parentItem = QtGui.QTreeWidgetItem([parent])
+                    parentItem.geomColumn = None
+                    self.ui.layerChooser.addTopLevelItem(parentItem)
+                    lastParent = parent
+
+                childItem = QtGui.QTreeWidgetItem([child])
+                childItem.parent = parent
+                childItem.geomColumn = geomColumn
+                childItem.description = description
+                parentItem.addChild(childItem)
+            query.finish()
+        else:
+            self.showQueryError(query)
+            query.finish()
+
+        self.ui.layerChooser.resizeColumnToContents(0)
+    @QtCore.pyqtSlot(QtGui.QTreeWidgetItem, int)
+    def on_layerChooser_itemDoubleClicked(self, thisItem, thisColumn):
+        if thisItem.geomColumn == None:
+            if thisItem.isExpanded():
+                self.ui.layerChooser.collapseItem(thisItem)
+            else:
+                self.ui.layerChooser.expandItem(thisItem)
+        else:
+            self.accept()
+
+    @QtCore.pyqtSlot()
+    def on_layerChooser_itemSelectionChanged(self):
+        enable = len(self.ui.layerChooser.selectedItems()) > 0
+
+        for item in self.ui.layerChooser.selectedItems():
+            if item.geomColumn == None:
+                enable = False
+                break
+
+        self.okBtn.setEnabled(enable)
+
+    def accept(self):
+        for item in self.ui.layerChooser.selectedItems():
+            if item.geomColumn != None:
+                self.schemaName = item.parent
+                self.tableName = item.data(0,  0)
+                self.geomColumn = item.geomColumn
+                self.description = item.description
+                break
+
+        self.done(1)
+
+    def reject(self):
+        self.done(0)
+
+    def showQueryError(self, query):
+        QtGui.QMessageBox.warning(None, "DBError",  "Database Error: \
+            %(error)s \n %(query)s" % {"error": query.lastError().text(),  "query": query.lastQuery()})
 
 class XPlanungConf(QtGui.QDialog):
     def __init__(self, dbHandler):
