@@ -31,9 +31,14 @@ from XPlanDialog import LoadObjektart
 
 class XpError(object):
     '''General error'''
-    def __init__(self,  value):
+    def __init__(self, value, iface = None):
         self.value = value
-        QtGui.QMessageBox.warning(None, "XPlanung",  value)
+
+        if iface == None:
+            QtGui.QMessageBox.warning(None, "XPlanung", value)
+        else:
+            iface.messageBar().pushMessage("XPlanung", value,
+                level=QgsMessageBar.CRITICAL)
     def __str__(self):
         return repr(self.value)
 
@@ -74,7 +79,9 @@ class XPlan():
                 self.app.ddManager = ddManager
         except ImportError:
             self.unload()
-            XpError("Bitte installieren Sie das Plugin DataDrivenInputMask aus dem QGIS Official Repository!")
+            XpError(u"Bitte installieren Sie das Plugin " + \
+                "DataDrivenInputMask aus dem QGIS Official Repository!",
+                self.iface)
 
     def initGui(self):
         # Code von fTools
@@ -176,10 +183,9 @@ class XPlan():
 
         if self.db != None:
             if not self.tools.isXpDb(self.db):
-                self.iface.messageBar().pushMessage("Falsche Datenbank",
-                u"Die konfigurierte Datenbank ist keine XPlan-Datenbank. Bitte " +\
+                XpError(u"Die konfigurierte Datenbank ist keine XPlan-Datenbank. Bitte " +\
                 u"konfigurieren Sie eine solche und initialisieren " +\
-                u"Sie dann erneut.", level=QgsMessageBar.CRITICAL)
+                u"Sie dann erneut.", self.iface)
                 self.dbHandler.dbDisconnect(self.db)
                 self.db = None
                 self.setSettings()
@@ -316,10 +322,12 @@ class XPlan():
                                     self.aktiverBereichLayerCheck(layer)
             else:
                 if msg:
-                    XpError("Der Layer " + layer.name() + " ist kein PostgreSQL-Layer!")
+                    XpError("Der Layer " + layer.name() + " ist kein PostgreSQL-Layer!",
+                        self.iface)
         else: # not a vector layer
             if msg:
-                XpError("Der Layer " + layer.name() + " ist kein VektorLayer!")
+                XpError("Der Layer " + layer.name() + " ist kein VektorLayer!",
+                    self.iface)
 
         return ddInit
 
@@ -408,7 +416,8 @@ class XPlan():
 
                 for aGid in layer.selectedFeaturesIds():
                     if aGid < 0:
-                        XpError(u"Bereichszuordnung: Bitte speichern Sie zuerst den Layer " + layer.name())
+                        XpError(u"Bereichszuordnung: Bitte speichern Sie zuerst den Layer " + layer.name(),
+                            self.iface)
                         gehoertZuLayer.destroyEditCommand()
                     else:
                         for aBereichGid in self.aktiveBereiche:
@@ -529,7 +538,9 @@ class XPlan():
 
                     if self.aktivenBereichenZuordnen(layer):
                         if not gehoertZuLayer.commitChanges():
-                            XpError(u"Konnte Änderungen am Layer " + gehoertZuLayer.name() + " nicht speichern!")
+                            XpError(u"Konnte Änderungen am Layer " + \
+                                gehoertZuLayer.name() + " nicht speichern!",
+                                self.iface)
                 except KeyError:
                     continue
 
