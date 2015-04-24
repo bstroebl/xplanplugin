@@ -24,7 +24,7 @@ EXTRAS = tools/icons/logo_xplanung.png
 
 METADATA = metadata.txt
 
-UI_FILES = Ui_Bereichsauswahl.py Ui_conf.py Ui_ObjektartLaden.py
+UI_FILES = Ui_Bereichsauswahl.py Ui_conf.py Ui_ObjektartLaden.py Ui_Stilauswahl.py
 
 #RESOURCE_FILES = tools/resources_rc.py
 

@@ -24,6 +24,7 @@ from PyQt4 import QtCore, QtGui, QtSql
 from qgis.core import *
 from qgis.gui import *
 from Ui_Bereichsauswahl import Ui_Bereichsauswahl
+from Ui_Stilauswahl import Ui_Stilauswahl
 from Ui_conf import Ui_conf
 from Ui_ObjektartLaden import Ui_ObjektartLaden
 
@@ -319,6 +320,64 @@ class BereichsauswahlDialog(QtGui.QDialog):
         self.done(0)
 
     def showQueryError(self, query):
-        QtGui.QMessageBox.warning(None, "DBError",  "Database Error: \
-            %(error)s \n %(query)s" % {"error": query.lastError().text(),  "query": query.lastQuery()})
+        self.iface.messageBar().pushMessage(
+            "DBError",  "Database Error: \
+            %(error)s \n %(query)s" % {"error": query.lastError().text(),
+            "query": query.lastQuery()}, level=QgsMessageBar.CRITICAL)
+
+class StilauswahlDialog(QtGui.QDialog):
+    def __init__(self, iface, aDict, title = "Stilauswahl"):
+        QtGui.QDialog.__init__(self)
+        # Set up the user interface from Designer.
+        self.ui = Ui_Stilauswahl()
+        self.ui.setupUi(self)
+        self.setWindowTitle(title)
+        #self.ui.bereich.currentItemChanged.connect(self.enableOk)
+        self.iface = iface
+        self.aDict = aDict
+        self.selected = -1 # id des ausgewälten Stils
+        self.okBtn = self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok)
+        self.okBtn.setEnabled(False)
+
+        self.initializeValues()
+
+    def initializeValues(self):
+        self.fillStilList()
+
+    def debug(self,  msg):
+        QtGui.QMessageBox.information(None, "Debug",  msg)
+
+    def fillStilList(self):
+        self.ui.stil.clear()
+
+        for key, value in self.aDict:
+            anItem = QtGui.QTableWidgetItem(value)
+            anItem.id = key
+            self.ui.stil.addItem(anItem)
+
+    @QtCore.pyqtSlot(QtGui.QTableWidgetItem)
+    def on_stil_itemDoubleClicked(self, thisItem):
+        self.selected = thisItem.id
+        self.accept()
+
+    @QtCore.pyqtSlot(   )
+    def on_stil_itemSelectionChanged(self):
+        enable = len(self.ui.stil.selectedItems()) > 0
+        self.okBtn.setEnabled(enable)
+
+    def accept(self):
+        if self.selected == -1:
+            for item in self.ui.stil.selectedItems():
+                self.selected = item.id
+
+        self.done(self.selected)
+
+    def reject(self):
+        self.done(-1)
+
+    def showQueryError(self, query):
+        self.iface.messageBar().pushMessage(
+            "DBError",  "Database Error: \
+            %(error)s \n %(query)s" % {"error": query.lastError().text(),
+            "query": query.lastQuery()}, level=QgsMessageBar.CRITICAL)
 

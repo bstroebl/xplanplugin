@@ -110,7 +110,8 @@ class XPTools():
         return retValue
 
 
-    def joinLayer(self,  sourceLayer,  joinLayer,  targetField = "gid",  joinField = "gid", memoryCache = False):
+    def joinLayer(self, sourceLayer, joinLayer, targetField = "gid",
+            joinField = "gid", prefix = None, memoryCache = False):
         '''Zwei Layer joinen
         sourceLayer ist der Layer, an den der joinLayer angeknüpft wird
         targetField ist das Feld im sourceLayer, an das geknüpft wird, joinField
@@ -125,48 +126,11 @@ class XPTools():
         joinInfo.joinField = joinLayer.fieldNameIndex(joinField)
         joinInfo.joinLayerId = joinLayer.id()
         joinInfo.memoryCache = memoryCache
+
+        if prefix != None:
+            joinInfo.prefix = prefix
+
         sourceLayer.addJoin(joinInfo)
-
-    def getLayerStyle(self,  db,  layer,  bereichGid = -9999):
-        '''gibt den Style für einen Layer für den Bereich mit der übergebenen gid zurück,
-        wenn es für diesen Bereich keinen Stil gibt, wird der allgemeine Stil zurückgegeben
-        (XP_Bereich_gid = NULL), falls es den auch nicht gibt wird None zurückgegeben'''
-
-        relation = self.getPostgresRelation(layer)
-        style = None
-
-        if relation:
-            sel = "SELECT style \
-            FROM \"QGIS\".\"layer\" \
-            WHERE schemaname = :schema \
-                AND tablename = :table \
-                AND (\"XP_Bereich_gid\" = :bereichGid \
-                     OR \"XP_Bereich_gid\" IS NULL) \
-             ORDER BY \"XP_Bereich_gid\" NULLS "
-
-            if bereichGid == -9999:
-                sel = sel + "FIRST"
-            else:
-                sel = sel + "LAST"
-
-            query = QtSql.QSqlQuery(db)
-            query.prepare(sel)
-            query.bindValue(":schema", relation[0])
-            query.bindValue(":table", relation[1])
-            query.bindValue(":bereichGid", bereichGid)
-            query.exec_()
-
-            if query.isActive():
-
-                while query.next(): # returns false when all records are done
-                    style = unicode(query.value(0))
-                    break
-                query.finish()
-            else:
-                self.showQueryError(query)
-                query.finish()
-
-        return style
 
     def getPostgresRelation(self,  layer):
         '''gibt die Relation [schema, relation, Name_der_Geometriespalte] eines PostgreSQL-Layers zurück'''
@@ -321,6 +285,29 @@ class XPTools():
             else:
                 return False
 
+    def getXmlLayerStyle(self, layer):
+        '''erzeuge ein XML-Style-Dokument'''
+        doc=QtXml.QDomDocument()
+        rootNode = doc.createElement("qgis")
+        versionAttr = doc.createAttribute("version")
+        versionAttr.setValue(QGis.QGIS_VERSION)
+        rootNode.setAttributeNode(versionAttr)
+        minScaleAttr = doc.createAttribute("minimumScale")
+        minScaleAttr.setValue(str(layer.minimumScale()))
+        rootNode.setAttributeNode(minScaleAttr)
+        maxScaleAttr = doc.createAttribute("maximumScale")
+        maxScaleAttr.setValue(str(layer.maximumScale()))
+        rootNode.setAttributeNode(maxScaleAttr)
+        scaleBasedVisAttr = doc.createAttribute("hasScaleBasedVisibilityFlag")
+        scaleBasedVisAttr.setValue(str(int(layer.hasScaleBasedVisibility())))
+        rootNode.setAttributeNode(scaleBasedVisAttr)
+        doc.appendChild(rootNode)
+
+        if layer.writeSymbology(rootNode,doc,"Fehler"):
+            return doc
+        else:
+            return None
+
     def getGroupIndex(self,  groupName):
         '''Finde den Gruppenindex für Gruppe groupName'''
         retValue = -1
@@ -365,6 +352,37 @@ class XPTools():
             self.showQueryError(query)
 
         return retValue
+
+    def setEditable(self, layer, showErrorMsg = False, iface = None):
+    # is it a vectorLayer?
+        ok = isinstance(layer, QgsVectorLayer)
+        title = "Editierfehler"
+
+        if ok:
+            ok = layer.isEditable() # is already in editMode
+
+            if not ok:
+                # try to start editing
+                ok = layer.startEditing()
+
+                if not ok and showErrorMsg:
+                    msg = u"Bitte sorgen Sie dafür, dass der Layer " + layer.name() + u" editierbar ist!"
+                    if iface:
+                        iface.messageBar().pushMessage(title, msg, level=QgsMessageBar.CRITICAL)
+                    else:
+                        QtGui.QMessageBox.information(None, title, msg)
+
+        else:
+            if showErrorMsg:
+                msg = u"Der Layer " + layer.name() + u" ist kein Vektorlayer " + \
+                    u" und damit nicht editierbar!"
+
+                if iface:
+                    iface.messageBar().pushMessage(title, msg, level=QgsMessageBar.CRITICAL)
+                else:
+                    QtGui.QMessageBox.information(None, title, msg)
+
+        return ok
 
     def showQueryError(self, query):
         QtGui.QMessageBox.warning(None, "DBError",  "Database Error: \

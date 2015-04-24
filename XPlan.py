@@ -20,7 +20,7 @@ email                : bernhard.stroebl@jena.de
  ***************************************************************************/
 """
 # Import the PyQt and QGIS libraries
-from PyQt4 import QtCore, QtGui
+from PyQt4 import QtCore, QtGui, QtSql
 from qgis.core import *
 from qgis.gui import *
 import sys
@@ -28,6 +28,7 @@ from HandleDb import DbHandler
 from XPTools import XPTools
 from XPlanDialog import XPlanungConf
 from XPlanDialog import LoadObjektart
+from XPlanDialog import StilauswahlDialog
 
 class XpError(object):
     '''General error'''
@@ -52,6 +53,7 @@ class XPlan():
         self.tools = XPTools(self.iface)
         self.aktiveBereiche = []
         self.addedGeometries = {}
+        self.layerLayer = None
         # Liste der implementierten Fachschemata
         self.implementedSchemas = ["FP"]
 
@@ -105,7 +107,8 @@ class XPlan():
         self.action0 = QtGui.QAction(u"Initialisieren", self.iface.mainWindow())
         self.action0.triggered.connect(self.initialize)
         self.action1 = QtGui.QAction(u"Bereich laden", self.iface.mainWindow())
-        self.action1.setToolTip(u"Alle zu einem Bereich gehörenden Elemente laden und nach PlZVO darstellen")
+        self.action1.setToolTip(u"Alle zu einem Bereich gehörenden Elemente " + \
+            u"laden und mit gespeichertem Stil darstellen")
         self.action1.triggered.connect(self.bereichLaden)
         self.action2 = QtGui.QAction(u"Layer initialisieren", self.iface.mainWindow())
         self.action2.setToolTip(u"aktiver Layer: Eingabemaske erzeugen, neue Features den aktiven " +\
@@ -120,11 +123,18 @@ class XPlan():
                                 u"Damit werden sie zum originären Inhalt des Planbereichs.")
         self.action4.triggered.connect(self.aktivenBereichenZuordnenSlot)
         self.action5 = QtGui.QAction(u"Auswahl nachrichtlich übernehmen", self.iface.mainWindow())
-        self.action5.setToolTip(u"aktiver Layer: ausgewählte Elemente nachrichtlich den aktiven Bereichen zuweisen.")
+        self.action5.setToolTip(u"aktiver Layer: ausgewählte Elemente nachrichtlich " + \
+            "den aktiven Bereichen zuweisen.")
         self.action5.triggered.connect(self.aktivenBereichenNachrichtlichZuordnenSlot)
-        self.action6 = QtGui.QAction(u"Layer PlZVO-konform darstellen", self.iface.mainWindow())
+        self.action6 = QtGui.QAction(u"Layer darstellen", self.iface.mainWindow())
         self.action6.setToolTip(u"aktiver Layer: gespeicherten Stil anwenden")
         self.action6.triggered.connect(self.layerStyleSlot)
+        self.action7 = QtGui.QAction(u"Layerstil speichern", self.iface.mainWindow())
+        self.action7.setToolTip(u"aktiver Layer: Stil speichern")
+        self.action7.triggered.connect(self.saveStyleSlot)
+        self.action8 = QtGui.QAction(u"gespeicherten Layerstil ändern", self.iface.mainWindow())
+        self.action8.setToolTip(u"aktiver Layer: einen vorhandenen Layerstil bearbeiten")
+        self.action8.triggered.connect(self.changeSavedStyleSlot)
 
         self.action20 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
         self.action20.triggered.connect(self.loadXP)
@@ -137,7 +147,9 @@ class XPlan():
         self.action24 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
         self.action24.triggered.connect(self.loadSO)
 
-        self.xpMenu.addActions([self.action_1, self.action0, self.action20, self.action2, self.action6])
+        self.xpMenu.addActions([self.action_1,
+            self.action0, self.action20, self.action2,
+            self.action6, self.action7, self.action8])
         self.bereichMenu.addActions([self.action1,  self.action3,  self.action4,  self.action5])
         self.bpMenu.addActions([self.action21])
         self.fpMenu.addActions([self.action22])
@@ -168,7 +180,118 @@ class XPlan():
     def debug(self,  msg):
         QtGui.QMessageBox.information(None, "Debug",  msg)
 
+    def loadLayerLayer(self):
+        try:
+            from DataDrivenInputMask import ddattribute
+        except:
+            XpError(u"Kann package ddattribute nicht laden!", self.iface)
+            return False
+
+        layerLayerDdTable = ddattribute.DdTable(
+            schemaName = "QGIS", tableName = "layer")
+        self.layerLayer = self.app.ddManager.findPostgresLayer(
+            self.db, layerLayerDdTable)
+
+        if self.layerLayer == None:
+            self.layerLayer = self.app.ddManager.loadPostGISLayer(
+                self.db, layerLayerDdTable)
+
+            if self.layerLayer == None:
+                XpError(u"Kann Tabelle QGIS.layer nicht laden!", self.iface)
+                return False
+
+        self.layerLayer.layerDeleted.connect(self.onLayerLayerDeleted)
+        return True
+
+    def getLayerStyle(self, layer, bereichGid = -9999):
+        '''gibt den Style für einen Layer für den Bereich mit der übergebenen gid zurück,
+        wenn es für diesen Bereich keinen Stil gibt, wird der allgemeine Stil zurückgegeben
+        (XP_Bereich_gid = NULL), falls es den auch nicht gibt wird None zurückgegeben'''
+
+        relation = self.tools.getPostgresRelation(layer)
+
+        if relation:
+            sel = "SELECT l.id, COALESCE(b.name,\'kein Bereich\'), l.style \
+            FROM \"QGIS\".\"layer\" l \
+            LEFT JOIN \"XP_Basisobjekte\".\"XP_Bereich\" b ON l.\"XP_Bereich_gid\" = b.gid \
+            WHERE l.schemaname = :schema \
+                AND l.tablename = :table"
+
+            if bereichGid != -9999:
+                sel += " AND (l.\"XP_Bereich_gid\" = :bereichGid" + \
+                    " OR l.\"XP_Bereich_gid\" IS NULL)"
+
+            sel += " ORDER BY \"XP_Bereich_gid\" NULLS "
+
+            if bereichGid == -9999:
+                sel = sel + "FIRST"
+            else:
+                sel = sel + "LAST"
+
+            query = QtSql.QSqlQuery(self.db)
+            query.prepare(sel)
+            query.bindValue(":schema", relation[0])
+            query.bindValue(":table", relation[1])
+
+            if bereichGid != -9999:
+                query.bindValue(":bereichGid", bereichGid)
+
+            query.exec_()
+
+            if query.isActive():
+                if query.size() == 0:
+                    self.iface.messageBar().pushMessage(
+                        "XPlanung", u"Für den Layer " + layer.name + "sind keine Stile gespeichert",
+                        level=QgsMessageBar.WARNING)
+                    query.finish()
+                    stilId = None
+                elif query.size() == 1:
+                    while query.next():
+                        stilId = query.value(0)
+                        style = query.value(2)
+
+                    query.finish()
+                else:
+                    bereiche = {}
+                    stile = {}
+
+                    while query.next():
+                        stilId = query.value(0)
+                        bereich = query.value(1)
+                        style = query.value(2)
+
+                        if bereichGid != -9999:
+                            break
+                        else:
+                            stile[stilId] = style
+                            bereiche[stilId] = bereich
+
+                    query.finish()
+
+                    if bereichGid == -9999:
+                        dlg = StilauswahlDialog(self.iface, bereiche)
+                        dlg.show()
+                        stilId = dlg.exec_()
+
+                        if stilId == -1:
+                            stilId = None
+                        else:
+                            style = stile[stilId]
+
+                if stilId == None:
+                    return None
+                else:
+                    return [stilId, style]
+            else:
+                self.showQueryError(query)
+                query.finish()
+                return None
+        else:
+            return None
+
     #Slots
+    def onLayerLayerDeleted(self):
+        self.layerLayer = None
 
     def setSettings(self):
         dlg = XPlanungConf(self.dbHandler)
@@ -252,6 +375,66 @@ class XPlan():
             self.app.ddManager.addAction(layer, actionName = "XP_Sachdaten")
             self.iface.mapCanvas().refresh() # neuzeichnen
 
+    def saveStyleSlot(self):
+        layer = self.iface.activeLayer()
+
+        if layer != None:
+            if self.db == None:
+                self.initialize(False)
+
+        if self.layerLayer == None:
+            if not self.loadLayerLayer():
+                return None
+
+        self.app.ddManager.removeAction(layer, actionName = "XP_Sachdaten")
+        newFeat = self.tools.createFeature(self.layerLayer)
+        doc = self.tools.getXmlLayerStyle(layer)
+
+        if doc != None:
+            newFeat[self.layerLayer.fieldNameIndex("style")] = doc.toString()
+            layerDdTable = self.app.ddManager.makeDdTable(layer, self.db)
+
+            if layerDdTable != None:
+                newFeat[self.layerLayer.fieldNameIndex("schemaname")] = layerDdTable.schemaName
+                newFeat[self.layerLayer.fieldNameIndex("tablename")] = layerDdTable.tableName
+
+                if self.tools.setEditable(self.layerLayer, True, self.iface):
+                    if self.layerLayer.addFeature(newFeat):
+                        self.app.ddManager.showFeatureForm(
+                            self.layerLayer, newFeat, askForSave = False)
+
+        self.app.ddManager.addAction(layer, actionName = "XP_Sachdaten")
+
+    def changeSavedStyleSlot(self):
+        layer = self.iface.activeLayer()
+
+        if layer != None:
+            if self.db == None:
+                self.initialize(False)
+
+            styleList = self.getLayerStyle(layer)
+
+            if styleList != None:
+                if self.layerLayer == None:
+                    if not self.loadLayerLayer():
+                        return None
+
+                stilId = styleList[0]
+                feat = QgsFeature()
+
+                if self.layerLayer.getFeatures(
+                        QgsFeatureRequest().setFilterFid(stilId).setFlags(
+                        QgsFeatureRequest.NoGeometry)).nextFeature(feat):
+                    self.app.ddManager.removeAction(layer, actionName = "XP_Sachdaten")
+                    doc = self.tools.getXmlLayerStyle(layer)
+
+                    if doc != None:
+                        feat[self.layerLayer.fieldNameIndex("style")] = doc.toString()
+                        self.app.ddManager.showFeatureForm(
+                            self.layerLayer, feat)
+
+                    self.app.ddManager.addAction(layer, actionName = "XP_Sachdaten")
+
     def layerStyleSlot(self):
         layer = self.iface.activeLayer()
 
@@ -259,9 +442,11 @@ class XPlan():
             if self.db == None:
                 self.initialize(False)
             ddInit = self.layerInitialize(layer)
-            aStyle = self.tools.getLayerStyle(self.db,  layer)
+            aStyleList = self.getLayerStyle(layer)
 
-            if aStyle:
+            if aStyleList != None :
+                aStyle = aStyleList[1]
+
                 if ddInit:
                     self.layerJoinParent(layer)
                     self.layerJoinXP_Objekt(layer)
@@ -282,7 +467,8 @@ class XPlan():
             if parentLayer == None:
                 parentLayer = self.app.ddManager.loadPostGISLayer(self.db,  parents[0])
 
-            self.tools.joinLayer(layer,  parentLayer,  memoryCache = True)
+            prefix = parents[0].schemaName + "." + parents[0].tableName
+            self.tools.joinLayer(layer, parentLayer, prefix = prefix, memoryCache = True)
 
     def layerJoinXP_Objekt(self,  layer):
         '''den Layer XP_Objekt an den Layer joinen'''
@@ -500,9 +686,10 @@ class XPlan():
                                 # layer initialisieren
                                 if self.layerInitialize(aLayer,  msg=True,  layerCheck = False):
                                     # Stil des Layers aus der DB holen und anwenden
-                                    aStyle = self.tools.getLayerStyle(self.db,  aLayer,  bereich)
+                                    aStyleList = self.getLayerStyle(aLayer, bereich)
 
-                                    if aStyle:
+                                    if aStyleList != None:
+                                        aStyle = aStyleList[1]
                                         self.layerJoinParent(aLayer)
 
                                         if not self.tools.styleLayer(aLayer,  aStyle):
