@@ -177,31 +177,30 @@ class XPlan():
         self.vectorMenu.removeAction(self.lpMenu.menuAction())
         self.iface.removePluginVectorMenu("tmp", self.tmpAct)
 
-    def debug(self,  msg):
-        QtGui.QMessageBox.information(None, "Debug",  msg)
+    def debug(self, msg):
+        QgsMessageLog.logMessage("Debug" + "\n" + msg)
 
     def loadLayerLayer(self):
-        try:
-            from DataDrivenInputMask import ddattribute
-        except:
-            XpError(u"Kann package ddattribute nicht laden!", self.iface)
-            return False
+        layerLayerDdTable = self.app.ddManager.createDdTable(
+            self.db, "QGIS", "layer",
+            withOid = False, withComment = False)
 
-        layerLayerDdTable = ddattribute.DdTable(
-            schemaName = "QGIS", tableName = "layer")
-        self.layerLayer = self.app.ddManager.findPostgresLayer(
-            self.db, layerLayerDdTable)
-
-        if self.layerLayer == None:
-            self.layerLayer = self.app.ddManager.loadPostGISLayer(
+        if layerLayerDdTable != None:
+            self.layerLayer = self.app.ddManager.findPostgresLayer(
                 self.db, layerLayerDdTable)
 
             if self.layerLayer == None:
-                XpError(u"Kann Tabelle QGIS.layer nicht laden!", self.iface)
-                return False
+                self.layerLayer = self.app.ddManager.loadPostGISLayer(
+                    self.db, layerLayerDdTable)
 
-        self.layerLayer.layerDeleted.connect(self.onLayerLayerDeleted)
-        return True
+                if self.layerLayer == None:
+                    XpError(u"Kann Tabelle QGIS.layer nicht laden!", self.iface)
+                    return False
+
+            self.layerLayer.layerDeleted.connect(self.onLayerLayerDeleted)
+            return True
+        else:
+            return False
 
     def getLayerStyle(self, layer, bereichGid = -9999):
         '''gibt den Style für einen Layer für den Bereich mit der übergebenen gid zurück,
@@ -241,7 +240,7 @@ class XPlan():
             if query.isActive():
                 if query.size() == 0:
                     self.iface.messageBar().pushMessage(
-                        "XPlanung", u"Für den Layer " + layer.name + "sind keine Stile gespeichert",
+                        "XPlanung", u"Für den Layer " + layer.name() + u" sind keine Stile gespeichert",
                         level=QgsMessageBar.WARNING)
                     query.finish()
                     stilId = None
@@ -330,9 +329,17 @@ class XPlan():
                 tableName = dlg.tableName
                 geomColumn = dlg.geomColumn
                 description = dlg.description
-                layer = self.tools.loadPostGISLayer(self.db, schemaName, tableName, geomColumn = geomColumn)
-                layer.setTitle(tableName)
-                layer.setAbstract(description)
+                ddTable = self.app.ddManager.createDdTable(self.db,
+                    schemaName, tableName, withOid = False,
+                    withComment = False)
+
+                if ddTable != None:
+                    layer = self.app.ddManager.loadPostGISLayer(self.db,
+                        ddTable, geomColumn = geomColumn)
+
+                    if layer != None:
+                        layer.setTitle(tableName)
+                        layer.setAbstract(description)
 
     def loadXP(self):
         self.loadObjektart("XP")
@@ -430,8 +437,17 @@ class XPlan():
 
                     if doc != None:
                         feat[self.layerLayer.fieldNameIndex("style")] = doc.toString()
-                        self.app.ddManager.showFeatureForm(
-                            self.layerLayer, feat)
+
+                        if self.app.ddManager.showFeatureForm(
+                                self.layerLayer, feat) != 0:
+                            if self.tools.setEditable(self.layerLayer):
+                                self.layerLayer.changeAttributeValue(
+                                    stilId, self.layerLayer.fieldNameIndex("style"),
+                                    doc.toString())
+                                if not self.layerLayer.commitChanges():
+                                    XpError(u"Konnte Änderungen an " + \
+                                    self.layerLayer.name() + u"nicht speichern!",
+                                    self.iface)
 
                     self.app.ddManager.addAction(layer, actionName = "XP_Sachdaten")
 
@@ -472,10 +488,16 @@ class XPlan():
 
     def layerJoinXP_Objekt(self,  layer):
         '''den Layer XP_Objekt an den Layer joinen'''
-        xpObjektLayer = self.tools.findPostgresLayer("XP_Basisobjekte",  "XP_Objekt", self.db.databaseName(), self.db.hostName())
+        xpObjektDdTable = self.app.ddManager.createDdTable(
+            self.db, "XP_Basisobjekte", "XP_Objekt",
+            withOid = False, withComment = False)
+        if xpObjektDdTable != None:
+            xpObjektLayer = self.app.ddManager.findPostgresLayer(self.db, xpObjektDdTable)
 
-        if xpObjektLayer:
-            self.tools.joinLayer(layer,  xpObjektLayer,  memoryCache = True)
+            if xpObjektLayer == None:
+                xpObjektLayer = self.app.ddManager.loadPostGISLayer(self.db, xpObjektDdTable)
+
+            self.tools.joinLayer(layer, xpObjektLayer, memoryCache = True)
 
     def layerInitialize(self,  layer,  msg = False,  layerCheck = True):
         '''einen XP_Layer initialisieren, gibt Boolschen Wert zurück'''
@@ -495,10 +517,10 @@ class XPlan():
                     schema = layerRelation[0]
                     table = layerRelation[1]
 
-                    if schema !="XP_Praesentationsobjekte":
+                    if schema != "XP_Praesentationsobjekte":
                         schemaTyp = schema[:2]
 
-                        if  table != schemaTyp + "_Plan" and table != schemaTyp + "_Bereich":
+                        if table != schemaTyp + "_Plan" and table != schemaTyp + "_Bereich":
                             if self.implementedSchemas.count(schemaTyp) > 0:
                                 layer.committedFeaturesAdded.connect(self.featuresAdded)
                                 layer.editingStopped.connect(self.editingHasStopped)
@@ -584,54 +606,64 @@ class XPlan():
                 # da nur Bereiche einer Art ausgewählt werden können, reicht es den Typ des ersten Bereiches festzustellen
                 gehoertZuSchema = bereichTyp + "_Basisobjekte"
                 gehoertZuTable = "gehoertZu" + bereichTyp + "_Bereich"
-                gehoertZuLayer = self.tools.findPostgresLayer(gehoertZuSchema, gehoertZuTable,  self.db.databaseName(),  self.db.hostName())
+                gehoertZuDdTable = self.app.ddManager.createDdTable(
+                    self.db, gehoertZuSchema, gehoertZuTable,
+                    withOid = False,  withComment = False)
 
-                if gehoertZuLayer == None:
-                    gehoertZuLayer = self.tools.loadPostGISLayer(self.db,  gehoertZuSchema,  gehoertZuTable)
+                if gehoertZuDdTable != None:
+                    gehoertZuLayer = self.app.ddManager.findPostgresLayer(
+                        gehoertZuDdTable, self.db.databaseName())
 
-                if not gehoertZuLayer.isEditable():
-                    if not gehoertZuLayer.startEditing():
-                        return False
+                    if gehoertZuLayer == None:
+                        gehoertZuLayer = self.app.ddManager.loadPostGISLayer(
+                            self.db, gehoertZuDdTable)
 
-                bereichFld = gehoertZuLayer.fieldNameIndex(bereichTyp + "_Bereich_gid")
-                objektFld = gehoertZuLayer.fieldNameIndex(bereichTyp + "_Objekt_gid")
-                bereitsZugeordnet = self.tools.getBereicheFuerFeatures(self.db,  bereichTyp,  layer.selectedFeaturesIds())
+                        if gehoertZuLayer == None:
+                            return False
 
-                gehoertZuLayer.beginEditCommand(u"Ausgewählte Features von " + layer.name() + u" den aktiven Bereichen zugeordnet.")
-                newFeat = None #ini
+                    if not gehoertZuLayer.isEditable():
+                        if not gehoertZuLayer.startEditing():
+                            return False
 
-                for aGid in layer.selectedFeaturesIds():
-                    if aGid < 0:
-                        XpError(u"Bereichszuordnung: Bitte speichern Sie zuerst den Layer " + layer.name(),
-                            self.iface)
+                    bereichFld = gehoertZuLayer.fieldNameIndex(bereichTyp + "_Bereich_gid")
+                    objektFld = gehoertZuLayer.fieldNameIndex(bereichTyp + "_Objekt_gid")
+                    bereitsZugeordnet = self.tools.getBereicheFuerFeatures(self.db,  bereichTyp,  layer.selectedFeaturesIds())
+
+                    gehoertZuLayer.beginEditCommand(u"Ausgewählte Features von " + layer.name() + u" den aktiven Bereichen zugeordnet.")
+                    newFeat = None #ini
+
+                    for aGid in layer.selectedFeaturesIds():
+                        if aGid < 0:
+                            XpError(u"Bereichszuordnung: Bitte speichern Sie zuerst den Layer " + layer.name(),
+                                self.iface)
+                            gehoertZuLayer.destroyEditCommand()
+                        else:
+                            for aBereichGid in self.aktiveBereiche:
+                                doInsert = True
+                                #prüfen, ob dieses XP_Objekt bereits diesem XP_Bereich zugewiesen ist
+                                try:
+                                    objektBereiche = bereitsZugeordnet[aGid]
+                                except KeyError:
+                                    objektBereiche = []
+
+                                for objektBereich in objektBereiche:
+
+                                    if objektBereich == aBereichGid:
+                                        doInsert = False
+                                        break
+
+                                if doInsert:
+                                    newFeat = self.tools.createFeature(gehoertZuLayer)
+                                    gehoertZuLayer.addFeature(newFeat,  False)
+                                    gehoertZuLayer.changeAttributeValue(newFeat.id(),  bereichFld, aBereichGid)
+                                    gehoertZuLayer.changeAttributeValue(newFeat.id(),  objektFld, aGid)
+
+                    if newFeat == None: # keine neuen Einträge
                         gehoertZuLayer.destroyEditCommand()
+                        return False
                     else:
-                        for aBereichGid in self.aktiveBereiche:
-                            doInsert = True
-                            #prüfen, ob dieses XP_Objekt bereits diesem XP_Bereich zugewiesen ist
-                            try:
-                                objektBereiche = bereitsZugeordnet[aGid]
-                            except KeyError:
-                                objektBereiche = []
-
-                            for objektBereich in objektBereiche:
-
-                                if objektBereich == aBereichGid:
-                                    doInsert = False
-                                    break
-
-                            if doInsert:
-                                newFeat = self.tools.createFeature(gehoertZuLayer)
-                                gehoertZuLayer.addFeature(newFeat,  False)
-                                gehoertZuLayer.changeAttributeValue(newFeat.id(),  bereichFld, aBereichGid)
-                                gehoertZuLayer.changeAttributeValue(newFeat.id(),  objektFld, aGid)
-
-                if newFeat == None: # keine neuen Einträge
-                    gehoertZuLayer.destroyEditCommand()
-                    return False
-                else:
-                    gehoertZuLayer.endEditCommand()
-                    return True
+                        gehoertZuLayer.endEditCommand()
+                        return True
             else:
                 return False
         else:
@@ -680,25 +712,30 @@ class XPlan():
                     for aLayerType in layers:
                         for aKey in aLayerType.iterkeys():
                             for aRelName in aLayerType[aKey]:
-                                aLayer = self.tools.loadPostGISLayer(self.db,  aKey,  aRelName, geomColumn = 'position',
-                                                                whereClause = filter)
+                                aDdTable = self.app.ddManager.createDdTable(self.db,
+                                    aKey, aRelName, withOid = False, withComment = False)
 
-                                # layer initialisieren
-                                if self.layerInitialize(aLayer,  msg=True,  layerCheck = False):
-                                    # Stil des Layers aus der DB holen und anwenden
-                                    aStyleList = self.getLayerStyle(aLayer, bereich)
+                                if aDdTable != None:
+                                    aLayer = self.app.ddManager.loadPostGISLayer(self.db,
+                                        aDdTable, geomColumn = 'position',
+                                        whereClause = filter)
 
-                                    if aStyleList != None:
-                                        aStyle = aStyleList[1]
-                                        self.layerJoinParent(aLayer)
+                                    # layer initialisieren
+                                    if self.layerInitialize(aLayer,  msg=True,  layerCheck = False):
+                                        # Stil des Layers aus der DB holen und anwenden
+                                        aStyleList = self.getLayerStyle(aLayer, bereich)
 
-                                        if not self.tools.styleLayer(aLayer,  aStyle):
-                                            break
+                                        if aStyleList != None:
+                                            aStyle = aStyleList[1]
+                                            self.layerJoinParent(aLayer)
 
-                                    self.app.ddManager.addAction(aLayer, actionName = "XP_Sachdaten")
+                                            if not self.tools.styleLayer(aLayer,  aStyle):
+                                                break
 
-                                lIface.moveLayer(aLayer,  groupIdx)
-                                lIface.setLayerVisible(aLayer,  True)
+                                        self.app.ddManager.addAction(aLayer, actionName = "XP_Sachdaten")
+
+                                    lIface.moveLayer(aLayer,  groupIdx)
+                                    lIface.setLayerVisible(aLayer,  True)
             self.iface.mapCanvas().refresh() # neuzeichnen
 
     def editingHasStopped(self):

@@ -26,7 +26,6 @@ from qgis.core import *
 from qgis.gui import *
 from XPlanDialog import BereichsauswahlDialog
 
-
 class XPTools():
     def __init__(self,  iface):
         self.iface = iface
@@ -207,56 +206,6 @@ class XPTools():
             self.showQueryError(query)
             query.finish()
             return None
-
-    def findPostgresLayer(self, schemaName,  tableName, dbName, dbServer, aliasName = None):
-        '''Finde einen PostgreSQL-Layer, mit Namen aliasName (optional)'''
-        layerList = self.iface.legendInterface().layers()
-        procLayer = None # ini
-
-        for layer in layerList:
-            if isinstance(layer, QgsVectorLayer):
-                if layer.dataProvider().storageType().find("PostgreSQL") != -1:
-                    src = layer.source()
-                    lookFor = "table=\"" + schemaName + "\".\"" + tableName + "\""
-
-                    #if (src.find(schemaName) != -1) and (src.find(tableName) != -1) and (src.find(dbName) != -1) and (src.find(dbServer) != -1):
-                    if (src.find(lookFor) != -1) and (src.find(dbName) != -1) and (src.find(dbServer) != -1):
-
-                        if aliasName:
-                            if QtCore.QString(aliasName) != layer.name():
-                                continue
-
-                        procLayer = layer
-                        break
-
-        return procLayer
-
-    def loadPostGISLayer(self,  db, schemaName, tableName, displayName = None,
-        geomColumn = "", whereClause = None, keyColumn = None):
-        '''Lade einen PostGIS-Layer aus der Datenbank db'''
-        if not displayName:
-            displayName = schemaName + "." + tableName
-
-        uri = QgsDataSourceURI()
-        thisPort = db.port()
-
-        if thisPort == -1:
-            thisPort = 5432
-
-        # set host name, port, database name, username and password
-        uri.setConnection(db.hostName(), str(thisPort), db.databaseName(), db.userName(), db.password())
-        # set database schema, table name, geometry column and optionaly subset (WHERE clause)
-        uri.setDataSource(schemaName, tableName, geomColumn)
-
-        if whereClause:
-            uri.setSql(whereClause)
-
-        if keyColumn:
-            uri.setKeyColumn(keyColumn)
-
-        vlayer = QgsVectorLayer(uri.uri(), displayName, "postgres")
-        QgsMapLayerRegistry.instance().addMapLayers([vlayer])
-        return vlayer
 
     def styleLayer(self,  layer,  xmlStyle):
         '''wende den übergebenen Stil auf den übergebenen Layer an'''
