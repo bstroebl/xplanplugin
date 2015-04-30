@@ -247,7 +247,9 @@ class XPlan():
                 elif query.size() == 1:
                     while query.next():
                         stilId = query.value(0)
-                        style = query.value(2)
+                        style = unicode(query.value(2))
+                        import sys
+                        self.debug(sys.getdefaultencoding())
 
                     query.finish()
                 else:
@@ -257,7 +259,7 @@ class XPlan():
                     while query.next():
                         stilId = query.value(0)
                         bereich = query.value(1)
-                        style = query.value(2)
+                        style = unicode(query.value(2))
 
                         if bereichGid != -9999:
                             break
@@ -333,6 +335,7 @@ class XPlan():
                     schemaName, tableName, withOid = False,
                     withComment = False)
 
+                self.debug(schemaName + "." + tableName + "." + geomColumn)
                 if ddTable != None:
                     layer = self.app.ddManager.loadPostGISLayer(self.db,
                         ddTable, geomColumn = geomColumn)
@@ -455,17 +458,20 @@ class XPlan():
         layer = self.iface.activeLayer()
 
         if layer != None:
+
             if self.db == None:
                 self.initialize(False)
+
             ddInit = self.layerInitialize(layer)
             aStyleList = self.getLayerStyle(layer)
 
             if aStyleList != None :
-                aStyle = aStyleList[1]
+                aStyle = aStyleList[1] # 0 ist die styleId
 
                 if ddInit:
                     self.layerJoinParent(layer)
                     self.layerJoinXP_Objekt(layer)
+
                 self.tools.styleLayer(layer,  aStyle)
 
             if ddInit:
@@ -483,7 +489,7 @@ class XPlan():
             if parentLayer == None:
                 parentLayer = self.app.ddManager.loadPostGISLayer(self.db,  parents[0])
 
-            prefix = parents[0].schemaName + "." + parents[0].tableName
+            prefix = parents[0].tableName + "."
             self.tools.joinLayer(layer, parentLayer, prefix = prefix, memoryCache = True)
 
     def layerJoinXP_Objekt(self,  layer):
@@ -491,13 +497,15 @@ class XPlan():
         xpObjektDdTable = self.app.ddManager.createDdTable(
             self.db, "XP_Basisobjekte", "XP_Objekt",
             withOid = False, withComment = False)
+
         if xpObjektDdTable != None:
             xpObjektLayer = self.app.ddManager.findPostgresLayer(self.db, xpObjektDdTable)
 
             if xpObjektLayer == None:
                 xpObjektLayer = self.app.ddManager.loadPostGISLayer(self.db, xpObjektDdTable)
 
-            self.tools.joinLayer(layer, xpObjektLayer, memoryCache = True)
+            self.tools.joinLayer(layer, xpObjektLayer, memoryCache = True,
+                prefix = "XP_Objekt.")
 
     def layerInitialize(self,  layer,  msg = False,  layerCheck = True):
         '''einen XP_Layer initialisieren, gibt Boolschen Wert zurück'''
@@ -528,6 +536,155 @@ class XPlan():
 
                                 if layerCheck:
                                     self.aktiverBereichLayerCheck(layer)
+
+                        #spezielle Aktionen mit speziellen Layern
+                        if table == "FP_GemeinbedarfFlaeche" or \
+                            table == "FP_GemeinbedarfLinie" or \
+                            table == "FP_GemeinbedarfPunkt":
+                            zweckbestDdTable = self.app.ddManager.createDdTable(
+                                self.db, "FP_Gemeinbedarf_Spiel_und_Sportanlagen",
+                                "FP_Gemeinbedarf_zweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if zweckbestDdTable != None:
+                                zweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                    self.db, zweckbestDdTable)
+
+                                if zweckbestLayer == None:
+                                    zweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                        self.db, zweckbestDdTable)
+
+                                if zweckbestLayer != None:
+                                    self.tools.joinLayer(layer, zweckbestLayer,
+                                        prefix = "XP_ZweckbestimmungGemeinbedarf.")
+
+                            besZweckbestDdTable = self.app.ddManager.createDdTable(
+                                self.db, "FP_Gemeinbedarf_Spiel_und_Sportanlagen",
+                                "FP_Gemeinbedarf_besondereZweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if besZweckbestDdTable != None:
+                                besZweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                    self.db, besZweckbestDdTable)
+
+                                if besZweckbestLayer == None:
+                                    besZweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                        self.db, besZweckbestDdTable)
+
+                                if besZweckbestLayer != None:
+                                    self.tools.joinLayer(layer, besZweckbestLayer,
+                                        prefix = "XP_BesondereZweckbestGemeinbedarf.")
+
+                        elif table == "FP_GruenFlaeche" or \
+                            table == "FP_GruenLinie" or \
+                            table == "FP_GruenPunkt":
+                            zweckbestDdTable = self.app.ddManager.createDdTable(
+                                self.db, "FP_Landwirtschaft_Wald_und_Gruen",
+                                "FP_Gruen_zweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if zweckbestDdTable != None:
+                                zweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                    self.db, zweckbestDdTable)
+
+                                if zweckbestLayer == None:
+                                    zweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                        self.db, zweckbestDdTable)
+
+                                if zweckbestLayer != None:
+                                    self.tools.joinLayer(layer, zweckbestLayer,
+                                        prefix = "XP_ZweckbestimmungGruen.")
+
+                            besZweckbestDdTable = self.app.ddManager.createDdTable(
+                                self.db, "FP_Landwirtschaft_Wald_und_Gruen",
+                                "FP_Gruen_besondereZweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if besZweckbestDdTable != None:
+                                besZweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                    self.db, besZweckbestDdTable)
+
+                                if besZweckbestLayer == None:
+                                    besZweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                        self.db, besZweckbestDdTable)
+
+                                if besZweckbestLayer != None:
+                                    self.tools.joinLayer(layer, besZweckbestLayer,
+                                        prefix = "XP_BesondereZweckbestGruen.")
+                        elif table == "FP_PrivilegiertesVorhabenFlaeche" or \
+                            table == "FP_PrivilegiertesVorhabenLinie" or \
+                            table == "FP_PrivilegiertesVorhabenPunkt":
+                            zweckbestDdTable = self.app.ddManager.createDdTable(
+                                self.db, "FP_Sonstiges",
+                                "FP_PrivilegiertesVorhaben_zweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if zweckbestDdTable != None:
+                                zweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                    self.db, zweckbestDdTable)
+
+                                if zweckbestLayer == None:
+                                    zweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                        self.db, zweckbestDdTable)
+
+                                if zweckbestLayer != None:
+                                    self.tools.joinLayer(layer, zweckbestLayer,
+                                        prefix = "FP_ZweckbestimmungPrivilegiertesVorhaben.")
+
+                            besZweckbestDdTable = self.app.ddManager.createDdTable(
+                                self.db, "FP_Sonstiges",
+                                "FP_PrivilegiertesVorhaben_besondereZweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if besZweckbestDdTable != None:
+                                besZweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                    self.db, besZweckbestDdTable)
+
+                                if besZweckbestLayer == None:
+                                    besZweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                        self.db, besZweckbestDdTable)
+
+                                if besZweckbestLayer != None:
+                                    self.tools.joinLayer(layer, besZweckbestLayer,
+                                        prefix = "FP_BesondZweckbestPrivilegiertesVorhaben.")
+                        elif table == "FP_SpielSportanlageFlaeche" or \
+                            table == "FP_SpielSportanlageLinie" or \
+                            table == "FP_SpielSportanlagePunkt":
+                            zweckbestDdTable = self.app.ddManager.createDdTable(
+                                self.db, "FP_Gemeinbedarf_Spiel_und_Sportanlagen",
+                                "FP_SpielSportanlage_zweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if zweckbestDdTable != None:
+                                zweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                    self.db, zweckbestDdTable)
+
+                                if zweckbestLayer == None:
+                                    zweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                        self.db, zweckbestDdTable)
+
+                                if zweckbestLayer != None:
+                                    self.tools.joinLayer(layer, zweckbestLayer,
+                                        prefix = "XP_ZweckbestimmungSpielSportanlage.")
+                        elif table == "FP_KennzeichnungFlaeche" or \
+                            table == "FP_KennzeichnungLinie" or \
+                            table == "FP_KennzeichnungPunkt":
+                            zweckbestDdTable = self.app.ddManager.createDdTable(
+                                self.db, "FP_Sonstiges",
+                                "FP_Kennzeichnung_zweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if zweckbestDdTable != None:
+                                zweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                    self.db, zweckbestDdTable)
+
+                                if zweckbestLayer == None:
+                                    zweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                        self.db, zweckbestDdTable)
+
+                                if zweckbestLayer != None:
+                                    self.tools.joinLayer(layer, zweckbestLayer,
+                                        prefix = "XP_ZweckbestimmungKennzeichnung.")
             else:
                 if msg:
                     XpError("Der Layer " + layer.name() + " ist kein PostgreSQL-Layer!",
