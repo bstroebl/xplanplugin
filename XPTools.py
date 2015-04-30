@@ -211,7 +211,7 @@ class XPTools():
         '''wende den übergebenen Stil auf den übergebenen Layer an'''
         doc = QtXml.QDomDocument()
 
-        if doc.setContent(xmlStyle):
+        if doc.setContent(xmlStyle.encode("utf-8"))[0]:
             rootNode = doc.firstChildElement()
             if layer.readSymbology(rootNode, "Fehler beim Anwenden"):
 
