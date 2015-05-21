@@ -327,27 +327,34 @@ class XPlan():
             result = dlg.exec_()
 
             if result == 1:
-                schemaName = dlg.schemaName
-                tableName = dlg.tableName
-                geomColumn = dlg.geomColumn
-                description = dlg.description
-                ddTable = self.app.ddManager.createDdTable(self.db,
-                    schemaName, tableName, withOid = False,
-                    withComment = False)
+                for aSel in dlg.selection:
+                    schemaName = aSel[0]
+                    tableName = aSel[1]
+                    geomColumn = aSel[2]
+                    description = aSel[3]
+                    ddTable = self.app.ddManager.createDdTable(self.db,
+                        schemaName, tableName, withOid = False,
+                        withComment = False)
 
-                if ddTable != None:
-                    layer = self.app.ddManager.loadPostGISLayer(self.db,
-                        ddTable, geomColumn = geomColumn)
+                    if ddTable != None:
+                        layer = self.app.ddManager.loadPostGISLayer(self.db,
+                            ddTable, geomColumn = geomColumn)
 
-                    if layer != None:
-                        layer.setTitle(tableName)
-                        layer.setAbstract(description)
-                        grpIdx = self.getGroupIndex(schemaName)
+                        if layer != None:
+                            layer.setTitle(tableName)
+                            layer.setAbstract(description)
+                            ddInit = self.layerInitialize(layer)
 
-                        if grpIdx == -1:
-                            grpIdx = self.createGroup(schemaName)
+                            if ddInit:
+                                self.app.ddManager.addAction(layer,
+                                    actionName = "XP_Sachdaten")
 
-                        self.iface.legendInterface().moveLayer(layer, grpIdx)
+                            grpIdx = self.getGroupIndex(schemaName)
+
+                            if grpIdx == -1:
+                                grpIdx = self.createGroup(schemaName)
+
+                            self.iface.legendInterface().moveLayer(layer, grpIdx)
 
     def loadXP(self):
         self.loadObjektart("XP")

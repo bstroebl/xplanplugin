@@ -108,14 +108,15 @@ class LoadObjektart(QtGui.QDialog):
         self.okBtn.setEnabled(enable)
 
     def accept(self):
+        self.selection = []
+
         for item in self.ui.layerChooser.selectedItems():
             if item.geomColumn != None:
-                self.schemaName = item.parent
-                self.tableName = item.data(0,  0)
-                self.geomColumn = item.geomColumn
-                self.description = item.description
-                break
-
+                # Info per ausgewähltem Layer
+                self.selection.append([item.parent, # Schema
+                    item.data(0, 0), # Tabelle
+                    item.geomColumn, # Geometriespalte
+                    item.description]) # Beschreibung
         self.done(1)
 
     def reject(self):
