@@ -335,7 +335,6 @@ class XPlan():
                     schemaName, tableName, withOid = False,
                     withComment = False)
 
-                self.debug(schemaName + "." + tableName + "." + geomColumn)
                 if ddTable != None:
                     layer = self.app.ddManager.loadPostGISLayer(self.db,
                         ddTable, geomColumn = geomColumn)
@@ -343,6 +342,12 @@ class XPlan():
                     if layer != None:
                         layer.setTitle(tableName)
                         layer.setAbstract(description)
+                        grpIdx = self.getGroupIndex(schemaName)
+
+                        if grpIdx == -1:
+                            grpIdx = self.createGroup(schemaName)
+
+                        self.iface.legendInterface().moveLayer(layer, grpIdx)
 
     def loadXP(self):
         self.loadObjektart("XP")
@@ -478,6 +483,32 @@ class XPlan():
                 self.app.ddManager.addAction(layer, actionName = "XP_Sachdaten")
 
             self.iface.mapCanvas().refresh() # neuzeichnen
+
+    def createGroup(self,  grpName):
+        grpIdx = self.iface.legendInterface().addGroup(grpName,  False) # False = expand
+
+        if QGis.QGIS_VERSION_INT >= 20400:
+            # Gruppe an der Spitze des LAyerbaums einfügen
+            root=QgsProject.instance().layerTreeRoot()
+            group = root.findGroup(grpName)
+            group2 = group.clone()
+            root.insertChildNode(0,  group2)
+            root.removeChildNode(group)
+            grpIdx = self.getGroupIndex(grpName)
+
+        return grpIdx
+
+    def getGroupIndex(self, groupName):
+        '''Finde den Gruppenindex für Gruppe groupName'''
+        retValue = -1
+        groups = self.iface.legendInterface().groups()
+
+        for i in range(len(groups)):
+            if groups[i] == groupName:
+                retValue = i
+                break
+
+        return retValue
 
     def layerJoinParent(self,  layer):
         ddTable = self.app.ddManager.ddLayers[layer.id()][0]
