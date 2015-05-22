@@ -417,7 +417,10 @@ class XPlan():
         doc = self.tools.getXmlLayerStyle(layer)
 
         if doc != None:
+            # füge den neuen Stil in das Feature ein
             newFeat[self.layerLayer.fieldNameIndex("style")] = doc.toString()
+            # vergebe eine Fake-Id, damit kein Fehler kommt, id wird aus Sequenz vergeben
+            newFeat[self.layerLayer.fieldNameIndex("id")] = 1
             layerDdTable = self.app.ddManager.makeDdTable(layer, self.db)
 
             if layerDdTable != None:
