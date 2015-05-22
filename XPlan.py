@@ -101,9 +101,10 @@ class XPlan():
         self.soMenu = QtGui.QMenu(u"SonstigePlanwerke")
         self.soMenu.setToolTip(u"Fachschema zur Modellierung nachrichtlicher Übernahmen " + \
             u"aus anderen Rechtsbereichen und sonstiger raumbezogener Pläne nach BauGB. ")
+        self.xpDbMenu = QtGui.QMenu(u"XPlanung")
 
-        self.action_1 = QtGui.QAction(u"Einstellungen", self.iface.mainWindow())
-        self.action_1.triggered.connect(self.setSettings)
+        self.action9 = QtGui.QAction(u"Einstellungen", self.iface.mainWindow())
+        self.action9.triggered.connect(self.setSettings)
         self.action0 = QtGui.QAction(u"Initialisieren", self.iface.mainWindow())
         self.action0.triggered.connect(self.initialize)
         self.action1 = QtGui.QAction(u"Bereich laden", self.iface.mainWindow())
@@ -126,7 +127,7 @@ class XPlan():
         self.action5.setToolTip(u"aktiver Layer: ausgewählte Elemente nachrichtlich " + \
             "den aktiven Bereichen zuweisen.")
         self.action5.triggered.connect(self.aktivenBereichenNachrichtlichZuordnenSlot)
-        self.action6 = QtGui.QAction(u"Layer darstellen", self.iface.mainWindow())
+        self.action6 = QtGui.QAction(u"Layer darstellen (nach PlanZV)", self.iface.mainWindow())
         self.action6.setToolTip(u"aktiver Layer: gespeicherten Stil anwenden")
         self.action6.triggered.connect(self.layerStyleSlot)
         self.action7 = QtGui.QAction(u"Layerstil speichern", self.iface.mainWindow())
@@ -147,14 +148,14 @@ class XPlan():
         self.action24 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
         self.action24.triggered.connect(self.loadSO)
 
-        self.xpMenu.addActions([self.action_1,
-            self.action0, self.action20, self.action2,
-            self.action6, self.action7, self.action8])
-        self.bereichMenu.addActions([self.action1,  self.action3,  self.action4,  self.action5])
+        self.xpMenu.addActions([self.action20, self.action6])
+        self.bereichMenu.addActions([self.action1, self.action3,
+            self.action4, self.action5])
         self.bpMenu.addActions([self.action21])
         self.fpMenu.addActions([self.action22])
         self.lpMenu.addActions([self.action23])
         self.soMenu.addActions([self.action24])
+        self.xpDbMenu.addActions([self.action9, self.action7, self.action8])
         # Add toolbar button and menu item
         self.tmpAct = QtGui.QAction(self.iface.mainWindow())
         self.iface.addPluginToVectorMenu("tmp", self.tmpAct) # sicherstellen, dass das VektorMenu da ist
@@ -166,6 +167,8 @@ class XPlan():
         self.vectorMenu.addMenu(self.lpMenu)
         self.vectorMenu.addMenu(self.soMenu)
         self.iface.removePluginVectorMenu("tmp", self.tmpAct)
+        self.databaseMenu = self.iface.databaseMenu()
+        self.databaseMenu.addMenu(self.xpDbMenu)
 
     def unload(self):
         self.app.ddManager.quit()
@@ -176,6 +179,7 @@ class XPlan():
         self.vectorMenu.removeAction(self.fpMenu.menuAction())
         self.vectorMenu.removeAction(self.lpMenu.menuAction())
         self.iface.removePluginVectorMenu("tmp", self.tmpAct)
+        self.databaseMenu.removeAction(self.xpDbMenu.menuAction())
 
     def debug(self, msg):
         QgsMessageLog.logMessage("Debug" + "\n" + msg)
