@@ -858,7 +858,8 @@ class XPlan():
                     break
 
                 bereichTyp = self.tools.getBereichTyp(self.db,  bereichGid) #
-                # da nur Bereiche einer Art ausgewählt werden können, reicht es den Typ des ersten Bereiches festzustellen
+                # da nur Bereiche einer Art ausgewählt werden können,
+                # reicht es, den Typ des ersten Bereiches festzustellen
                 gehoertZuSchema = bereichTyp + "_Basisobjekte"
                 gehoertZuTable = "gehoertZu" + bereichTyp + "_Bereich"
                 gehoertZuDdTable = self.app.ddManager.createDdTable(
@@ -867,7 +868,7 @@ class XPlan():
 
                 if gehoertZuDdTable != None:
                     gehoertZuLayer = self.app.ddManager.findPostgresLayer(
-                        gehoertZuDdTable, self.db.databaseName())
+                        self.db, gehoertZuDdTable)
 
                     if gehoertZuLayer == None:
                         gehoertZuLayer = self.app.ddManager.loadPostGISLayer(
