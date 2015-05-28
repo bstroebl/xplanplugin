@@ -351,12 +351,12 @@ class StilauswahlDialog(QtGui.QDialog):
     def fillStilList(self):
         self.ui.stil.clear()
 
-        for key, value in self.aDict:
-            anItem = QtGui.QTableWidgetItem(value)
+        for key, value in self.aDict.items():
+            anItem = QtGui.QListWidgetItem(value)
             anItem.id = key
             self.ui.stil.addItem(anItem)
 
-    @QtCore.pyqtSlot(QtGui.QTableWidgetItem)
+    @QtCore.pyqtSlot(QtGui.QListWidgetItem)
     def on_stil_itemDoubleClicked(self, thisItem):
         self.selected = thisItem.id
         self.accept()
