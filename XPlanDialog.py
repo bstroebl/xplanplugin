@@ -44,7 +44,7 @@ class LoadObjektart(QtGui.QDialog):
     def initialize(self):
         sQuery = "select f_table_schema, f_table_name,f_geometry_column, COALESCE(description,\'\') \
             from geometry_columns \
-            JOIN \
+            LEFT JOIN \
             (SELECT c.oid,nspname,relname,description \
                 FROM pg_class c \
                 JOIN pg_namespace n ON c.relnamespace = n.oid \
