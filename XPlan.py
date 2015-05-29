@@ -206,7 +206,7 @@ class XPlan():
         else:
             return False
 
-    def getLayerStyle(self, layer, bereichGid = -9999):
+    def getLayerStyle(self, layer, bereichGid = -9999, showWarning = True):
         '''gibt den Style für einen Layer für den Bereich mit der übergebenen gid zurück,
         wenn es für diesen Bereich keinen Stil gibt, wird der allgemeine Stil zurückgegeben
         (XP_Bereich_gid = NULL), falls es den auch nicht gibt wird None zurückgegeben'''
@@ -243,9 +243,10 @@ class XPlan():
 
             if query.isActive():
                 if query.size() == 0:
-                    self.iface.messageBar().pushMessage(
-                        "XPlanung", u"Für den Layer " + layer.name() + u" sind keine Stile gespeichert",
-                        level=QgsMessageBar.WARNING)
+                    if showWarning:
+                        self.iface.messageBar().pushMessage(
+                            "XPlanung", u"Für den Layer " + layer.name() + u" sind keine Stile gespeichert",
+                            level=QgsMessageBar.WARNING, duration = 10)
                     query.finish()
                     stilId = None
                 elif query.size() == 1:
@@ -347,6 +348,13 @@ class XPlan():
                         if layer != None:
                             layer.setTitle(tableName)
                             layer.setAbstract(description)
+
+                            aStyleList = self.getLayerStyle(layer, showWarning = False)
+
+                            if aStyleList != None :
+                                aStyle = aStyleList[1] # 0 ist die styleId
+                                self.tools.styleLayer(layer, aStyle)
+
                             ddInit = self.layerInitialize(layer)
 
                             if ddInit:
@@ -486,11 +494,6 @@ class XPlan():
 
             if aStyleList != None :
                 aStyle = aStyleList[1] # 0 ist die styleId
-
-                if ddInit:
-                    self.layerJoinParent(layer)
-                    self.layerJoinXP_Objekt(layer)
-
                 self.tools.styleLayer(layer,  aStyle)
 
             if ddInit:
@@ -574,7 +577,21 @@ class XPlan():
                         schemaTyp = schema[:2]
 
                         if table != schemaTyp + "_Plan" and table != schemaTyp + "_Bereich":
+                            self.layerJoinParent(layer)
+                            self.layerJoinXP_Objekt(layer)
+
                             if self.implementedSchemas.count(schemaTyp) > 0:
+                                # disconnect slots in case they are already connected
+                                try:
+                                    layer.committedFeaturesAdded.disconnect(self.featuresAdded)
+                                except:
+                                    pass
+
+                                try:
+                                    layer.editingStopped.disconnect(self.editingHasStopped)
+                                except:
+                                    pass
+
                                 layer.committedFeaturesAdded.connect(self.featuresAdded)
                                 layer.editingStopped.connect(self.editingHasStopped)
                                 self.addedGeometries[layer.id()] = []
@@ -582,7 +599,7 @@ class XPlan():
                                 if layerCheck:
                                     self.aktiverBereichLayerCheck(layer)
 
-                        #spezielle Aktionen mit speziellen Layern
+                        #spezielle Joins mit speziellen Layern
                         if table == "FP_GemeinbedarfFlaeche" or \
                             table == "FP_GemeinbedarfLinie" or \
                             table == "FP_GemeinbedarfPunkt":
@@ -783,6 +800,25 @@ class XPlan():
                                 if zweckbestLayer != None:
                                     self.tools.joinLayer(layer, zweckbestLayer,
                                         prefix = "XP_ZweckbestimmungWald.")
+                        elif table == "FP_GenerischesObjektFlaeche" or \
+                            table == "FP_GenerischesObjektLinie" or \
+                            table == "FP_GenerischesObjektPunkt":
+                            zweckbestDdTable = self.app.ddManager.createDdTable(
+                                self.db, "FP_Sonstiges",
+                                "FP_GenerischesObjekt_zweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if zweckbestDdTable != None:
+                                zweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                    self.db, zweckbestDdTable)
+
+                                if zweckbestLayer == None:
+                                    zweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                        self.db, zweckbestDdTable)
+
+                                if zweckbestLayer != None:
+                                    self.tools.joinLayer(layer, zweckbestLayer,
+                                        prefix = "FP_ZweckbestimmungGenerischeObjekte.")
             else:
                 if msg:
                     XpError("Der Layer " + layer.name() + " ist kein PostgreSQL-Layer!",
