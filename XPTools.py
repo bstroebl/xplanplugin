@@ -25,10 +25,12 @@ from PyQt4 import QtCore, QtGui, QtSql,  QtXml
 from qgis.core import *
 from qgis.gui import *
 from XPlanDialog import BereichsauswahlDialog
+from XPlanDialog import StilauswahlDialog
 
 class XPTools():
-    def __init__(self,  iface):
+    def __init__(self, iface, standardName):
         self.iface = iface
+        self.standardName = standardName # Name des Standardstils
         self.bereiche = {}
         # dictionary, um den Typ eines Bereichs zu speichern, so dass nur einmal pro Session und Bereich eine SQL-Abfrage nötig ist
 
@@ -42,6 +44,113 @@ class XPTools():
             return {-1: -1}
         else:
             return dlg.selected
+
+    def chooseStyle(self, layer):
+        '''
+        Biete Auswahl der für diesen Layer zur Verfügung stehenden Stile an
+        und gib den Namen des ausgewählten Stils zurück
+        '''
+
+        stile = {}
+        styleMan = layer.styleManager()
+        i = 0
+
+        for aStyle in styleMan.styles():
+            if aStyle != u"":
+               i += 1
+               stile[i] = aStyle
+
+        if len(stile) == 0:
+            self.noStyleWarning(layer)
+            return None
+        elif len(stile) == 1:
+            return stile[1]
+        else:
+            dlg = StilauswahlDialog(self.iface, stile)
+            dlg.show()
+            stilId = dlg.exec_()
+
+            if stilId == -1:
+                return None
+            else:
+                return stile[stilId]
+
+    def getLayerStyles(self, db, layer, showWarning = False):
+        '''
+        Liste alle für diesen Layer in der DB gespeicherten XP-Stile
+        auf und gibt sie als Dict zurück Stil-Id:[Bereichsname, Stil(XML)]
+        '''
+
+        relation = self.getPostgresRelation(layer)
+
+        if relation:
+            sel = "SELECT l.id, COALESCE(b.name,\'" + \
+                self.standardName + "\'), l.style \
+                FROM \"QGIS\".\"layer\" l \
+                LEFT JOIN \"XP_Basisobjekte\".\"XP_Bereich\" b ON l.\"XP_Bereich_gid\" = b.gid \
+                WHERE l.schemaname = :schema \
+                    AND l.tablename = :table \
+                ORDER BY \"XP_Bereich_gid\" NULLS FIRST"
+
+            query = QtSql.QSqlQuery(db)
+            query.prepare(sel)
+            query.bindValue(":schema", relation[0])
+            query.bindValue(":table", relation[1])
+            query.exec_()
+
+            if query.isActive():
+                if query.size() == 0:
+                    if showWarning:
+                        self.noStyleWarning(layer)
+                    query.finish()
+                    return None
+                else:
+                    stile = {}
+
+                    while query.next():
+                        styleId = query.value(0)
+                        bereich = query.value(1)
+                        style = unicode(query.value(2))
+                        stile[styleId] = [bereich, style]
+
+                    query.finish()
+                    return stile
+            else:
+                self.showQueryError(query)
+                query.finish()
+                return None
+        else:
+            return None
+
+    def loadStyles(self, db, layer):
+        '''
+        die Stile dieses Layers laden und auf den Layer anwenden
+        '''
+        styleMan = layer.styleManager()
+        stile = self.getLayerStyles(db, layer)
+
+        for key, value in stile.items():
+            bereich = value[0]
+            stil = value[1]
+            styleMan.renameStyle(bereich, bereich + "_old") # falls schon vorhanden
+            style = QgsMapLayerStyle(stil)
+            styleMan.addStyle(bereich, style)
+            styleMan.removeStyle(bereich + "_old")
+
+        if len(stile) > 0:
+            styleMan.removeStyle(u"") # den unbenannten Stil entfernen
+
+    def useStyle(self, layer, bereich):
+        '''
+        benutze den Stil der den Namen "bereich" hat
+        '''
+        styleMan = layer.styleManager()
+
+        if styleMan.setCurrentStyle(bereich):
+            self.iface.legendInterface().refreshLayerSymbology(layer)
+        else:
+            if styleMan.setCurrentStyle(self.standardName):
+                self.iface.legendInterface().refreshLayerSymbology(layer)
 
     def getBereichTyp(self,  db,  bereichGid):
         '''gibt den Typ (FP, BP etc) des Bereichs mit der übergebenen gid zurück'''
@@ -207,8 +316,9 @@ class XPTools():
             query.finish()
             return None
 
-    def styleLayer(self,  layer,  xmlStyle):
+    def styleLayerDeprecated(self,  layer,  xmlStyle):
         '''wende den übergebenen Stil auf den übergebenen Layer an'''
+
         doc = QtXml.QDomDocument()
 
         if doc.setContent(xmlStyle.encode("utf-8"))[0]:
@@ -336,6 +446,11 @@ class XPTools():
     def showQueryError(self, query):
         QtGui.QMessageBox.warning(None, "DBError",  "Database Error: \
             %(error)s \n %(query)s" % {"error": query.lastError().text(),  "query": query.lastQuery()})
+
+    def noStyleWarning(self, layer):
+        self.iface.messageBar().pushMessage(
+            "XPlanung", u"Für den Layer " + layer.name() + u" sind keine Stile gespeichert",
+            level=QgsMessageBar.WARNING, duration = 10)
 
     def debug(self,  msg):
         QtGui.QMessageBox.information(None, "Debug",  msg)

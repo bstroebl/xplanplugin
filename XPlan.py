@@ -28,7 +28,6 @@ from HandleDb import DbHandler
 from XPTools import XPTools
 from XPlanDialog import XPlanungConf
 from XPlanDialog import LoadObjektart
-from XPlanDialog import StilauswahlDialog
 
 class XpError(object):
     '''General error'''
@@ -47,10 +46,11 @@ class XPlan():
     def __init__(self, iface):
         # Save reference to the QGIS interface
         self.iface = iface
+        self.standardName = u"XP-Standard"
         self.app = QgsApplication.instance()
         self.dbHandler = DbHandler(self.iface)
         self.db = None
-        self.tools = XPTools(self.iface)
+        self.tools = XPTools(self.iface, self.standardName)
         self.aktiveBereiche = []
         self.addedGeometries = {}
         self.layerLayer = None
@@ -133,9 +133,9 @@ class XPlan():
         self.action7 = QtGui.QAction(u"Layerstil speichern", self.iface.mainWindow())
         self.action7.setToolTip(u"aktiver Layer: Stil speichern")
         self.action7.triggered.connect(self.saveStyleSlot)
-        self.action8 = QtGui.QAction(u"gespeicherten Layerstil ändern", self.iface.mainWindow())
-        self.action8.setToolTip(u"aktiver Layer: einen vorhandenen Layerstil bearbeiten")
-        self.action8.triggered.connect(self.changeSavedStyleSlot)
+        self.action8 = QtGui.QAction(u"gespeicherten Layerstil löschen", self.iface.mainWindow())
+        self.action8.setToolTip(u"aktiver Layer: aktien Layerstil löschen")
+        self.action8.triggered.connect(self.deleteStyleSlot)
 
         self.action20 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
         self.action20.triggered.connect(self.loadXP)
@@ -206,93 +206,39 @@ class XPlan():
         else:
             return False
 
-    def getLayerStyle(self, layer, bereichGid = -9999, showWarning = True):
-        '''gibt den Style für einen Layer für den Bereich mit der übergebenen gid zurück,
-        wenn es für diesen Bereich keinen Stil gibt, wird der allgemeine Stil zurückgegeben
-        (XP_Bereich_gid = NULL), falls es den auch nicht gibt wird None zurückgegeben'''
-
-        relation = self.tools.getPostgresRelation(layer)
-
-        if relation:
-            sel = "SELECT l.id, COALESCE(b.name,\'kein Bereich\'), l.style \
+    def getStyleId(self, schemaName, tableName, bereich):
+        sel = "SELECT id, COALESCE(\"XP_Bereich_gid\",-9999) \
             FROM \"QGIS\".\"layer\" l \
-            LEFT JOIN \"XP_Basisobjekte\".\"XP_Bereich\" b ON l.\"XP_Bereich_gid\" = b.gid \
+            LEFT JOIN \"XP_Basisobjekte\".\"XP_Bereiche\" b ON l.\"XP_Bereich_gid\" = b.gid \
             WHERE l.schemaname = :schema \
-                AND l.tablename = :table"
+            AND l.tablename = :table \
+            AND b.name"
 
-            if bereichGid != -9999:
-                sel += " AND (l.\"XP_Bereich_gid\" = :bereichGid" + \
-                    " OR l.\"XP_Bereich_gid\" IS NULL)"
-
-            sel += " ORDER BY \"XP_Bereich_gid\" NULLS "
-
-            if bereichGid == -9999:
-                sel = sel + "FIRST"
-            else:
-                sel = sel + "LAST"
-
-            query = QtSql.QSqlQuery(self.db)
-            query.prepare(sel)
-            query.bindValue(":schema", relation[0])
-            query.bindValue(":table", relation[1])
-
-            if bereichGid != -9999:
-                query.bindValue(":bereichGid", bereichGid)
-
-            query.exec_()
-
-            if query.isActive():
-                if query.size() == 0:
-                    if showWarning:
-                        self.iface.messageBar().pushMessage(
-                            "XPlanung", u"Für den Layer " + layer.name() + u" sind keine Stile gespeichert",
-                            level=QgsMessageBar.WARNING, duration = 10)
-                    query.finish()
-                    stilId = None
-                elif query.size() == 1:
-                    while query.next():
-                        stilId = query.value(0)
-                        style = unicode(query.value(2))
-                        import sys
-                        self.debug(sys.getdefaultencoding())
-
-                    query.finish()
-                else:
-                    bereiche = {}
-                    stile = {}
-
-                    while query.next():
-                        stilId = query.value(0)
-                        bereich = query.value(1)
-                        style = unicode(query.value(2))
-
-                        if bereichGid != -9999:
-                            break
-                        else:
-                            stile[stilId] = style
-                            bereiche[stilId] = bereich
-
-                    query.finish()
-
-                    if bereichGid == -9999:
-                        dlg = StilauswahlDialog(self.iface, bereiche)
-                        dlg.show()
-                        stilId = dlg.exec_()
-
-                        if stilId == -1:
-                            stilId = None
-                        else:
-                            style = stile[stilId]
-
-                if stilId == None:
-                    return None
-                else:
-                    return [stilId, style]
-            else:
-                self.showQueryError(query)
-                query.finish()
-                return None
+        if bereich == self.standardName:
+            sel += " IS NULL"
         else:
+            sel += " = :bereich"
+
+        query = QtSql.QSqlQuery(self.db)
+        query.prepare(sel)
+        query.bindValue(":schema", schemaName)
+        query.bindValue(":table", tableName)
+
+        if bereich != self.standardName:
+            query.bindValue(":bereich", bereich)
+
+        query.exec_()
+
+        if query.isActive():
+            stilId = None
+
+            while query.next(): # returns false when all records are done
+                stilId = query.value(0)
+
+            query.finish()
+            return stilId
+        else:
+            self.showQueryError(query)
             return None
 
     #Slots
@@ -348,18 +294,15 @@ class XPlan():
                         if layer != None:
                             layer.setTitle(tableName)
                             layer.setAbstract(description)
-
-                            aStyleList = self.getLayerStyle(layer, showWarning = False)
-
-                            if aStyleList != None :
-                                aStyle = aStyleList[1] # 0 ist die styleId
-                                self.tools.styleLayer(layer, aStyle)
-
                             ddInit = self.layerInitialize(layer)
 
                             if ddInit:
                                 self.app.ddManager.addAction(layer,
                                     actionName = "XP_Sachdaten")
+                                stil = self.tools.chooseStyle(layer)
+
+                                if stil != None:
+                                    self.tools.useStyle(layer, stil)
 
                             grpIdx = self.getGroupIndex(schemaName)
 
@@ -409,31 +352,105 @@ class XPlan():
             self.app.ddManager.addAction(layer, actionName = "XP_Sachdaten")
             self.iface.mapCanvas().refresh() # neuzeichnen
 
-    def saveStyleSlot(self):
+
+    def deleteStyleSlot(self):
         layer = self.iface.activeLayer()
 
-        if layer != None:
-            if self.db == None:
-                self.initialize(False)
+        if layer == None:
+            return None
 
         if self.layerLayer == None:
             if not self.loadLayerLayer():
                 return None
 
+        if self.db == None:
+            self.initialize(False)
+
+        styleMan = layer.styleManager()
+        bereich = styleMan.currentStyle()
+
+        if bereich == u"":
+            return None
+
+        relation = self.tools.getPostgresRelation(layer)
+        schemaName = relation[0]
+        tableName = relation[1]
+        stilId = self.getStyleId(schemaName, tableName, bereich)
+
+        if stilId != None: # Eintrag löschen
+            feat = QgsFeature()
+
+            if self.layerLayer.getFeatures(
+                    QgsFeatureRequest().setFilterFid(stilId).setFlags(
+                    QgsFeatureRequest.NoGeometry)).nextFeature(feat):
+                if self.tools.setEditable(self.layerLayer):
+                    if self.layerLayer.deleteFeature(stilId):
+                        if self.layerLayer.commitChanges():
+                            self.iface.messageBar().pushMessage("XPlanung",
+                                u"Stil " + bereich + u" gelöscht",
+                                level=QgsMessageBar.INFO, duration = 10)
+                        else:
+                            XpError(u"Konnte Änderungen an " + \
+                                self.layerLayer.name() + u"nicht speichern!",
+                                self.iface)
+
+    def saveStyleSlot(self):
+        layer = self.iface.activeLayer()
+
+        if layer == None:
+            return None
+
+        if self.layerLayer == None:
+            if not self.loadLayerLayer():
+                return None
+
+        if self.db == None:
+            self.initialize(False)
+
+        styleMan = layer.styleManager()
+        bereich = styleMan.currentStyle()
+
+        if bereich == u"":
+            bereich = self.standardName
+
+        relation = self.tools.getPostgresRelation(layer)
+        schemaName = relation[0]
+        tableName = relation[1]
+        stilId = self.getStyleId(schemaName, tableName, bereich)
         self.app.ddManager.removeAction(layer, actionName = "XP_Sachdaten")
-        newFeat = self.tools.createFeature(self.layerLayer)
         doc = self.tools.getXmlLayerStyle(layer)
 
         if doc != None:
-            # füge den neuen Stil in das Feature ein
-            newFeat[self.layerLayer.fieldNameIndex("style")] = doc.toString()
-            # vergebe eine Fake-Id, damit kein Fehler kommt, id wird aus Sequenz vergeben
-            newFeat[self.layerLayer.fieldNameIndex("id")] = 1
-            layerDdTable = self.app.ddManager.makeDdTable(layer, self.db)
+            if stilId != None: # Eintrag ändern
+                self.iface.messageBar().pushMessage("XPlanung",
+                    u"Ersetze Stil " + bereich,
+                    level=QgsMessageBar.INFO, duration = 10)
 
-            if layerDdTable != None:
-                newFeat[self.layerLayer.fieldNameIndex("schemaname")] = layerDdTable.schemaName
-                newFeat[self.layerLayer.fieldNameIndex("tablename")] = layerDdTable.tableName
+                feat = QgsFeature()
+
+                if self.layerLayer.getFeatures(
+                        QgsFeatureRequest().setFilterFid(stilId).setFlags(
+                        QgsFeatureRequest.NoGeometry)).nextFeature(feat):
+                    feat[self.layerLayer.fieldNameIndex("style")] = doc.toString()
+
+                    if self.app.ddManager.showFeatureForm(
+                            self.layerLayer, feat) != 0:
+                        if self.tools.setEditable(self.layerLayer):
+                            self.layerLayer.changeAttributeValue(
+                                stilId, self.layerLayer.fieldNameIndex("style"),
+                                doc.toString())
+                            if not self.layerLayer.commitChanges():
+                                XpError(u"Konnte Änderungen an " + \
+                                self.layerLayer.name() + u"nicht speichern!",
+                                self.iface)
+            else: # neuer Eintrag
+                newFeat = self.tools.createFeature(self.layerLayer)
+                # füge den neuen Stil in das Feature ein
+                newFeat[self.layerLayer.fieldNameIndex("style")] = doc.toString()
+                # vergebe eine Fake-Id, damit kein Fehler kommt, id wird aus Sequenz vergeben
+                newFeat[self.layerLayer.fieldNameIndex("id")] = 1
+                newFeat[self.layerLayer.fieldNameIndex("schemaname")] = schemaName
+                newFeat[self.layerLayer.fieldNameIndex("tablename")] = tableName
 
                 if self.tools.setEditable(self.layerLayer, True, self.iface):
                     if self.layerLayer.addFeature(newFeat):
@@ -442,44 +459,6 @@ class XPlan():
 
         self.app.ddManager.addAction(layer, actionName = "XP_Sachdaten")
 
-    def changeSavedStyleSlot(self):
-        layer = self.iface.activeLayer()
-
-        if layer != None:
-            if self.db == None:
-                self.initialize(False)
-
-            styleList = self.getLayerStyle(layer)
-
-            if styleList != None:
-                if self.layerLayer == None:
-                    if not self.loadLayerLayer():
-                        return None
-
-                stilId = styleList[0]
-                feat = QgsFeature()
-
-                if self.layerLayer.getFeatures(
-                        QgsFeatureRequest().setFilterFid(stilId).setFlags(
-                        QgsFeatureRequest.NoGeometry)).nextFeature(feat):
-                    self.app.ddManager.removeAction(layer, actionName = "XP_Sachdaten")
-                    doc = self.tools.getXmlLayerStyle(layer)
-
-                    if doc != None:
-                        feat[self.layerLayer.fieldNameIndex("style")] = doc.toString()
-
-                        if self.app.ddManager.showFeatureForm(
-                                self.layerLayer, feat) != 0:
-                            if self.tools.setEditable(self.layerLayer):
-                                self.layerLayer.changeAttributeValue(
-                                    stilId, self.layerLayer.fieldNameIndex("style"),
-                                    doc.toString())
-                                if not self.layerLayer.commitChanges():
-                                    XpError(u"Konnte Änderungen an " + \
-                                    self.layerLayer.name() + u"nicht speichern!",
-                                    self.iface)
-
-                    self.app.ddManager.addAction(layer, actionName = "XP_Sachdaten")
 
     def layerStyleSlot(self):
         layer = self.iface.activeLayer()
@@ -489,17 +468,12 @@ class XPlan():
             if self.db == None:
                 self.initialize(False)
 
-            ddInit = self.layerInitialize(layer)
-            aStyleList = self.getLayerStyle(layer)
+            if self.layerInitialize(layer):
+                stil = self.tools.chooseStyle(layer)
 
-            if aStyleList != None :
-                aStyle = aStyleList[1] # 0 ist die styleId
-                self.tools.styleLayer(layer,  aStyle)
+                if stil != None:
+                    self.tools.useStyle(layer, stil)
 
-            if ddInit:
-                self.app.ddManager.addAction(layer, actionName = "XP_Sachdaten")
-
-            self.iface.mapCanvas().refresh() # neuzeichnen
 
     def createGroup(self,  grpName):
         grpIdx = self.iface.legendInterface().addGroup(grpName,  False) # False = expand
@@ -572,6 +546,7 @@ class XPlan():
                 if layerRelation[2]: # Layer hat Geometrien
                     schema = layerRelation[0]
                     table = layerRelation[1]
+                    self.tools.loadStyles(self.db, layer)
 
                     if schema != "XP_Praesentationsobjekte":
                         schemaTyp = schema[:2]
@@ -1015,15 +990,7 @@ class XPlan():
                                     # layer initialisieren
                                     if self.layerInitialize(aLayer,  msg=True,  layerCheck = False):
                                         # Stil des Layers aus der DB holen und anwenden
-                                        aStyleList = self.getLayerStyle(aLayer, bereich)
-
-                                        if aStyleList != None:
-                                            aStyle = aStyleList[1]
-                                            self.layerJoinParent(aLayer)
-
-                                            if not self.tools.styleLayer(aLayer,  aStyle):
-                                                break
-
+                                        self.tools.useStyle(layer, bereichDict[bereich])
                                         self.app.ddManager.addAction(aLayer, actionName = "XP_Sachdaten")
 
                                     lIface.moveLayer(aLayer,  groupIdx)
