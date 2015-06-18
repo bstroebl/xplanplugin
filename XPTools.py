@@ -129,16 +129,17 @@ class XPTools():
         styleMan = layer.styleManager()
         stile = self.getLayerStyles(db, layer)
 
-        for key, value in stile.items():
-            bereich = value[0]
-            stil = value[1]
-            styleMan.renameStyle(bereich, bereich + "_old") # falls schon vorhanden
-            style = QgsMapLayerStyle(stil)
-            styleMan.addStyle(bereich, style)
-            styleMan.removeStyle(bereich + "_old")
+        if stile != None:
+            for key, value in stile.items():
+                bereich = value[0]
+                stil = value[1]
+                styleMan.renameStyle(bereich, bereich + "_old") # falls schon vorhanden
+                style = QgsMapLayerStyle(stil)
+                styleMan.addStyle(bereich, style)
+                styleMan.removeStyle(bereich + "_old")
 
-        if len(stile) > 0:
-            styleMan.removeStyle(u"") # den unbenannten Stil entfernen
+            if len(stile) > 0:
+                styleMan.removeStyle(u"") # den unbenannten Stil entfernen
 
     def useStyle(self, layer, bereich):
         '''
