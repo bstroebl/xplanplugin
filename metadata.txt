@@ -10,9 +10,9 @@
 
 [general]
 name=FS XPlanung
-qgisMinimumVersion=2.0
+qgisMinimumVersion=2.8
 description=Fachschale XPlanung
-version=0.1
+version=0.2.0
 
 # end of mandatory metadata
 
