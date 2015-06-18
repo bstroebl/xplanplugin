@@ -47,6 +47,7 @@ class XPlan():
         # Save reference to the QGIS interface
         self.iface = iface
         self.standardName = u"XP-Standard"
+        self.tmpAct = QtGui.QAction(self.iface.mainWindow()) # eine nicht benötigte QAction
         self.app = QgsApplication.instance()
         self.dbHandler = DbHandler(self.iface)
         self.db = None
@@ -157,7 +158,7 @@ class XPlan():
         self.soMenu.addActions([self.action24])
         self.xpDbMenu.addActions([self.action9, self.action7, self.action8])
         # Add toolbar button and menu item
-        self.tmpAct = QtGui.QAction(self.iface.mainWindow())
+
         self.iface.addPluginToVectorMenu("tmp", self.tmpAct) # sicherstellen, dass das VektorMenu da ist
         self.vectorMenu = self.iface.vectorMenu()
         self.vectorMenu.addMenu(self.xpMenu)
@@ -167,19 +168,26 @@ class XPlan():
         self.vectorMenu.addMenu(self.lpMenu)
         self.vectorMenu.addMenu(self.soMenu)
         self.iface.removePluginVectorMenu("tmp", self.tmpAct)
+        self.iface.addPluginToDatabaseMenu("tmp", self.tmpAct)
         self.databaseMenu = self.iface.databaseMenu()
         self.databaseMenu.addMenu(self.xpDbMenu)
+        self.iface.removePluginDatabaseMenu("tmp", self.tmpAct)
 
     def unload(self):
-        self.app.ddManager.quit()
-        self.iface.addPluginToVectorMenu("tmp", self.tmpAct)
-        self.vectorMenu.removeAction(self.xpMenu.menuAction())
-        self.vectorMenu.removeAction(self.bereichMenu.menuAction())
-        self.vectorMenu.removeAction(self.bpMenu.menuAction())
-        self.vectorMenu.removeAction(self.fpMenu.menuAction())
-        self.vectorMenu.removeAction(self.lpMenu.menuAction())
-        self.iface.removePluginVectorMenu("tmp", self.tmpAct)
-        self.databaseMenu.removeAction(self.xpDbMenu.menuAction())
+        try:
+            self.app.ddManager.quit()
+            self.iface.addPluginToVectorMenu("tmp", self.tmpAct)
+            self.vectorMenu.removeAction(self.xpMenu.menuAction())
+            self.vectorMenu.removeAction(self.bereichMenu.menuAction())
+            self.vectorMenu.removeAction(self.bpMenu.menuAction())
+            self.vectorMenu.removeAction(self.fpMenu.menuAction())
+            self.vectorMenu.removeAction(self.lpMenu.menuAction())
+            self.iface.removePluginVectorMenu("tmp", self.tmpAct)
+            self.iface.addPluginToDatabaseMenu("tmp", self.tmpAct)
+            self.databaseMenu.removeAction(self.xpDbMenu.menuAction())
+            self.iface.removePluginDatabaseMenu("tmp", self.tmpAct)
+        except:
+            pass
 
     def debug(self, msg):
         QgsMessageLog.logMessage("Debug" + "\n" + msg)
