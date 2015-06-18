@@ -230,8 +230,10 @@ class XPTools():
                 sourceLayer.removeJoin(joinLayer.id())
 
         joinInfo = QgsVectorJoinInfo()
-        joinInfo.targetField = sourceLayer.fieldNameIndex(targetField)
-        joinInfo.joinField = joinLayer.fieldNameIndex(joinField)
+        joinInfo.targetFieldIndex = sourceLayer.fieldNameIndex(targetField)
+        joinInfo.joinFieldIndex = joinLayer.fieldNameIndex(joinField)
+        joinInfo.joinFieldName = joinField
+        joinInfo.targetFieldName = targetField
         joinInfo.joinLayerId = joinLayer.id()
         joinInfo.memoryCache = memoryCache
 
