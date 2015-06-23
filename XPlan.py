@@ -76,10 +76,10 @@ class XPlan():
             self.ddUi = ddui.DataDrivenUi(self.iface)
 
             try:
-                self.app.ddManager
+                self.app.xpManager
             except AttributeError:
                 ddManager = ddmanager.DdManager(self.iface)
-                self.app.ddManager = ddManager
+                self.app.xpManager = ddManager
         except ImportError:
             self.unload()
             XpError(u"Bitte installieren Sie das Plugin " + \
@@ -131,6 +131,9 @@ class XPlan():
         self.action6 = QtGui.QAction(u"Layer darstellen (nach PlanZV)", self.iface.mainWindow())
         self.action6.setToolTip(u"aktiver Layer: gespeicherten Stil anwenden")
         self.action6.triggered.connect(self.layerStyleSlot)
+        self.action10 = QtGui.QAction(u"Mehrfachdateneingabe", self.iface.mainWindow())
+        self.action10.setToolTip(u"Eingabe für alle gewählten Objekte")
+        self.action10.triggered.connect(self.layerMultiEditSlot)
         self.action7 = QtGui.QAction(u"Layerstil speichern", self.iface.mainWindow())
         self.action7.setToolTip(u"aktiver Layer: Stil speichern")
         self.action7.triggered.connect(self.saveStyleSlot)
@@ -149,7 +152,7 @@ class XPlan():
         self.action24 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
         self.action24.triggered.connect(self.loadSO)
 
-        self.xpMenu.addActions([self.action20, self.action6])
+        self.xpMenu.addActions([self.action20, self.action6, self.action10])
         self.bereichMenu.addActions([self.action1, self.action3,
             self.action4, self.action5])
         self.bpMenu.addActions([self.action21])
@@ -175,7 +178,7 @@ class XPlan():
 
     def unload(self):
         try:
-            self.app.ddManager.quit()
+            self.app.xpManager.quit()
             self.iface.addPluginToVectorMenu("tmp", self.tmpAct)
             self.vectorMenu.removeAction(self.xpMenu.menuAction())
             self.vectorMenu.removeAction(self.bereichMenu.menuAction())
@@ -193,16 +196,16 @@ class XPlan():
         QgsMessageLog.logMessage("Debug" + "\n" + msg)
 
     def loadLayerLayer(self):
-        layerLayerDdTable = self.app.ddManager.createDdTable(
+        layerLayerDdTable = self.app.xpManager.createDdTable(
             self.db, "QGIS", "layer",
             withOid = False, withComment = False)
 
         if layerLayerDdTable != None:
-            self.layerLayer = self.app.ddManager.findPostgresLayer(
+            self.layerLayer = self.app.xpManager.findPostgresLayer(
                 self.db, layerLayerDdTable)
 
             if self.layerLayer == None:
-                self.layerLayer = self.app.ddManager.loadPostGISLayer(
+                self.layerLayer = self.app.xpManager.loadPostGISLayer(
                     self.db, layerLayerDdTable)
 
                 if self.layerLayer == None:
@@ -291,12 +294,12 @@ class XPlan():
                     tableName = aSel[1]
                     geomColumn = aSel[2]
                     description = aSel[3]
-                    ddTable = self.app.ddManager.createDdTable(self.db,
+                    ddTable = self.app.xpManager.createDdTable(self.db,
                         schemaName, tableName, withOid = False,
                         withComment = False)
 
                     if ddTable != None:
-                        layer = self.app.ddManager.loadPostGISLayer(self.db,
+                        layer = self.app.xpManager.loadPostGISLayer(self.db,
                             ddTable, geomColumn = geomColumn)
 
                         if layer != None:
@@ -305,8 +308,9 @@ class XPlan():
                             ddInit = self.layerInitialize(layer)
 
                             if ddInit:
-                                self.app.ddManager.addAction(layer,
-                                    actionName = "XP_Sachdaten")
+                                self.app.xpManager.addAction(layer,
+                                    actionName = "XP_Sachdaten",
+                                    ddManagerName = "xpManager")
                                 stil = self.tools.chooseStyle(layer)
 
                                 if stil != None:
@@ -357,7 +361,8 @@ class XPlan():
             if self.db == None:
                 self.initialize(False)
             self.layerInitialize(layer)
-            self.app.ddManager.addAction(layer, actionName = "XP_Sachdaten")
+            self.app.xpManager.addAction(layer, actionName = "XP_Sachdaten",
+                ddManagerName = "xpManager")
             self.iface.mapCanvas().refresh() # neuzeichnen
 
 
@@ -425,7 +430,7 @@ class XPlan():
         schemaName = relation[0]
         tableName = relation[1]
         stilId = self.getStyleId(schemaName, tableName, bereich)
-        self.app.ddManager.removeAction(layer, actionName = "XP_Sachdaten")
+        self.app.xpManager.removeAction(layer, actionName = "XP_Sachdaten")
         doc = self.tools.getXmlLayerStyle(layer)
 
         if doc != None:
@@ -441,7 +446,7 @@ class XPlan():
                         QgsFeatureRequest.NoGeometry)).nextFeature(feat):
                     feat[self.layerLayer.fieldNameIndex("style")] = doc.toString()
 
-                    if self.app.ddManager.showFeatureForm(
+                    if self.app.xpManager.showFeatureForm(
                             self.layerLayer, feat) != 0:
                         if self.tools.setEditable(self.layerLayer):
                             self.layerLayer.changeAttributeValue(
@@ -462,11 +467,20 @@ class XPlan():
 
                 if self.tools.setEditable(self.layerLayer, True, self.iface):
                     if self.layerLayer.addFeature(newFeat):
-                        self.app.ddManager.showFeatureForm(
+                        self.app.xpManager.showFeatureForm(
                             self.layerLayer, newFeat, askForSave = False)
 
-        self.app.ddManager.addAction(layer, actionName = "XP_Sachdaten")
+        self.app.xpManager.addAction(layer, actionName = "XP_Sachdaten",
+            ddManagerName = "xpManager")
 
+    def layerMultiEditSlot(self):
+        layer = self.iface.activeLayer()
+
+        if layer != None:
+            sel = layer.selectedFeatures()
+
+            if len(sel) > 0:
+                self.app.xpManager.showFeatureForm(layer, sel[0], multiEdit = True)
 
     def layerStyleSlot(self):
         layer = self.iface.activeLayer()
@@ -510,29 +524,29 @@ class XPlan():
         return retValue
 
     def layerJoinParent(self,  layer):
-        ddTable = self.app.ddManager.ddLayers[layer.id()][0]
+        ddTable = self.app.xpManager.ddLayers[layer.id()][0]
         parents = self.ddUi.getParents(ddTable,  self.db)
 
         if len(parents) > 0:
-            parentLayer = self.app.ddManager.findPostgresLayer(self.db,  parents[0])
+            parentLayer = self.app.xpManager.findPostgresLayer(self.db,  parents[0])
 
             if parentLayer == None:
-                parentLayer = self.app.ddManager.loadPostGISLayer(self.db,  parents[0])
+                parentLayer = self.app.xpManager.loadPostGISLayer(self.db,  parents[0])
 
             prefix = parents[0].tableName + "."
             self.tools.joinLayer(layer, parentLayer, prefix = prefix, memoryCache = True)
 
     def layerJoinXP_Objekt(self,  layer):
         '''den Layer XP_Objekt an den Layer joinen'''
-        xpObjektDdTable = self.app.ddManager.createDdTable(
+        xpObjektDdTable = self.app.xpManager.createDdTable(
             self.db, "XP_Basisobjekte", "XP_Objekt",
             withOid = False, withComment = False)
 
         if xpObjektDdTable != None:
-            xpObjektLayer = self.app.ddManager.findPostgresLayer(self.db, xpObjektDdTable)
+            xpObjektLayer = self.app.xpManager.findPostgresLayer(self.db, xpObjektDdTable)
 
             if xpObjektLayer == None:
-                xpObjektLayer = self.app.ddManager.loadPostGISLayer(self.db, xpObjektDdTable)
+                xpObjektLayer = self.app.xpManager.loadPostGISLayer(self.db, xpObjektDdTable)
 
             self.tools.joinLayer(layer, xpObjektLayer, memoryCache = True,
                 prefix = "XP_Objekt.")
@@ -546,10 +560,10 @@ class XPlan():
 
             if layerRelation != None: # PostgreSQL-Layer
                 try:
-                    self.app.ddManager.ddLayers[layer.id()] # bereits initialisiert
+                    self.app.xpManager.ddLayers[layer.id()] # bereits initialisiert
                     ddInit = True
                 except KeyError:
-                    ddInit = self.app.ddManager.initLayer(layer,  skip = [], createAction = False,  db = self.db)
+                    ddInit = self.app.xpManager.initLayer(layer,  skip = [], createAction = False,  db = self.db)
 
                 if layerRelation[2]: # Layer hat Geometrien
                     schema = layerRelation[0]
@@ -586,34 +600,34 @@ class XPlan():
                         if table == "FP_GemeinbedarfFlaeche" or \
                             table == "FP_GemeinbedarfLinie" or \
                             table == "FP_GemeinbedarfPunkt":
-                            zweckbestDdTable = self.app.ddManager.createDdTable(
+                            zweckbestDdTable = self.app.xpManager.createDdTable(
                                 self.db, "FP_Gemeinbedarf_Spiel_und_Sportanlagen",
                                 "FP_Gemeinbedarf_zweckbestimmung",
                                 withOid = False, withComment = False)
 
                             if zweckbestDdTable != None:
-                                zweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                zweckbestLayer = self.app.xpManager.findPostgresLayer(
                                     self.db, zweckbestDdTable)
 
                                 if zweckbestLayer == None:
-                                    zweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                    zweckbestLayer = self.app.xpManager.loadPostGISLayer(
                                         self.db, zweckbestDdTable)
 
                                 if zweckbestLayer != None:
                                     self.tools.joinLayer(layer, zweckbestLayer,
                                         prefix = "XP_ZweckbestimmungGemeinbedarf.")
 
-                            besZweckbestDdTable = self.app.ddManager.createDdTable(
+                            besZweckbestDdTable = self.app.xpManager.createDdTable(
                                 self.db, "FP_Gemeinbedarf_Spiel_und_Sportanlagen",
                                 "FP_Gemeinbedarf_besondereZweckbestimmung",
                                 withOid = False, withComment = False)
 
                             if besZweckbestDdTable != None:
-                                besZweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                besZweckbestLayer = self.app.xpManager.findPostgresLayer(
                                     self.db, besZweckbestDdTable)
 
                                 if besZweckbestLayer == None:
-                                    besZweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                    besZweckbestLayer = self.app.xpManager.loadPostGISLayer(
                                         self.db, besZweckbestDdTable)
 
                                 if besZweckbestLayer != None:
@@ -623,34 +637,34 @@ class XPlan():
                         elif table == "FP_GruenFlaeche" or \
                             table == "FP_GruenLinie" or \
                             table == "FP_GruenPunkt":
-                            zweckbestDdTable = self.app.ddManager.createDdTable(
+                            zweckbestDdTable = self.app.xpManager.createDdTable(
                                 self.db, "FP_Landwirtschaft_Wald_und_Gruen",
                                 "FP_Gruen_zweckbestimmung",
                                 withOid = False, withComment = False)
 
                             if zweckbestDdTable != None:
-                                zweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                zweckbestLayer = self.app.xpManager.findPostgresLayer(
                                     self.db, zweckbestDdTable)
 
                                 if zweckbestLayer == None:
-                                    zweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                    zweckbestLayer = self.app.xpManager.loadPostGISLayer(
                                         self.db, zweckbestDdTable)
 
                                 if zweckbestLayer != None:
                                     self.tools.joinLayer(layer, zweckbestLayer,
                                         prefix = "XP_ZweckbestimmungGruen.")
 
-                            besZweckbestDdTable = self.app.ddManager.createDdTable(
+                            besZweckbestDdTable = self.app.xpManager.createDdTable(
                                 self.db, "FP_Landwirtschaft_Wald_und_Gruen",
                                 "FP_Gruen_besondereZweckbestimmung",
                                 withOid = False, withComment = False)
 
                             if besZweckbestDdTable != None:
-                                besZweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                besZweckbestLayer = self.app.xpManager.findPostgresLayer(
                                     self.db, besZweckbestDdTable)
 
                                 if besZweckbestLayer == None:
-                                    besZweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                    besZweckbestLayer = self.app.xpManager.loadPostGISLayer(
                                         self.db, besZweckbestDdTable)
 
                                 if besZweckbestLayer != None:
@@ -659,34 +673,34 @@ class XPlan():
                         elif table == "FP_PrivilegiertesVorhabenFlaeche" or \
                             table == "FP_PrivilegiertesVorhabenLinie" or \
                             table == "FP_PrivilegiertesVorhabenPunkt":
-                            zweckbestDdTable = self.app.ddManager.createDdTable(
+                            zweckbestDdTable = self.app.xpManager.createDdTable(
                                 self.db, "FP_Sonstiges",
                                 "FP_PrivilegiertesVorhaben_zweckbestimmung",
                                 withOid = False, withComment = False)
 
                             if zweckbestDdTable != None:
-                                zweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                zweckbestLayer = self.app.xpManager.findPostgresLayer(
                                     self.db, zweckbestDdTable)
 
                                 if zweckbestLayer == None:
-                                    zweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                    zweckbestLayer = self.app.xpManager.loadPostGISLayer(
                                         self.db, zweckbestDdTable)
 
                                 if zweckbestLayer != None:
                                     self.tools.joinLayer(layer, zweckbestLayer,
                                         prefix = "FP_ZweckbestimmungPrivilegiertesVorhaben.")
 
-                            besZweckbestDdTable = self.app.ddManager.createDdTable(
+                            besZweckbestDdTable = self.app.xpManager.createDdTable(
                                 self.db, "FP_Sonstiges",
                                 "FP_PrivilegiertesVorhaben_besondereZweckbestimmung",
                                 withOid = False, withComment = False)
 
                             if besZweckbestDdTable != None:
-                                besZweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                besZweckbestLayer = self.app.xpManager.findPostgresLayer(
                                     self.db, besZweckbestDdTable)
 
                                 if besZweckbestLayer == None:
-                                    besZweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                    besZweckbestLayer = self.app.xpManager.loadPostGISLayer(
                                         self.db, besZweckbestDdTable)
 
                                 if besZweckbestLayer != None:
@@ -695,34 +709,34 @@ class XPlan():
                         elif table == "FP_VerEntsorgungFlaeche" or \
                             table == "FP_VerEntsorgungLinie" or \
                             table == "FP_VerEntsorgungPunkt":
-                            zweckbestDdTable = self.app.ddManager.createDdTable(
+                            zweckbestDdTable = self.app.xpManager.createDdTable(
                                 self.db, "FP_Ver_und_Entsorgung",
                                 "FP_VerEntsorgung_zweckbestimmung",
                                 withOid = False, withComment = False)
 
                             if zweckbestDdTable != None:
-                                zweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                zweckbestLayer = self.app.xpManager.findPostgresLayer(
                                     self.db, zweckbestDdTable)
 
                                 if zweckbestLayer == None:
-                                    zweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                    zweckbestLayer = self.app.xpManager.loadPostGISLayer(
                                         self.db, zweckbestDdTable)
 
                                 if zweckbestLayer != None:
                                     self.tools.joinLayer(layer, zweckbestLayer,
                                         prefix = "FP_ZweckbestimmungVerEntsorgung.")
 
-                            besZweckbestDdTable = self.app.ddManager.createDdTable(
+                            besZweckbestDdTable = self.app.xpManager.createDdTable(
                                 self.db, "FP_Ver_und_Entsorgung",
                                 "FP_VerEntsorgung_besondereZweckbestimmung",
                                 withOid = False, withComment = False)
 
                             if besZweckbestDdTable != None:
-                                besZweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                besZweckbestLayer = self.app.xpManager.findPostgresLayer(
                                     self.db, besZweckbestDdTable)
 
                                 if besZweckbestLayer == None:
-                                    besZweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                    besZweckbestLayer = self.app.xpManager.loadPostGISLayer(
                                         self.db, besZweckbestDdTable)
 
                                 if besZweckbestLayer != None:
@@ -731,17 +745,17 @@ class XPlan():
                         elif table == "FP_SpielSportanlageFlaeche" or \
                             table == "FP_SpielSportanlageLinie" or \
                             table == "FP_SpielSportanlagePunkt":
-                            zweckbestDdTable = self.app.ddManager.createDdTable(
+                            zweckbestDdTable = self.app.xpManager.createDdTable(
                                 self.db, "FP_Gemeinbedarf_Spiel_und_Sportanlagen",
                                 "FP_SpielSportanlage_zweckbestimmung",
                                 withOid = False, withComment = False)
 
                             if zweckbestDdTable != None:
-                                zweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                zweckbestLayer = self.app.xpManager.findPostgresLayer(
                                     self.db, zweckbestDdTable)
 
                                 if zweckbestLayer == None:
-                                    zweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                    zweckbestLayer = self.app.xpManager.loadPostGISLayer(
                                         self.db, zweckbestDdTable)
 
                                 if zweckbestLayer != None:
@@ -750,34 +764,34 @@ class XPlan():
                         elif table == "FP_KennzeichnungFlaeche" or \
                             table == "FP_KennzeichnungLinie" or \
                             table == "FP_KennzeichnungPunkt":
-                            zweckbestDdTable = self.app.ddManager.createDdTable(
+                            zweckbestDdTable = self.app.xpManager.createDdTable(
                                 self.db, "FP_Sonstiges",
                                 "FP_Kennzeichnung_zweckbestimmung",
                                 withOid = False, withComment = False)
 
                             if zweckbestDdTable != None:
-                                zweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                zweckbestLayer = self.app.xpManager.findPostgresLayer(
                                     self.db, zweckbestDdTable)
 
                                 if zweckbestLayer == None:
-                                    zweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                    zweckbestLayer = self.app.xpManager.loadPostGISLayer(
                                         self.db, zweckbestDdTable)
 
                                 if zweckbestLayer != None:
                                     self.tools.joinLayer(layer, zweckbestLayer,
                                         prefix = "XP_ZweckbestimmungKennzeichnung.")
                         elif table == "FP_WaldFlaeche":
-                            zweckbestDdTable = self.app.ddManager.createDdTable(
+                            zweckbestDdTable = self.app.xpManager.createDdTable(
                                 self.db, "FP_Landwirtschaft_Wald_und_Gruen",
                                 "FP_WaldFlaeche_zweckbestimmung",
                                 withOid = False, withComment = False)
 
                             if zweckbestDdTable != None:
-                                zweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                zweckbestLayer = self.app.xpManager.findPostgresLayer(
                                     self.db, zweckbestDdTable)
 
                                 if zweckbestLayer == None:
-                                    zweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                    zweckbestLayer = self.app.xpManager.loadPostGISLayer(
                                         self.db, zweckbestDdTable)
 
                                 if zweckbestLayer != None:
@@ -786,17 +800,17 @@ class XPlan():
                         elif table == "FP_GenerischesObjektFlaeche" or \
                             table == "FP_GenerischesObjektLinie" or \
                             table == "FP_GenerischesObjektPunkt":
-                            zweckbestDdTable = self.app.ddManager.createDdTable(
+                            zweckbestDdTable = self.app.xpManager.createDdTable(
                                 self.db, "FP_Sonstiges",
                                 "FP_GenerischesObjekt_zweckbestimmung",
                                 withOid = False, withComment = False)
 
                             if zweckbestDdTable != None:
-                                zweckbestLayer = self.app.ddManager.findPostgresLayer(
+                                zweckbestLayer = self.app.xpManager.findPostgresLayer(
                                     self.db, zweckbestDdTable)
 
                                 if zweckbestLayer == None:
-                                    zweckbestLayer = self.app.ddManager.loadPostGISLayer(
+                                    zweckbestLayer = self.app.xpManager.loadPostGISLayer(
                                         self.db, zweckbestDdTable)
 
                                 if zweckbestLayer != None:
@@ -881,16 +895,16 @@ class XPlan():
                 # reicht es, den Typ des ersten Bereiches festzustellen
                 gehoertZuSchema = bereichTyp + "_Basisobjekte"
                 gehoertZuTable = "gehoertZu" + bereichTyp + "_Bereich"
-                gehoertZuDdTable = self.app.ddManager.createDdTable(
+                gehoertZuDdTable = self.app.xpManager.createDdTable(
                     self.db, gehoertZuSchema, gehoertZuTable,
                     withOid = False,  withComment = False)
 
                 if gehoertZuDdTable != None:
-                    gehoertZuLayer = self.app.ddManager.findPostgresLayer(
+                    gehoertZuLayer = self.app.xpManager.findPostgresLayer(
                         self.db, gehoertZuDdTable)
 
                     if gehoertZuLayer == None:
-                        gehoertZuLayer = self.app.ddManager.loadPostGISLayer(
+                        gehoertZuLayer = self.app.xpManager.loadPostGISLayer(
                             self.db, gehoertZuDdTable)
 
                         if gehoertZuLayer == None:
@@ -987,11 +1001,11 @@ class XPlan():
                     for aLayerType in layers:
                         for aKey in aLayerType.iterkeys():
                             for aRelName in aLayerType[aKey]:
-                                aDdTable = self.app.ddManager.createDdTable(self.db,
+                                aDdTable = self.app.xpManager.createDdTable(self.db,
                                     aKey, aRelName, withOid = False, withComment = False)
 
                                 if aDdTable != None:
-                                    aLayer = self.app.ddManager.loadPostGISLayer(self.db,
+                                    aLayer = self.app.xpManager.loadPostGISLayer(self.db,
                                         aDdTable, geomColumn = 'position',
                                         whereClause = filter)
 
@@ -999,7 +1013,8 @@ class XPlan():
                                     if self.layerInitialize(aLayer,  msg=True,  layerCheck = False):
                                         # Stil des Layers aus der DB holen und anwenden
                                         self.tools.useStyle(layer, bereichDict[bereich])
-                                        self.app.ddManager.addAction(aLayer, actionName = "XP_Sachdaten")
+                                        self.app.xpManager.addAction(aLayer, actionName = "XP_Sachdaten",
+                                            ddManagerName = "xpManager")
 
                                     lIface.moveLayer(aLayer,  groupIdx)
                                     lIface.setLayerVisible(aLayer,  True)
