@@ -56,7 +56,7 @@ class XPlan():
         self.addedGeometries = {}
         self.layerLayer = None
         # Liste der implementierten Fachschemata
-        self.implementedSchemas = ["FP"]
+        self.implementedSchemas = []
 
         #importiere DataDrivenInputMask
         pluginDir = QtCore.QFileInfo(QgsApplication.qgisUserDbFilePath()).path() + "/python/plugins/"
@@ -268,6 +268,22 @@ class XPlan():
         self.db = self.dbHandler.dbConnect()
 
         if self.db != None:
+            # implementedSchemas feststellen
+            query = QtSql.QSqlQuery(self.db)
+            query.prepare("SELECT substr(nspname,0,3) \
+                        FROM pg_namespace \
+                        WHERE nspname ILIKE \'%Basisobjekte%\' \
+                        ORDER BY nspname;")
+            query.exec_()
+
+            if query.isActive():
+                while query.next():
+                    self.implementedSchemas.append(query.value(0))
+
+                query.finish()
+            else:
+                self.showQueryError(query)
+
             if not self.tools.isXpDb(self.db):
                 XpError(u"Die konfigurierte Datenbank ist keine XPlan-Datenbank. Bitte " +\
                 u"konfigurieren Sie eine solche und initialisieren " +\
@@ -615,6 +631,7 @@ class XPlan():
 
                                 if zweckbestLayer != None:
                                     self.tools.joinLayer(layer, zweckbestLayer,
+                                        joinField = "FP_Gemeinbedarf_gid",
                                         prefix = "XP_ZweckbestimmungGemeinbedarf.")
 
                             besZweckbestDdTable = self.app.xpManager.createDdTable(
@@ -632,6 +649,7 @@ class XPlan():
 
                                 if besZweckbestLayer != None:
                                     self.tools.joinLayer(layer, besZweckbestLayer,
+                                        joinField = "FP_Gemeinbedarf_gid",
                                         prefix = "XP_BesondereZweckbestGemeinbedarf.")
 
                         elif table == "FP_GruenFlaeche" or \
@@ -652,6 +670,7 @@ class XPlan():
 
                                 if zweckbestLayer != None:
                                     self.tools.joinLayer(layer, zweckbestLayer,
+                                        joinField = "FP_Gruen_gid",
                                         prefix = "XP_ZweckbestimmungGruen.")
 
                             besZweckbestDdTable = self.app.xpManager.createDdTable(
@@ -669,6 +688,7 @@ class XPlan():
 
                                 if besZweckbestLayer != None:
                                     self.tools.joinLayer(layer, besZweckbestLayer,
+                                        joinField = "FP_Gruen_gid",
                                         prefix = "XP_BesondereZweckbestGruen.")
                         elif table == "FP_PrivilegiertesVorhabenFlaeche" or \
                             table == "FP_PrivilegiertesVorhabenLinie" or \
@@ -688,6 +708,7 @@ class XPlan():
 
                                 if zweckbestLayer != None:
                                     self.tools.joinLayer(layer, zweckbestLayer,
+                                        joinField = "FP_PrivilegiertesVorhaben_gid",
                                         prefix = "FP_ZweckbestimmungPrivilegiertesVorhaben.")
 
                             besZweckbestDdTable = self.app.xpManager.createDdTable(
@@ -705,6 +726,7 @@ class XPlan():
 
                                 if besZweckbestLayer != None:
                                     self.tools.joinLayer(layer, besZweckbestLayer,
+                                        joinField = "FP_PrivilegiertesVorhaben_gid",
                                         prefix = "FP_BesondZweckbestPrivilegiertesVorhaben.")
                         elif table == "FP_VerEntsorgungFlaeche" or \
                             table == "FP_VerEntsorgungLinie" or \
@@ -724,6 +746,7 @@ class XPlan():
 
                                 if zweckbestLayer != None:
                                     self.tools.joinLayer(layer, zweckbestLayer,
+                                        joinField = "FP_VerEntsorgung_gid",
                                         prefix = "FP_ZweckbestimmungVerEntsorgung.")
 
                             besZweckbestDdTable = self.app.xpManager.createDdTable(
@@ -741,6 +764,7 @@ class XPlan():
 
                                 if besZweckbestLayer != None:
                                     self.tools.joinLayer(layer, besZweckbestLayer,
+                                        joinField = "FP_VerEntsorgung_gid",
                                         prefix = "FP_BesondZweckbestVerEntsorgung.")
                         elif table == "FP_SpielSportanlageFlaeche" or \
                             table == "FP_SpielSportanlageLinie" or \
@@ -760,6 +784,7 @@ class XPlan():
 
                                 if zweckbestLayer != None:
                                     self.tools.joinLayer(layer, zweckbestLayer,
+                                        joinField = "FP_SpielSportanlage_gid",
                                         prefix = "XP_ZweckbestimmungSpielSportanlage.")
                         elif table == "FP_KennzeichnungFlaeche" or \
                             table == "FP_KennzeichnungLinie" or \
@@ -779,6 +804,7 @@ class XPlan():
 
                                 if zweckbestLayer != None:
                                     self.tools.joinLayer(layer, zweckbestLayer,
+                                        joinField = "FP_Kennzeichnung_gid",
                                         prefix = "XP_ZweckbestimmungKennzeichnung.")
                         elif table == "FP_WaldFlaeche":
                             zweckbestDdTable = self.app.xpManager.createDdTable(
@@ -796,6 +822,7 @@ class XPlan():
 
                                 if zweckbestLayer != None:
                                     self.tools.joinLayer(layer, zweckbestLayer,
+                                        joinField = "FP_WaldFlaeche_gid",
                                         prefix = "XP_ZweckbestimmungWald.")
                         elif table == "FP_GenerischesObjektFlaeche" or \
                             table == "FP_GenerischesObjektLinie" or \
@@ -815,6 +842,7 @@ class XPlan():
 
                                 if zweckbestLayer != None:
                                     self.tools.joinLayer(layer, zweckbestLayer,
+                                        joinField = "FP_GenerischesObjekt_gid",
                                         prefix = "FP_ZweckbestimmungGenerischeObjekte.")
             else:
                 if msg:
@@ -995,7 +1023,9 @@ class XPlan():
                     # Layer in die Gruppe laden und features entsprechend einschränken
                     bereichTyp = self.tools.getBereichTyp(self.db,  bereich)
                     filter = "gid IN (SELECT \"" + bereichTyp + "_Objekt_gid\" " + \
-                        "FROM \""+ bereichTyp + "_Basisobjekte\".\"gehoertZu" + bereichTyp + "_Bereich\" " + \
+                        "FROM \""+ bereichTyp + "_Basisobjekte\".\"" + \
+                        bereichTyp + "_Objekt_gehoertZu" + bereichTyp + "_Bereich\" " + \
+                        bereichTyp + "_Objekt_gehoertZu" + bereichTyp + "_Bereich\" " + \
                         "WHERE \"" + bereichTyp + "_Bereich_gid\" = " + str(bereich) + ")"
 
                     for aLayerType in layers:
