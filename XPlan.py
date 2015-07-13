@@ -57,6 +57,7 @@ class XPlan():
         self.layerLayer = None
         # Liste der implementierten Fachschemata
         self.implementedSchemas = []
+        self.willAktivenBereich = True # Nutzer möchte aktive Bereiche festlegen
 
         #importiere DataDrivenInputMask
         pluginDir = QtCore.QFileInfo(QgsApplication.qgisUserDbFilePath()).path() + "/python/plugins/"
@@ -120,6 +121,10 @@ class XPlan():
         self.action3.setToolTip(u"Elemente von Layern können automatisch oder händisch den aktiven " +\
             u"Bereichen zugewiesen werden. Damit werden sie zum originären Inhalt des Planbereichs.")
         self.action3.triggered.connect(self.aktiveBereicheFestlegen)
+        self.action3a = QtGui.QAction(u"Aktive Bereiche löschen", self.iface.mainWindow())
+        self.action3a.setToolTip(u"Elemente von Layern können automatisch oder händisch den aktiven " +\
+            u"Bereichen zugewiesen werden. Damit werden sie zum originären Inhalt des Planbereichs.")
+        self.action3a.triggered.connect(self.aktiveBereicheLoeschen)
         self.action4 = QtGui.QAction(u"Auswahl den aktiven Bereichen zuordnen", self.iface.mainWindow())
         self.action4.setToolTip(u"aktiver Layer: ausgewählte Elemente den aktiven Bereichen zuweisen. " +\
                                 u"Damit werden sie zum originären Inhalt des Planbereichs.")
@@ -153,7 +158,7 @@ class XPlan():
         self.action24.triggered.connect(self.loadSO)
 
         self.xpMenu.addActions([self.action20, self.action6, self.action10])
-        self.bereichMenu.addActions([self.action1, self.action3,
+        self.bereichMenu.addActions([self.action1, self.action3, self.action3a,
             self.action4, self.action5])
         self.bpMenu.addActions([self.action21])
         self.fpMenu.addActions([self.action22])
@@ -321,7 +326,8 @@ class XPlan():
                         if layer != None:
                             layer.setTitle(tableName)
                             layer.setAbstract(description)
-                            ddInit = self.layerInitialize(layer)
+                            ddInit = self.layerInitialize(layer,
+                                layerCheck = self.willAktivenBereich)
 
                             if ddInit:
                                 self.app.xpManager.addAction(layer,
@@ -367,8 +373,14 @@ class XPlan():
                     bereichsAuswahl[-1] #Abbruch; bisherigen aktive Bereiche bleiben aktiv
                 except KeyError:
                     self.aktiveBereiche = bereichsAuswahl
+
+                self.willAktivenBereich = True
             else:
                 self.aktiveBereiche = bereichsAuswahl # keine Auswahl => keine aktiven Bereiche
+
+    def aktiveBereicheLoeschen(self):
+        self.aktiveBereiche = []
+        self.willAktivenBereich = True
 
     def layerInitializeSlot(self):
         layer = self.iface.activeLayer()
@@ -868,7 +880,7 @@ class XPlan():
                     schemaTyp = schema[:2] # z.B. FP, LP
 
                     while(True):
-                        if len(self.aktiveBereiche) == 0:
+                        if len(self.aktiveBereiche) == 0 and self.willAktivenBereich:
                             thisChoice = QtGui.QMessageBox.question(None, "Keine aktiven Bereiche",
                             u"Wollen Sie aktive Bereiche festlegen? ",
                             QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
@@ -876,6 +888,7 @@ class XPlan():
                             if thisChoice == QtGui.QMessageBox.Yes:
                                 self.aktiveBereicheFestlegen()
                             else:
+                                self.willAktivenBereich = False
                                 break
 
                         if len(self.aktiveBereiche) > 0:
@@ -891,8 +904,8 @@ class XPlan():
                             else:
                                 thisChoice = QtGui.QMessageBox.question(None, "Falscher Objektbereich",
                                     u"Die momentan aktiven Bereiche und der Layer stammen aus unterschiedlichen " + \
-                                    "Objektbereichen: aktive Bereiche = " + bereichTyp + ", " + layer.name() + " = " + \
-                                    schemaTyp + ". Wollen Sie die aktiven Bereiche ändern? ",
+                                    u"Objektbereichen: aktive Bereiche = " + bereichTyp + ", " + layer.name() + " = " + \
+                                    schemaTyp + u". Wollen Sie die aktiven Bereiche ändern? ",
                                     QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
 
                                 if thisChoice == QtGui.QMessageBox.Yes:
