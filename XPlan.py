@@ -1023,6 +1023,13 @@ class XPlan():
                     # rausbekommen, welche Layer Elemente im Bereich haben
                     layers = self.tools.getLayerInBereich(self.db,  bereich)
                     #rausbekommen, welche Layer nachrichtlich Elemente im Bereich haben?
+
+                    if len(layers) == 0:
+                        self.iface.messageBar().pushMessage(
+                            "XPlanung", u"In diesem Bereich sind keine Objekte vorhanden!",
+                            level=QgsMessageBar.WARNING, duration = 10)
+                        return None
+
                     # eine Gruppe für den Bereich machen
                     lIface = self.iface.legendInterface()
                     lIface.addGroup(bereichDict[bereich],  False)

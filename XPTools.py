@@ -285,6 +285,9 @@ class XPTools():
             query.exec_()
 
             if query.isActive():
+                if query.size() == 0:
+                    return []
+
                 punktLayer = {}
                 linienLayer = {}
                 flaechenLayer = {}
@@ -315,10 +318,12 @@ class XPTools():
 
                 query.finish()
                 return [punktLayer,  linienLayer,  flaechenLayer]
+            else:
+                self.showQueryError(query)
+                query.finish()
+                return []
         else:
-            self.showQueryError(query)
-            query.finish()
-            return None
+            return []
 
     def styleLayerDeprecated(self,  layer,  xmlStyle):
         '''wende den übergebenen Stil auf den übergebenen Layer an'''
