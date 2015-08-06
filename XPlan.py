@@ -913,7 +913,7 @@ class XPlan():
                         elif table == "BP_GemeinbedarfsFlaeche":
                             zweckbestDdTable = self.app.xpManager.createDdTable(
                                 self.db, "BP_Gemeinbedarf_Spiel_und_Sportanlagen",
-                                "FP_GemeinbedarfsFlaeche_zweckbestimmung",
+                                "BP_GemeinbedarfsFlaeche_zweckbestimmung",
                                 withOid = False, withComment = False)
 
                             if zweckbestDdTable != None:
@@ -946,10 +946,10 @@ class XPlan():
                                     self.tools.joinLayer(layer, besZweckbestLayer,
                                         joinField = "BP_GemeinbedarfsFlaeche_gid",
                                         prefix = "XP_BesondereZweckbestGemeinbedarf.")
-                        elif table == "BP_SpielSportanlageFlaeche":
+                        elif table == "BP_SpielSportanlagenFlaeche":
                             zweckbestDdTable = self.app.xpManager.createDdTable(
                                 self.db, "BP_Gemeinbedarf_Spiel_und_Sportanlagen",
-                                "BP_SpielSportanlageFlaeche_zweckbestimmung",
+                                "BP_SpielSportanlagenFlaeche_zweckbestimmung",
                                 withOid = False, withComment = False)
 
                             if zweckbestDdTable != None:
@@ -962,11 +962,11 @@ class XPlan():
 
                                 if zweckbestLayer != None:
                                     self.tools.joinLayer(layer, zweckbestLayer,
-                                        joinField = "BP_SpielSportanlageFlaeche_gid",
+                                        joinField = "BP_SpielSportanlagenFlaeche_gid",
                                         prefix = "XP_ZweckbestimmungSpielSportanlage.")
                         elif table == "BP_KennzeichnungsFlaeche":
                             zweckbestDdTable = self.app.xpManager.createDdTable(
-                                self.db, "FP_Sonstiges",
+                                self.db, "BP_Sonstiges",
                                 "BP_KennzeichnungsFlaeche_zweckbestimmung",
                                 withOid = False, withComment = False)
 
