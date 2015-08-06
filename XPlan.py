@@ -759,7 +759,7 @@ class XPlan():
                                 if zweckbestLayer != None:
                                     self.tools.joinLayer(layer, zweckbestLayer,
                                         joinField = "FP_VerEntsorgung_gid",
-                                        prefix = "FP_ZweckbestimmungVerEntsorgung.")
+                                        prefix = "XP_ZweckbestimmungVerEntsorgung.")
 
                             besZweckbestDdTable = self.app.xpManager.createDdTable(
                                 self.db, "FP_Ver_und_Entsorgung",
@@ -777,7 +777,7 @@ class XPlan():
                                 if besZweckbestLayer != None:
                                     self.tools.joinLayer(layer, besZweckbestLayer,
                                         joinField = "FP_VerEntsorgung_gid",
-                                        prefix = "FP_BesondZweckbestVerEntsorgung.")
+                                        prefix = "XP_BesondZweckbestVerEntsorgung.")
                         elif table == "FP_SpielSportanlageFlaeche" or \
                             table == "FP_SpielSportanlageLinie" or \
                             table == "FP_SpielSportanlagePunkt":
@@ -856,6 +856,169 @@ class XPlan():
                                     self.tools.joinLayer(layer, zweckbestLayer,
                                         joinField = "FP_GenerischesObjekt_gid",
                                         prefix = "FP_ZweckbestimmungGenerischeObjekte.")
+                        elif table == "BP_GruenFlaeche":
+                            zweckbestDdTable = self.app.xpManager.createDdTable(
+                                self.db, "BP_Landwirtschaft_Wald_und_Gruen",
+                                "BP_GruenFlaeche_zweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if zweckbestDdTable != None:
+                                zweckbestLayer = self.app.xpManager.findPostgresLayer(
+                                    self.db, zweckbestDdTable)
+
+                                if zweckbestLayer == None:
+                                    zweckbestLayer = self.app.xpManager.loadPostGISLayer(
+                                        self.db, zweckbestDdTable)
+
+                                if zweckbestLayer != None:
+                                    self.tools.joinLayer(layer, zweckbestLayer,
+                                        joinField = "BP_GruenFlaeche_gid",
+                                        prefix = "XP_ZweckbestimmungGruen.")
+
+                            besZweckbestDdTable = self.app.xpManager.createDdTable(
+                                self.db, "BP_Landwirtschaft_Wald_und_Gruen",
+                                "BP_GruenFlaeche_besondereZweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if besZweckbestDdTable != None:
+                                besZweckbestLayer = self.app.xpManager.findPostgresLayer(
+                                    self.db, besZweckbestDdTable)
+
+                                if besZweckbestLayer == None:
+                                    besZweckbestLayer = self.app.xpManager.loadPostGISLayer(
+                                        self.db, besZweckbestDdTable)
+
+                                if besZweckbestLayer != None:
+                                    self.tools.joinLayer(layer, besZweckbestLayer,
+                                        joinField = "BP_Gruen_gid",
+                                        prefix = "XP_BesondereZweckbestGruen.")
+                        elif table == "BP_WaldFlaeche":
+                            zweckbestDdTable = self.app.xpManager.createDdTable(
+                                self.db, "BP_Landwirtschaft_Wald_und_Gruen",
+                                "BP_WaldFlaeche_zweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if zweckbestDdTable != None:
+                                zweckbestLayer = self.app.xpManager.findPostgresLayer(
+                                    self.db, zweckbestDdTable)
+
+                                if zweckbestLayer == None:
+                                    zweckbestLayer = self.app.xpManager.loadPostGISLayer(
+                                        self.db, zweckbestDdTable)
+
+                                if zweckbestLayer != None:
+                                    self.tools.joinLayer(layer, zweckbestLayer,
+                                        joinField = "BP_WaldFlaeche_gid",
+                                        prefix = "XP_ZweckbestimmungWald.")
+                        elif table == "BP_GemeinbedarfsFlaeche":
+                            zweckbestDdTable = self.app.xpManager.createDdTable(
+                                self.db, "BP_Gemeinbedarf_Spiel_und_Sportanlagen",
+                                "FP_GemeinbedarfsFlaeche_zweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if zweckbestDdTable != None:
+                                zweckbestLayer = self.app.xpManager.findPostgresLayer(
+                                    self.db, zweckbestDdTable)
+
+                                if zweckbestLayer == None:
+                                    zweckbestLayer = self.app.xpManager.loadPostGISLayer(
+                                        self.db, zweckbestDdTable)
+
+                                if zweckbestLayer != None:
+                                    self.tools.joinLayer(layer, zweckbestLayer,
+                                        joinField = "BP_GemeinbedarfsFlaeche_gid",
+                                        prefix = "XP_ZweckbestimmungGemeinbedarf.")
+
+                            besZweckbestDdTable = self.app.xpManager.createDdTable(
+                                self.db, "BP_Gemeinbedarf_Spiel_und_Sportanlagen",
+                                "BP_GemeinbedarfsFlaeche_besondereZweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if besZweckbestDdTable != None:
+                                besZweckbestLayer = self.app.xpManager.findPostgresLayer(
+                                    self.db, besZweckbestDdTable)
+
+                                if besZweckbestLayer == None:
+                                    besZweckbestLayer = self.app.xpManager.loadPostGISLayer(
+                                        self.db, besZweckbestDdTable)
+
+                                if besZweckbestLayer != None:
+                                    self.tools.joinLayer(layer, besZweckbestLayer,
+                                        joinField = "BP_GemeinbedarfsFlaeche_gid",
+                                        prefix = "XP_BesondereZweckbestGemeinbedarf.")
+                        elif table == "BP_SpielSportanlageFlaeche":
+                            zweckbestDdTable = self.app.xpManager.createDdTable(
+                                self.db, "BP_Gemeinbedarf_Spiel_und_Sportanlagen",
+                                "BP_SpielSportanlageFlaeche_zweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if zweckbestDdTable != None:
+                                zweckbestLayer = self.app.xpManager.findPostgresLayer(
+                                    self.db, zweckbestDdTable)
+
+                                if zweckbestLayer == None:
+                                    zweckbestLayer = self.app.xpManager.loadPostGISLayer(
+                                        self.db, zweckbestDdTable)
+
+                                if zweckbestLayer != None:
+                                    self.tools.joinLayer(layer, zweckbestLayer,
+                                        joinField = "BP_SpielSportanlageFlaeche_gid",
+                                        prefix = "XP_ZweckbestimmungSpielSportanlage.")
+                        elif table == "BP_KennzeichnungsFlaeche":
+                            zweckbestDdTable = self.app.xpManager.createDdTable(
+                                self.db, "FP_Sonstiges",
+                                "BP_KennzeichnungsFlaeche_zweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if zweckbestDdTable != None:
+                                zweckbestLayer = self.app.xpManager.findPostgresLayer(
+                                    self.db, zweckbestDdTable)
+
+                                if zweckbestLayer == None:
+                                    zweckbestLayer = self.app.xpManager.loadPostGISLayer(
+                                        self.db, zweckbestDdTable)
+
+                                if zweckbestLayer != None:
+                                    self.tools.joinLayer(layer, zweckbestLayer,
+                                        joinField = "BP_KennzeichnungsFlaeche_gid",
+                                        prefix = "XP_ZweckbestimmungKennzeichnung.")
+                        elif table == "BP_VerEntsorgungFlaeche" or \
+                            table == "BP_VerEntsorgungPunkt":
+                            zweckbestDdTable = self.app.xpManager.createDdTable(
+                                self.db, "BP_Ver_und_Entsorgung",
+                                "BP_VerEntsorgung_zweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if zweckbestDdTable != None:
+                                zweckbestLayer = self.app.xpManager.findPostgresLayer(
+                                    self.db, zweckbestDdTable)
+
+                                if zweckbestLayer == None:
+                                    zweckbestLayer = self.app.xpManager.loadPostGISLayer(
+                                        self.db, zweckbestDdTable)
+
+                                if zweckbestLayer != None:
+                                    self.tools.joinLayer(layer, zweckbestLayer,
+                                        joinField = "BP_VerEntsorgung_gid",
+                                        prefix = "XP_ZweckbestimmungVerEntsorgung.")
+
+                            besZweckbestDdTable = self.app.xpManager.createDdTable(
+                                self.db, "BP_Ver_und_Entsorgung",
+                                "BP_VerEntsorgung_besondereZweckbestimmung",
+                                withOid = False, withComment = False)
+
+                            if besZweckbestDdTable != None:
+                                besZweckbestLayer = self.app.xpManager.findPostgresLayer(
+                                    self.db, besZweckbestDdTable)
+
+                                if besZweckbestLayer == None:
+                                    besZweckbestLayer = self.app.xpManager.loadPostGISLayer(
+                                        self.db, besZweckbestDdTable)
+
+                                if besZweckbestLayer != None:
+                                    self.tools.joinLayer(layer, besZweckbestLayer,
+                                        joinField = "BP_VerEntsorgung_gid",
+                                        prefix = "XP_BesondZweckbestVerEntsorgung.")
             else:
                 if msg:
                     XpError("Der Layer " + layer.name() + " ist kein PostgreSQL-Layer!",
