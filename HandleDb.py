@@ -44,7 +44,7 @@ class DbHandler():
             passwd = thisPassword
 
         # connect to DB
-        db = QtSql.QSqlDatabase.addDatabase ("QPSQL")
+        db = QtSql.QSqlDatabase.addDatabase ("QPSQL", "XPlanung")
         db.setHostName(host)
         db.setPort(int(port))
         db.setDatabaseName(database)
