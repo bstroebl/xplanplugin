@@ -23,6 +23,7 @@ email                : bernhard.stroebl@jena.de
 from PyQt4 import QtCore, QtGui, QtSql
 from qgis.core import *
 from qgis.gui import *
+from DataDrivenInputMask.ddattribute import DdTable
 import sys
 from HandleDb import DbHandler
 from XPTools import XPTools
@@ -319,13 +320,19 @@ class XPlan():
                         schemaName, tableName, withOid = False,
                         withComment = False)
 
-                    if ddTable != None:
-                        layer = self.app.xpManager.loadPostGISLayer(self.db,
-                            ddTable, geomColumn = geomColumn)
+                    isView = ddTable == None
 
-                        if layer != None:
-                            layer.setTitle(tableName)
-                            layer.setAbstract(description)
+                    if isView:
+                        ddTable = DdTable(schemaName = schemaName, tableName = tableName)
+
+                    layer = self.app.xpManager.loadPostGISLayer(self.db,
+                        ddTable, geomColumn = geomColumn, keyColumn = "gid")
+
+                    if layer != None:
+                        layer.setTitle(tableName)
+                        layer.setAbstract(description)
+
+                        if not isView:
                             ddInit = self.layerInitialize(layer,
                                 layerCheck = self.willAktivenBereich)
 
@@ -333,17 +340,17 @@ class XPlan():
                                 self.app.xpManager.addAction(layer,
                                     actionName = "XP_Sachdaten",
                                     ddManagerName = "xpManager")
-                                stil = self.tools.chooseStyle(layer)
+                        stil = self.tools.chooseStyle(layer)
 
-                                if stil != None:
-                                    self.tools.useStyle(layer, stil)
+                        if stil != None:
+                            self.tools.useStyle(layer, stil)
 
-                            grpIdx = self.getGroupIndex(schemaName)
+                        grpIdx = self.getGroupIndex(schemaName)
 
-                            if grpIdx == -1:
-                                grpIdx = self.createGroup(schemaName)
+                        if grpIdx == -1:
+                            grpIdx = self.createGroup(schemaName)
 
-                            self.iface.legendInterface().moveLayer(layer, grpIdx)
+                        self.iface.legendInterface().moveLayer(layer, grpIdx)
 
     def loadXP(self):
         self.loadObjektart("XP")
