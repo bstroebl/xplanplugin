@@ -36,7 +36,7 @@ class XpError(object):
         self.value = value
 
         if iface == None:
-            QtGui.QMessageBox.warning(None, "XPlanung", value)
+            QtGui.QMessageBox.warning(None, "XPlanung", value, duration = 10)
         else:
             iface.messageBar().pushMessage("XPlanung", value,
                 level=QgsMessageBar.CRITICAL)
@@ -157,8 +157,11 @@ class XPlan():
         self.action23.triggered.connect(self.loadLP)
         self.action24 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
         self.action24.triggered.connect(self.loadSO)
+        self.action25 = QtGui.QAction(u"ExterneReferenz anlegen", self.iface.mainWindow())
+        self.action25.triggered.connect(self.createExterneReferenz)
 
-        self.xpMenu.addActions([self.action20, self.action6, self.action10])
+        self.xpMenu.addActions([self.action20, self.action25,
+            self.action6, self.action10])
         self.bereichMenu.addActions([self.action1, self.action3, self.action3a,
             self.action4, self.action5])
         self.bpMenu.addActions([self.action21])
@@ -259,6 +262,42 @@ class XPlan():
             return None
 
     #Slots
+    def createExterneReferenz(self):
+        if self.db == None:
+            self.initialize(False)
+
+        if self.db != None:
+            extRefDdTable = self.app.xpManager.createDdTable(
+                self.db, "XP_Basisobjekte", "XP_ExterneReferenz",
+                withOid = False, withComment = False)
+
+            if extRefDdTable != None:
+                self.debug("extRefDdTable")
+                extRefLayer = self.app.xpManager.findPostgresLayer(
+                    self.db, extRefDdTable)
+
+                if extRefLayer == None:
+                    extRefLayer = self.app.xpManager.loadPostGISLayer(
+                        self.db, extRefDdTable)
+
+                    if extRefLayer == None:
+                        XpError(u"Kann Tabelle XP_Basisobjekte.XP_ExterneReferenz nicht laden!",
+                            self.iface)
+                        return None
+
+                newFeat = self.tools.createFeature(extRefLayer)
+
+                if self.tools.setEditable(extRefLayer, True, self.iface):
+                    if extRefLayer.addFeature(newFeat):
+                        self.app.xpManager.showFeatureForm(
+                            extRefLayer, newFeat, askForSave = False)
+                    else:
+                        XpError(u"Kann in Tabelle XP_Basisobjekte.XP_ExterneReferenz \
+                            kein Feature einfügen!", self.iface)
+            else:
+                XpError(u"Kann DdTable XP_Basisobjekte.XP_ExterneReferenz nicht erzeugen!",
+                    self.iface)
+
     def onLayerLayerDeleted(self):
         self.layerLayer = None
 
