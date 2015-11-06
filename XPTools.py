@@ -221,11 +221,14 @@ class XPTools():
 
 
     def joinLayer(self, sourceLayer, joinLayer, targetField = "gid",
-            joinField = "gid", prefix = None, memoryCache = False):
+            joinField = "gid", prefix = None, memoryCache = False,
+            joinedFields = []):
         '''Zwei Layer joinen
         sourceLayer ist der Layer, an den der joinLayer angeknüpft wird
         targetField ist das Feld im sourceLayer, an das geknüpft wird, joinField
-        ist das Feld im joinLayer'''
+        ist das Feld im joinLayer
+        joinedFields ist ein Array mit den Feldnamen der Felder,
+        die gejoined werden sollen'''
 
         for aJoinInfo in sourceLayer.vectorJoins():
             if aJoinInfo.joinLayerId == joinLayer.id():
@@ -241,6 +244,9 @@ class XPTools():
 
         if prefix != None:
             joinInfo.prefix = prefix
+
+        if len(joinedFields) > 0:
+            joinInfo.setJoinFieldNamesSubset(joinedFields)
 
         sourceLayer.addJoin(joinInfo)
 

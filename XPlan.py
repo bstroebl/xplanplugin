@@ -558,7 +558,7 @@ class XPlan():
 
         return retValue
 
-    def layerJoinParent(self,  layer):
+    def layerJoinParent(self, layer, joinedFields = []):
         ddTable = self.app.xpManager.ddLayers[layer.id()][0]
         parents = self.ddUi.getParents(ddTable,  self.db)
 
@@ -569,9 +569,10 @@ class XPlan():
                 parentLayer = self.app.xpManager.loadPostGISLayer(self.db,  parents[0])
 
             prefix = parents[0].tableName + "."
-            self.tools.joinLayer(layer, parentLayer, prefix = prefix, memoryCache = True)
+            self.tools.joinLayer(layer, parentLayer, prefix = prefix,
+                memoryCache = True, joinedFields = joinedFields)
 
-    def layerJoinXP_Objekt(self,  layer):
+    def layerJoinXP_Objekt(self, layer, joinedFields = []):
         '''den Layer XP_Objekt an den Layer joinen'''
         xpObjektDdTable = self.app.xpManager.createDdTable(
             self.db, "XP_Basisobjekte", "XP_Objekt",
@@ -584,7 +585,7 @@ class XPlan():
                 xpObjektLayer = self.app.xpManager.loadPostGISLayer(self.db, xpObjektDdTable)
 
             self.tools.joinLayer(layer, xpObjektLayer, memoryCache = True,
-                prefix = "XP_Objekt.")
+                prefix = "XP_Objekt.", joinedFields = joinedFields)
 
     def layerInitialize(self,  layer,  msg = False,  layerCheck = True):
         '''einen XP_Layer initialisieren, gibt Boolschen Wert zurück'''
@@ -630,6 +631,9 @@ class XPlan():
 
                                 if layerCheck:
                                     self.aktiverBereichLayerCheck(layer)
+
+                        if table == "BP_Plan":
+                            self.layerJoinParent(layer, ["nummer"])
 
                         #spezielle Joins mit speziellen Layern
                         if table == "FP_GemeinbedarfFlaeche" or \
