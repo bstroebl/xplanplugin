@@ -219,6 +219,32 @@ class XPTools():
 
         return retValue
 
+    def getFeatures(self, layer):
+        '''gibt entweder die selektierten Features oder,
+        wenn keine Selektion besteht, alle Features zurück
+        aus Processing'''
+
+        class Features:
+
+            def __init__(self, layer):
+                self.layer = layer
+                self.selection = False
+                self.iter = layer.getFeatures()
+                selected = layer.selectedFeatures()
+                if len(selected) > 0:
+                    self.selection = True
+                    self.iter = iter(selected)
+
+            def __iter__(self):
+                return self.iter
+
+            def __len__(self):
+                if self.selection:
+                    return int(self.layer.selectedFeatureCount())
+                else:
+                    return int(self.layer.featureCount())
+
+        return Features(layer)
 
     def joinLayer(self, sourceLayer, joinLayer, targetField = "gid",
             joinField = "gid", prefix = None, memoryCache = False,
