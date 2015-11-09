@@ -159,12 +159,15 @@ class XPlan():
         self.action24.triggered.connect(self.loadSO)
         self.action25 = QtGui.QAction(u"ExterneReferenz anlegen", self.iface.mainWindow())
         self.action25.triggered.connect(self.createExterneReferenz)
+        self.action26 = QtGui.QAction(u"räuml. Geltungsbereiche neu berechnen",
+            self.iface.mainWindow())
+        self.action26.triggered.connect(self.geltungsbereichBerechnen)
 
         self.xpMenu.addActions([self.action20, self.action25,
             self.action6, self.action10])
         self.bereichMenu.addActions([self.action1, self.action3, self.action3a,
             self.action4, self.action5])
-        self.bpMenu.addActions([self.action21])
+        self.bpMenu.addActions([self.action21, self.action26])
         self.fpMenu.addActions([self.action22])
         self.lpMenu.addActions([self.action23])
         self.soMenu.addActions([self.action24])
@@ -251,6 +254,60 @@ class XPlan():
             return None
 
     #Slots
+    def geltungsbereichBerechnen(self):
+        '''raeumlicherGeltungsbereich für alle (selektierten)
+        BP_Plan aus den Geltungsbereichen
+        von BP_Bereich berechnen'''
+        if self.db == None:
+            self.initialize(False)
+
+        if self.db != None:
+            bpPlanLayer = self.getLayerForTable(
+                "BP_Basisobjekte","BP_Plan",
+                geomColumn = "raeumlicherGeltungsbereich")
+
+            if bpPlanLayer == None:
+                return None
+
+            bpBereichLayer = self.getLayerForTable(
+                "BP_Basisobjekte","BP_Bereich",
+                geomColumn = "geltungsbereich")
+
+            if bpBereichLayer != None:
+                bpPlaene = {}
+
+                for bpPlanFeat in self.tools.getFeatures(bpPlanLayer):
+                    bpPlaene[bpPlanFeat.id()] = []
+
+                if len(bpPlaene) > 0:
+                    if self.tools.setEditable(bpPlanLayer, True, self.iface):
+                        bpBereichLayer.selectAll()
+                        gehoertZuPlanFld = bpBereichLayer.fieldNameIndex("gehoertZuPlan")
+
+                        for bereichFeat in self.tools.getFeatures(bpBereichLayer):
+                            bpPlanId = bereichFeat[gehoertZuPlanFld]
+
+                            if bpPlanId in bpPlaene:
+                                bpPlaene[bpPlanId].append(QgsGeometry(bereichFeat.geometry()))
+
+                        bpBereichLayer.invertSelection()
+                        bpPlanLayer.beginEditCommand(u"XPlan: räumliche Geltungsbereiche erneuert")
+
+                        for fid, geomList in bpPlaene.iteritems():
+                            if len(geomList) == 0:
+                                continue
+
+                            first = True
+                            for aGeom in geomList:
+                                if first:
+                                    outGeom = aGeom
+                                    first = False
+                                else:
+                                    outGeom = QgsGeometry(outGeom.combine(aGeom))
+
+                            bpPlanLayer.changeGeometry(fid, outGeom)
+                        bpPlanLayer.endEditCommand()
+
     def createExterneReferenz(self):
         if self.db == None:
             self.initialize(False)
