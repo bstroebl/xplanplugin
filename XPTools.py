@@ -296,6 +296,30 @@ class XPTools():
 
         return retValue
 
+    def getBereichInPlan(self, db, planGid):
+        '''gibt ein Array mit den gids der Bereiche zurück,
+        die zum Plan mit der gid planGid gehören'''
+        bereiche = []
+        sql = "SELECT gid from \"QGIS\".\"XP_Bereiche\" WHERE plangid = :planGid"
+        query = QtSql.QSqlQuery(db)
+        query.prepare(sql)
+        query.bindValue(":planGid", planGid)
+        query.exec_()
+
+        if query.isActive():
+            if query.size() == 0:
+                return []
+
+            while query.next(): # returns false when all records are done
+                bereiche.append(query.value(0))
+
+            query.finish()
+            return bereiche
+        else:
+            self.showQueryError(query)
+            query.finish()
+            return []
+
     def getLayerInBereich(self,  db,  bereichGid):
         '''gibt ein Array mit Arrays (Punkt, Linie, Fläche) aller Layer zurück, die Elemente
         im XP_Bereich mit der übergebenen gid haben'''
