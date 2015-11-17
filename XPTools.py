@@ -320,63 +320,74 @@ class XPTools():
             query.finish()
             return []
 
-    def getLayerInBereich(self,  db,  bereichGid):
+    def getLayerInBereich(self, db, bereichGids):
         '''gibt ein Array mit Arrays (Punkt, Linie, Fläche) aller Layer zurück, die Elemente
-        im XP_Bereich mit der übergebenen gid haben'''
-        bereichTyp = self.getBereichTyp(db,  bereichGid)
+        im XP_Bereich mit den übergebenen gids haben'''
 
-        if bereichTyp:
-            sel = "SELECT \"Objektart\",  \
-            CASE \"Objektart\" LIKE \'%Punkt\' WHEN true THEN \'Punkt\' ELSE \
-                CASE \"Objektart\" LIKE \'%Linie\' WHEN true THEN \'Linie\' ELSE \'Flaeche\' \
-                END \
-            END as typ, \
-            \"Objektartengruppe\" FROM ( \
-            SELECT DISTINCT \"Objektart\", \"Objektartengruppe\" \
-            FROM \"" + bereichTyp +"_Basisobjekte\".\"" + bereichTyp + "_Objekte\" \
-            WHERE \"" + bereichTyp +"_Bereich_gid\" = :bereichGid) foo"
-            query = QtSql.QSqlQuery(db)
-            query.prepare(sel)
-            query.bindValue(":bereichGid", bereichGid)
-            query.exec_()
+        if len(bereichGids) > 0:
+            bereichTyp = self.getBereichTyp(db, bereichGids[0])
 
-            if query.isActive():
-                if query.size() == 0:
+            bereiche = ""
+
+            for bereichGid in bereichGids:
+                if bereiche != "":
+                    bereiche += ","
+
+                bereiche += str(bereichGid)
+
+            if bereichTyp:
+                sel = "SELECT \"Objektart\",  \
+                CASE \"Objektart\" LIKE \'%Punkt\' WHEN true THEN \'Punkt\' ELSE \
+                    CASE \"Objektart\" LIKE \'%Linie\' WHEN true THEN \'Linie\' ELSE \'Flaeche\' \
+                    END \
+                END as typ, \
+                \"Objektartengruppe\" FROM ( \
+                SELECT DISTINCT \"Objektart\", \"Objektartengruppe\" \
+                FROM \"" + bereichTyp +"_Basisobjekte\".\"" + bereichTyp + "_Objekte\" \
+                WHERE \"" + bereichTyp +"_Bereich_gid\" IN (" + bereiche + ")) foo"
+                query = QtSql.QSqlQuery(db)
+                query.prepare(sel)
+                query.exec_()
+
+                if query.isActive():
+                    if query.size() == 0:
+                        return []
+
+                    punktLayer = {}
+                    linienLayer = {}
+                    flaechenLayer = {}
+
+                    while query.next(): # returns false when all records are done
+                        layer = query.value(0)
+                        art = query.value(1)
+                        gruppe = query.value(2)
+
+                        if art == "Punkt":
+                            try:
+                                pLayerList = punktLayer[gruppe]
+                                pLayerList.append(layer)
+                            except KeyError:
+                                punktLayer[gruppe] = [layer]
+                        elif art == "Linie":
+                            try:
+                                lLayerList = linienLayer[gruppe]
+                                lLayerList.append(layer)
+                            except KeyError:
+                                linienLayer[gruppe] = [layer]
+                        elif art == "Flaeche":
+                            try:
+                                fLayerList = flaechenLayer[gruppe]
+                                fLayerList.append(layer)
+                            except KeyError:
+                                flaechenLayer[gruppe] = [layer]
+
+                    query.finish()
+                    return [punktLayer,  linienLayer,  flaechenLayer]
+                else:
+                    self.showQueryError(query)
+                    query.finish()
                     return []
-
-                punktLayer = {}
-                linienLayer = {}
-                flaechenLayer = {}
-
-                while query.next(): # returns false when all records are done
-                    layer = query.value(0)
-                    art = query.value(1)
-                    gruppe = query.value(2)
-
-                    if art == "Punkt":
-                        try:
-                            pLayerList = punktLayer[gruppe]
-                            pLayerList.append(layer)
-                        except KeyError:
-                            punktLayer[gruppe] = [layer]
-                    elif art == "Linie":
-                        try:
-                            lLayerList = linienLayer[gruppe]
-                            lLayerList.append(layer)
-                        except KeyError:
-                            linienLayer[gruppe] = [layer]
-                    elif art == "Flaeche":
-                        try:
-                            fLayerList = flaechenLayer[gruppe]
-                            fLayerList.append(layer)
-                        except KeyError:
-                            flaechenLayer[gruppe] = [layer]
-
-                query.finish()
-                return [punktLayer,  linienLayer,  flaechenLayer]
             else:
-                self.showQueryError(query)
-                query.finish()
                 return []
         else:
             return []

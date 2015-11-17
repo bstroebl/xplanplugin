@@ -1095,7 +1095,7 @@ class XPlan():
 
                 if bereich >= 0:
                     # rausbekommen, welche Layer Elemente im Bereich haben
-                    layers = self.tools.getLayerInBereich(self.db,  bereich)
+                    layers = self.tools.getLayerInBereich(self.db, [bereich])
                     #rausbekommen, welche Layer nachrichtlich Elemente im Bereich haben?
 
                     if len(layers) == 0:
