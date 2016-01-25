@@ -28,8 +28,10 @@ from Ui_Stilauswahl import Ui_Stilauswahl
 from Ui_conf import Ui_conf
 from Ui_ObjektartLaden import Ui_ObjektartLaden
 
-class LoadObjektart(QtGui.QDialog):
-    def __init__(self, objektart, db):
+class XP_Chooser(QtGui.QDialog):
+    '''Ein Dialog mit einem TreeWidget um ein Element auszuwählen, abstrakt'''
+
+    def __init__(self, objektart, db, title):
         QtGui.QDialog.__init__(self)
         self.objektart = objektart
         self.db = db
@@ -39,7 +41,86 @@ class LoadObjektart(QtGui.QDialog):
         self.ui.buttonBox.rejected.connect(self.reject)
         self.okBtn = self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok)
         self.okBtn.setEnabled(False)
+        self.setWindowTitle(title)
         self.initialize()
+
+    def reject(self):
+        self.done(0)
+
+    def showQueryError(self, query):
+        QtGui.QMessageBox.warning(None, "DBError",  "Database Error: \
+            %(error)s \n %(query)s" % {"error": query.lastError().text(),
+            "query": query.lastQuery()})
+
+class ChoosePlan(XP_Chooser):
+    def __init__(self, objektart, db):
+        XP_Chooser.__init__(self, objektart, db, u"Plan auswählen")
+
+    def initialize(self):
+        sQuery = "select name, gid, nummer \
+                FROM \"XP_Basisobjekte\".\"XP_Plaene\" \
+                WHERE \"Objektart\" = :objektart \
+                ORDER BY name"
+
+        query = QtSql.QSqlQuery(self.db)
+        query.prepare(sQuery)
+        query.bindValue(":objektart", self.objektart)
+        query.exec_()
+
+        if query.isActive():
+            while query.next():
+                parent = query.value(0)
+                planGid = query.value(1)
+                nummer = query.value(2)
+
+                parentItem = QtGui.QTreeWidgetItem([parent])
+                parentItem.gid = planGid
+                self.ui.layerChooser.addTopLevelItem(parentItem)
+                childItem = QtGui.QTreeWidgetItem([nummer])
+                childItem.parent = parent
+                childItem.gid = planGid
+                parentItem.addChild(childItem)
+            query.finish()
+        else:
+            self.showQueryError(query)
+            query.finish()
+
+        self.ui.layerChooser.resizeColumnToContents(0)
+
+    @QtCore.pyqtSlot(QtGui.QTreeWidgetItem, int)
+    def on_layerChooser_itemDoubleClicked(self, thisItem, thisColumn):
+        if thisItem.gid == None:
+            if thisItem.isExpanded():
+                self.ui.layerChooser.collapseItem(thisItem)
+            else:
+                self.ui.layerChooser.expandItem(thisItem)
+        else:
+            self.accept()
+
+    @QtCore.pyqtSlot()
+    def on_layerChooser_itemSelectionChanged(self):
+        enable = len(self.ui.layerChooser.selectedItems()) > 0
+
+        for item in self.ui.layerChooser.selectedItems():
+            if item.gid == None:
+                enable = False
+                break
+
+        self.okBtn.setEnabled(enable)
+
+    def accept(self):
+        self.selection = []
+
+        for item in self.ui.layerChooser.selectedItems():
+            if item.gid != None:
+                # Info per ausgewähltem Layer
+                self.selection.append([item.gid])
+        self.done(1)
+
+
+class ChooseObjektart(XP_Chooser):
+    def __init__(self, objektart, db):
+        XP_Chooser.__init__(self, objektart, db, u"Objektart laden")
 
     def initialize(self):
         sQuery = "select f_table_schema, f_table_name,f_geometry_column, COALESCE(description,\'\') \
@@ -118,13 +199,6 @@ class LoadObjektart(QtGui.QDialog):
                     item.geomColumn, # Geometriespalte
                     item.description]) # Beschreibung
         self.done(1)
-
-    def reject(self):
-        self.done(0)
-
-    def showQueryError(self, query):
-        QtGui.QMessageBox.warning(None, "DBError",  "Database Error: \
-            %(error)s \n %(query)s" % {"error": query.lastError().text(),  "query": query.lastQuery()})
 
 class XPlanungConf(QtGui.QDialog):
     def __init__(self, dbHandler):
