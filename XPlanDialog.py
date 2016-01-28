@@ -23,6 +23,7 @@ email                : bernhard.stroebl@jena.de
 from PyQt4 import QtCore, QtGui, QtSql
 from qgis.core import *
 from qgis.gui import *
+import qgis.gui
 from Ui_Bereichsauswahl import Ui_Bereichsauswahl
 from Ui_Stilauswahl import Ui_Stilauswahl
 from Ui_conf import Ui_conf
@@ -215,6 +216,15 @@ class XPlanungConf(QtGui.QDialog):
         self.ui.leUID.setText( s.value( "uid", "" ) )
         self.ui.lePWD.setText( s.value( "pwd", "" ) )
 
+        if hasattr(qgis.gui,'QgsAuthConfigSelect'):
+            self.authCfgSelect = QgsAuthConfigSelect( self, "postgres" )
+            self.ui.tabWidget.insertTab( 1, self.authCfgSelect, "Konfigurationen" )
+            authcfg = s.value( "authcfg", "" )
+
+            if authcfg:
+                self.ui.tabWidget.setCurrentIndex( 1 )
+                self.authCfgSelect.setConfigId( authcfg );
+
     def accept(self):
         s = QtCore.QSettings( "XPlanung", "XPlanung-Erweiterung" )
         s.setValue( "service", self.ui.leSERVICE.text() )
@@ -223,6 +233,9 @@ class XPlanungConf(QtGui.QDialog):
         s.setValue( "dbname", self.ui.leDBNAME.text() )
         s.setValue( "uid", self.ui.leUID.text() )
         s.setValue( "pwd", self.ui.lePWD.text() )
+
+        if hasattr(qgis.gui,'QgsAuthConfigSelect'):
+            s.setValue( "authcfg", self.authCfgSelect.configId() )
 
         db = self.dbHandler.dbConnect()
 

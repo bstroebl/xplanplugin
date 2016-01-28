@@ -23,6 +23,7 @@ email                : bernhard.stroebl@jena.de
 from PyQt4 import QtCore
 from PyQt4 import QtSql
 from qgis.gui import QgsMessageBar
+import qgis.core
 
 class DbHandler():
     '''class to handle a QtSql.QSqlDatabase connnection to a PostgreSQL server'''
@@ -39,6 +40,13 @@ class DbHandler():
         database = ( s.value( "dbname", "" ) )
         username = ( s.value( "uid", "" ) )
         passwd = ( s.value( "pwd", "" ) )
+        authcfg = s.value( "authcfg", "" )
+
+        if authcfg != "" and hasattr(qgis.core,'QgsAuthManager'):
+            amc = qgis.core.QgsAuthMethodConfig()
+            qgis.core.QgsAuthManager.instance().loadAuthenticationConfig( authcfg, amc, True)
+            username = amc.config( "username", username )
+            passwd = amc.config( "password", passwd )
 
         if thisPassword:
             passwd = thisPassword
