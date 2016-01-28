@@ -28,7 +28,7 @@ import sys
 from HandleDb import DbHandler
 from XPTools import XPTools
 from XPlanDialog import XPlanungConf
-from XPlanDialog import LoadObjektart
+from XPlanDialog import ChooseObjektart
 
 class XpError(object):
     '''General error'''
@@ -373,7 +373,7 @@ class XPlan():
             self.initialize(False)
 
         if self.db != None:
-            dlg = LoadObjektart(objektart, self.db)
+            dlg = ChooseObjektart(objektart, self.db)
             dlg.show()
             result = dlg.exec_()
 
