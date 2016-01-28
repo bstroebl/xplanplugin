@@ -52,6 +52,10 @@ deploy: compile
 	#cp -vf $(RESOURCE_FILES) $(HOME)/.qgis/python/plugins/$(PLUGINNAME)/tools
 	cp -vf $(EXTRAS) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/tools/icons
 
+# The derase deletes deployed plugin
+derase:
+	rm -Rf $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
+
 # The dclean target removes compiled python files from plugin directory
 dclean:
 	find $(HOME)/.qgis2/python/plugins/$(PLUGINNAME) -iname "*.pyc" -delete
