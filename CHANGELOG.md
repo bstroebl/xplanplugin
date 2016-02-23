@@ -10,5 +10,5 @@
 - Tool, um einen Layer für schema.table zu erhalten, falls er nicht im Projekt ist, wird er geladen
 
 ### Changed
-- Tool joinLayer verbindet optinoal nur bestimmte Felder
+- Tool joinLayer verbindet optional nur bestimmte Felder
 
