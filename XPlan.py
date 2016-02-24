@@ -515,12 +515,12 @@ class XPlan():
         if layer == None:
             return None
 
+        if self.db == None:
+            self.initialize(False)
+
         if self.layerLayer == None:
             if not self.loadLayerLayer():
                 return None
-
-        if self.db == None:
-            self.initialize(False)
 
         styleMan = layer.styleManager()
         bereich = styleMan.currentStyle()
