@@ -634,7 +634,7 @@ class XPlan():
                 if layer == None:
                     if showMsg:
                         XpError(u"Kann Tabelle %(schema)s.%(table)s nicht laden!" % \
-                            {"schema":"schemaName", "table":"tableName"},
+                            {"schema":schemaName, "table":tableName},
                             self.iface)
                     return None
                 else:
@@ -644,7 +644,7 @@ class XPlan():
         else:
             if showMsg:
                 XpError(u"Kann ddTable %(schema)s.%(table)s nicht erzeugen!" % \
-                    {"schema":"schemaName", "table":"tableName"},
+                    {"schema":schemaName, "table":tableName},
                     self.iface)
             return None
 
