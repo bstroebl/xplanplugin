@@ -537,10 +537,22 @@ class XPlan():
 
         if doc != None:
             if stilId != None: # Eintrag ändern
-                self.iface.messageBar().pushMessage("XPlanung",
-                    u"Ersetze Stil " + bereich,
-                    level=QgsMessageBar.INFO, duration = 10)
+                reply = QtGui.QMessageBox.question(
+                    None, u"Stil vorhanden",
+                    u"Vorhandenen Stil für Bereich %s ersetzen?" % bereich,
+                    QtGui.QMessageBox.Yes | QtGui.QMessageBox.No | QtGui.QMessageBox.Cancel,
+                    defaultButton = QtGui.QMessageBox.No)
 
+                if reply == QtGui.QMessageBox.Yes:
+                    changeStyle = True
+                elif reply == QtGui.QMessageBox.No:
+                    changeStyle = False
+                else:
+                    return None
+            else:
+                changeStyle = False
+
+            if changeStyle:
                 feat = QgsFeature()
 
                 if self.layerLayer.getFeatures(
