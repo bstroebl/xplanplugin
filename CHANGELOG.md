@@ -9,6 +9,7 @@
 ### Changed
 - Funktion getLayerInBereich: gebe Layer für mehrere Bereiche zurück
 - Auswahldialog: Klassen umstrukturiert
+- Speichern von Layerstilen fragt nun explizit, ob der bestehende Stil überschrieben werden soll
 
 ### Fixed
 - Zeige Schema und Tabelle in Fehlermeldung
