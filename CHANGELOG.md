@@ -2,6 +2,7 @@
 
 ## [Unreleased](https://gitlab.jena.de/Fachschale/XPlanung/compare/master...develop)
 
+# 0.5.0 - 2016-02-25
 ### Added
 - Funktion getBereichInPlan: gebe gids der Bereiche eines Plans zurück
 - Ermögliche gespeicherte Authentifizierung (ab QGIS 2.12) zur Verbindung mit der XPlan-Datenbank
