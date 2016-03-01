@@ -2,6 +2,9 @@
 
 ## [Unreleased](https://gitlab.jena.de/Fachschale/XPlanung/compare/master...develop)
 
+### Fixed
+- Joine per default mit Memory cache, damit wird die Darstellung zwar nicht mehr aktualisiert bei verändertem Wert, jedoch friert QGIS nicht mehr ein, weil er ewig auf DB-Abfragen gewartet hat
+
 # 0.5.0 - 2016-02-25
 ### Added
 - Funktion getBereichInPlan: gebe gids der Bereiche eines Plans zurück
