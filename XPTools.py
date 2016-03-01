@@ -247,7 +247,7 @@ class XPTools():
         return Features(layer)
 
     def joinLayer(self, sourceLayer, joinLayer, targetField = "gid",
-            joinField = "gid", prefix = None, memoryCache = False,
+            joinField = "gid", prefix = None, memoryCache = True,
             joinedFields = []):
         '''Zwei Layer joinen
         sourceLayer ist der Layer, an den der joinLayer angeknüpft wird
