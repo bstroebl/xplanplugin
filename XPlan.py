@@ -393,7 +393,8 @@ class XPlan():
                         ddTable = DdTable(schemaName = schemaName, tableName = tableName)
 
                     layer = self.app.xpManager.loadPostGISLayer(self.db,
-                        ddTable, geomColumn = geomColumn, keyColumn = "gid")
+                        ddTable, displayName = tableName,  geomColumn = geomColumn,
+                        keyColumn = "gid")
 
                     if layer != None:
                         layer.setTitle(tableName)
