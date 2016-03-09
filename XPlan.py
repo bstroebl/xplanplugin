@@ -48,11 +48,12 @@ class XPlan():
         # Save reference to the QGIS interface
         self.iface = iface
         self.standardName = u"XP-Standard"
+        self.simpleStyleName = "einfarbig"
         self.tmpAct = QtGui.QAction(self.iface.mainWindow()) # eine nicht benötigte QAction
         self.app = QgsApplication.instance()
         self.dbHandler = DbHandler(self.iface)
         self.db = None
-        self.tools = XPTools(self.iface, self.standardName)
+        self.tools = XPTools(self.iface, self.standardName, self.simpleStyleName)
         self.aktiveBereiche = []
         self.addedGeometries = {}
         self.layerLayer = None
@@ -378,6 +379,8 @@ class XPlan():
             result = dlg.exec_()
 
             if result == 1:
+                withDisplay = dlg.withDisplay
+
                 for aSel in dlg.selection:
                     schemaName = aSel[0]
                     tableName = aSel[1]
@@ -392,33 +395,47 @@ class XPlan():
                     if isView:
                         ddTable = DdTable(schemaName = schemaName, tableName = tableName)
 
-                    layer = self.app.xpManager.loadPostGISLayer(self.db,
-                        ddTable, displayName = tableName,  geomColumn = geomColumn,
-                        keyColumn = "gid")
+                    editLayer = self.app.xpManager.loadPostGISLayer(self.db,
+                        ddTable, displayName = tableName + " (editierbar)",
+                        geomColumn = geomColumn, keyColumn = "gid")
 
-                    if layer != None:
-                        layer.setTitle(tableName)
-                        layer.setAbstract(description)
-
-                        if not isView:
-                            ddInit = self.layerInitialize(layer,
-                                layerCheck = self.willAktivenBereich)
-
-                            if ddInit:
-                                self.app.xpManager.addAction(layer,
-                                    actionName = "XP_Sachdaten",
-                                    ddManagerName = "xpManager")
-                        stil = self.tools.chooseStyle(layer)
-
-                        if stil != None:
-                            self.tools.useStyle(layer, stil)
-
+                    if editLayer != None:
                         grpIdx = self.getGroupIndex(schemaName)
 
                         if grpIdx == -1:
                             grpIdx = self.createGroup(schemaName)
 
-                        self.iface.legendInterface().moveLayer(layer, grpIdx)
+                        self.iface.legendInterface().moveLayer(editLayer, grpIdx)
+                        editLayer.setAbstract(description)
+                        stile = self.tools.getLayerStyles(self.db,
+                            editLayer, schemaName, tableName)
+
+                        if stile != None:
+                            self.tools.applyStyles(editLayer, stile)
+                            self.tools.useStyle(editLayer, self.simpleStyleName)
+
+                        if not isView:
+                            ddInit = self.layerInitialize(editLayer,
+                                layerCheck = self.willAktivenBereich)
+
+                            if ddInit:
+                                self.app.xpManager.addAction(editLayer,
+                                    actionName = "XP_Sachdaten",
+                                    ddManagerName = "xpManager")
+
+                            if withDisplay:
+                                displayLayer = self.createVirtualLayer(editLayer, tableName)
+
+                                if displayLayer != None:
+                                    self.iface.legendInterface().moveLayer(
+                                        displayLayer, grpIdx)
+
+                                    if stile != None:
+                                        self.tools.applyStyles(displayLayer, stile)
+                                        stil = self.tools.chooseStyle(displayLayer)
+
+                                        if stil != None:
+                                            self.tools.useStyle(displayLayer, stil)
 
     def loadXP(self):
         self.loadObjektart("XP")
@@ -673,29 +690,6 @@ class XPlan():
 
         return retValue
 
-    def layerJoinParent(self, layer, joinedFields = []):
-        ddTable = self.app.xpManager.ddLayers[layer.id()][0]
-        parents = self.ddUi.getParents(ddTable,  self.db)
-
-        if len(parents) > 0:
-            parentLayer = self.app.xpManager.findPostgresLayer(self.db,  parents[0])
-
-            if parentLayer == None:
-                parentLayer = self.app.xpManager.loadPostGISLayer(self.db,  parents[0])
-
-            prefix = parents[0].tableName + "."
-            self.tools.joinLayer(layer, parentLayer, prefix = prefix,
-                memoryCache = True, joinedFields = joinedFields)
-
-    def layerJoinXP_Objekt(self, layer, joinedFields = []):
-        '''den Layer XP_Objekt an den Layer joinen'''
-
-        xpObjektLayer = self.getLayerForTable("XP_Basisobjekte", "XP_Objekt")
-
-        if xpObjektLayer != None:
-            self.tools.joinLayer(layer, xpObjektLayer, memoryCache = True,
-                prefix = "XP_Objekt.", joinedFields = joinedFields)
-
     def layerInitialize(self,  layer,  msg = False,  layerCheck = True):
         '''einen XP_Layer initialisieren, gibt Boolschen Wert zurück'''
         ddInit = False
@@ -713,15 +707,11 @@ class XPlan():
                 if layerRelation[2]: # Layer hat Geometrien
                     schema = layerRelation[0]
                     table = layerRelation[1]
-                    self.tools.loadStyles(self.db, layer)
 
                     if schema != "XP_Praesentationsobjekte":
                         schemaTyp = schema[:2]
 
                         if table != schemaTyp + "_Plan" and table != schemaTyp + "_Bereich":
-                            self.layerJoinParent(layer)
-                            self.layerJoinXP_Objekt(layer)
-
                             if self.implementedSchemas.count(schemaTyp) > 0:
                                 # disconnect slots in case they are already connected
                                 try:
@@ -740,218 +730,6 @@ class XPlan():
 
                                 if layerCheck:
                                     self.aktiverBereichLayerCheck(layer)
-
-                        if table == "BP_Plan":
-                            self.layerJoinParent(layer, ["nummer"])
-
-                        #spezielle Joins mit speziellen Layern
-                        if table == "FP_GemeinbedarfFlaeche" or \
-                            table == "FP_GemeinbedarfLinie" or \
-                            table == "FP_GemeinbedarfPunkt":
-                            zweckbestLayer = self.getLayerForTable(
-                                "FP_Gemeinbedarf_Spiel_und_Sportanlagen",
-                                "FP_Gemeinbedarf_zweckbestimmung")
-
-                            if zweckbestLayer != None:
-                                self.tools.joinLayer(layer, zweckbestLayer,
-                                    joinField = "FP_Gemeinbedarf_gid",
-                                    prefix = "XP_ZweckbestimmungGemeinbedarf.")
-
-                            besZweckbestLayer = self.getLayerForTable(
-                                "FP_Gemeinbedarf_Spiel_und_Sportanlagen",
-                                "FP_Gemeinbedarf_besondereZweckbestimmung")
-
-
-                            if besZweckbestLayer != None:
-                                self.tools.joinLayer(layer, besZweckbestLayer,
-                                    joinField = "FP_Gemeinbedarf_gid",
-                                    prefix = "XP_BesondereZweckbestGemeinbedarf.")
-
-                        elif table == "FP_GruenFlaeche" or \
-                            table == "FP_GruenLinie" or \
-                            table == "FP_GruenPunkt":
-                            zweckbestLayer = self.getLayerForTable(
-                                "FP_Landwirtschaft_Wald_und_Gruen",
-                                "FP_Gruen_zweckbestimmung")
-
-                            if zweckbestLayer != None:
-                                self.tools.joinLayer(layer, zweckbestLayer,
-                                    joinField = "FP_Gruen_gid",
-                                    prefix = "XP_ZweckbestimmungGruen.")
-
-                            besZweckbestLayer = self.getLayerForTable(
-                                "FP_Landwirtschaft_Wald_und_Gruen",
-                                "FP_Gruen_besondereZweckbestimmung")
-
-                            if besZweckbestLayer != None:
-                                self.tools.joinLayer(layer, besZweckbestLayer,
-                                    joinField = "FP_Gruen_gid",
-                                    prefix = "XP_BesondereZweckbestGruen.")
-                        elif table == "FP_PrivilegiertesVorhabenFlaeche" or \
-                            table == "FP_PrivilegiertesVorhabenLinie" or \
-                            table == "FP_PrivilegiertesVorhabenPunkt":
-                            zweckbestLayer = self.getLayerForTable(
-                                "FP_Sonstiges",
-                                "FP_PrivilegiertesVorhaben_zweckbestimmung")
-
-                            if zweckbestLayer != None:
-                                self.tools.joinLayer(layer, zweckbestLayer,
-                                    joinField = "FP_PrivilegiertesVorhaben_gid",
-                                    prefix = "FP_ZweckbestimmungPrivilegiertesVorhaben.")
-
-                            besZweckbestLayer = self.getLayerForTable(
-                                "FP_Sonstiges",
-                                "FP_PrivilegiertesVorhaben_besondereZweckbestimmung")
-
-                            if besZweckbestLayer != None:
-                                self.tools.joinLayer(layer, besZweckbestLayer,
-                                    joinField = "FP_PrivilegiertesVorhaben_gid",
-                                    prefix = "FP_BesondZweckbestPrivilegiertesVorhaben.")
-                        elif table == "FP_VerEntsorgungFlaeche" or \
-                            table == "FP_VerEntsorgungLinie" or \
-                            table == "FP_VerEntsorgungPunkt":
-                            zweckbestLayer = self.getLayerForTable(
-                                "FP_Ver_und_Entsorgung",
-                                "FP_VerEntsorgung_zweckbestimmung")
-
-                            if zweckbestLayer != None:
-                                self.tools.joinLayer(layer, zweckbestLayer,
-                                    joinField = "FP_VerEntsorgung_gid",
-                                    prefix = "XP_ZweckbestimmungVerEntsorgung.")
-
-                            besZweckbestLayer = self.getLayerForTable(
-                                "FP_Ver_und_Entsorgung",
-                                "FP_VerEntsorgung_besondereZweckbestimmung")
-
-                            if besZweckbestLayer != None:
-                                self.tools.joinLayer(layer, besZweckbestLayer,
-                                    joinField = "FP_VerEntsorgung_gid",
-                                    prefix = "XP_BesondZweckbestVerEntsorgung.")
-                        elif table == "FP_SpielSportanlageFlaeche" or \
-                            table == "FP_SpielSportanlageLinie" or \
-                            table == "FP_SpielSportanlagePunkt":
-                            zweckbestLayer = self.getLayerForTable(
-                                "FP_Gemeinbedarf_Spiel_und_Sportanlagen",
-                                "FP_SpielSportanlage_zweckbestimmung")
-
-                            if zweckbestLayer != None:
-                                self.tools.joinLayer(layer, zweckbestLayer,
-                                    joinField = "FP_SpielSportanlage_gid",
-                                    prefix = "XP_ZweckbestimmungSpielSportanlage.")
-                        elif table == "FP_KennzeichnungFlaeche" or \
-                            table == "FP_KennzeichnungLinie" or \
-                            table == "FP_KennzeichnungPunkt":
-                            zweckbestLayer = self.getLayerForTable(
-                                "FP_Sonstiges",
-                                "FP_Kennzeichnung_zweckbestimmung")
-
-                            if zweckbestLayer != None:
-                                self.tools.joinLayer(layer, zweckbestLayer,
-                                    joinField = "FP_Kennzeichnung_gid",
-                                    prefix = "XP_ZweckbestimmungKennzeichnung.")
-                        elif table == "FP_WaldFlaeche":
-                            zweckbestLayer = self.getLayerForTable(
-                                "FP_Landwirtschaft_Wald_und_Gruen",
-                                "FP_WaldFlaeche_zweckbestimmung")
-
-                            if zweckbestLayer != None:
-                                self.tools.joinLayer(layer, zweckbestLayer,
-                                    joinField = "FP_WaldFlaeche_gid",
-                                    prefix = "XP_ZweckbestimmungWald.")
-                        elif table == "FP_GenerischesObjektFlaeche" or \
-                            table == "FP_GenerischesObjektLinie" or \
-                            table == "FP_GenerischesObjektPunkt":
-                            zweckbestLayer = self.getLayerForTable(
-                                "FP_Sonstiges",
-                                "FP_GenerischesObjekt_zweckbestimmung")
-
-
-                            if zweckbestLayer != None:
-                                self.tools.joinLayer(layer, zweckbestLayer,
-                                    joinField = "FP_GenerischesObjekt_gid",
-                                    prefix = "FP_ZweckbestimmungGenerischeObjekte.")
-                        elif table == "BP_GruenFlaeche":
-                            zweckbestLayer = self.getLayerForTable(
-                                "BP_Landwirtschaft_Wald_und_Gruen",
-                                "BP_GruenFlaeche_zweckbestimmung")
-
-                            if zweckbestLayer != None:
-                                self.tools.joinLayer(layer, zweckbestLayer,
-                                    joinField = "BP_GruenFlaeche_gid",
-                                    prefix = "XP_ZweckbestimmungGruen.")
-
-                            besZweckbestLayer = self.getLayerForTable(
-                                "BP_Landwirtschaft_Wald_und_Gruen",
-                                "BP_GruenFlaeche_besondereZweckbestimmung")
-
-                            if besZweckbestLayer != None:
-                                self.tools.joinLayer(layer, besZweckbestLayer,
-                                    joinField = "BP_Gruen_gid",
-                                    prefix = "XP_BesondereZweckbestGruen.")
-                        elif table == "BP_WaldFlaeche":
-                            zweckbestLayer = self.getLayerForTable(
-                                "BP_Landwirtschaft_Wald_und_Gruen",
-                                "BP_WaldFlaeche_zweckbestimmung")
-
-                            if zweckbestLayer != None:
-                                self.tools.joinLayer(layer, zweckbestLayer,
-                                    joinField = "BP_WaldFlaeche_gid",
-                                    prefix = "XP_ZweckbestimmungWald.")
-                        elif table == "BP_GemeinbedarfsFlaeche":
-                            zweckbestLayer = self.getLayerForTable(
-                                "BP_Gemeinbedarf_Spiel_und_Sportanlagen",
-                                "BP_GemeinbedarfsFlaeche_zweckbestimmung")
-
-                            if zweckbestLayer != None:
-                                self.tools.joinLayer(layer, zweckbestLayer,
-                                    joinField = "BP_GemeinbedarfsFlaeche_gid",
-                                    prefix = "XP_ZweckbestimmungGemeinbedarf.")
-
-                            besZweckbestLayer = self.getLayerForTable(
-                                "BP_Gemeinbedarf_Spiel_und_Sportanlagen",
-                                "BP_GemeinbedarfsFlaeche_besondereZweckbestimmung")
-
-                            if besZweckbestLayer != None:
-                                self.tools.joinLayer(layer, besZweckbestLayer,
-                                    joinField = "BP_GemeinbedarfsFlaeche_gid",
-                                    prefix = "XP_BesondereZweckbestGemeinbedarf.")
-                        elif table == "BP_SpielSportanlagenFlaeche":
-                            zweckbestLayer = self.getLayerForTable(
-                                "BP_Gemeinbedarf_Spiel_und_Sportanlagen",
-                                "BP_SpielSportanlagenFlaeche_zweckbestimmung")
-
-                            if zweckbestLayer != None:
-                                self.tools.joinLayer(layer, zweckbestLayer,
-                                    joinField = "BP_SpielSportanlagenFlaeche_gid",
-                                    prefix = "XP_ZweckbestimmungSpielSportanlage.")
-                        elif table == "BP_KennzeichnungsFlaeche":
-                            zweckbestLayer = self.getLayerForTable(
-                                "BP_Sonstiges",
-                                "BP_KennzeichnungsFlaeche_zweckbestimmung")
-
-                            if zweckbestLayer != None:
-                                self.tools.joinLayer(layer, zweckbestLayer,
-                                    joinField = "BP_KennzeichnungsFlaeche_gid",
-                                    prefix = "XP_ZweckbestimmungKennzeichnung.")
-                        elif table == "BP_VerEntsorgungFlaeche" or \
-                            table == "BP_VerEntsorgungPunkt":
-                            zweckbestLayer = self.getLayerForTable(
-                                "BP_Ver_und_Entsorgung",
-                                "BP_VerEntsorgung_zweckbestimmung")
-
-                            if zweckbestLayer != None:
-                                self.tools.joinLayer(layer, zweckbestLayer,
-                                    joinField = "BP_VerEntsorgung_gid",
-                                    prefix = "XP_ZweckbestimmungVerEntsorgung.")
-
-                            besZweckbestLayer = self.getLayerForTable(
-                                "BP_Ver_und_Entsorgung",
-                                "BP_VerEntsorgung_besondereZweckbestimmung")
-
-                            if besZweckbestLayer != None:
-                                self.tools.joinLayer(layer, besZweckbestLayer,
-                                    joinField = "BP_VerEntsorgung_gid",
-                                    prefix = "XP_BesondZweckbestVerEntsorgung.")
             else:
                 if msg:
                     XpError("Der Layer " + layer.name() + " ist kein PostgreSQL-Layer!",
@@ -962,6 +740,193 @@ class XPlan():
                     self.iface)
 
         return ddInit
+
+    def createVirtualLayer(self, editLayer, table):
+        '''
+        Laden von weiteren Tabellen und erzeugen des virtualLayer
+        '''
+
+        ddTable = self.app.xpManager.ddLayers[editLayer.id()][0]
+        # TODO: Parent joins nur bei Layern machen, die das für die Darstellung benötigen
+        parents = self.ddUi.getParents(ddTable, self.db)
+        parentJoins = []
+
+        while len(parents) > 0:
+            parentLayer = self.app.xpManager.findPostgresLayer(self.db, parents[0])
+
+            if parentLayer == None:
+                parentLayer = self.app.xpManager.loadPostGISLayer(self.db, parents[0])
+
+
+            parentJoins.append(parentLayer)
+            parents = self.ddUi.getParents(parents[0], self.db)
+
+        joins = []
+        # array, das alle Infos zu Joins aufnimmt:
+        # 0: layer, der gejoint wird
+        # 1: Feld in 0, an das gejoint wird (entspricht gid von schema.table)
+        # 2: Feld in 0, das den relevanten Inhalt enthält
+
+        if table == "FP_GemeinbedarfFlaeche" or \
+                table == "FP_GemeinbedarfLinie" or \
+                table == "FP_GemeinbedarfPunkt":
+            joinLayer1 = self.getLayerForTable(
+                "FP_Gemeinbedarf_Spiel_und_Sportanlagen",
+                "FP_Gemeinbedarf_zweckbestimmung")
+            joins.append([joinLayer1, "FP_Gemeinbedarf_gid", "zweckbestimmung"])
+
+            joinLayer2 = self.getLayerForTable(
+                "FP_Gemeinbedarf_Spiel_und_Sportanlagen",
+                "FP_Gemeinbedarf_besondereZweckbestimmung")
+            joins.append([joinLayer2, "FP_Gemeinbedarf_gid", "besondereZweckbestimmung"])
+
+        elif table == "FP_GruenFlaeche" or \
+                table == "FP_GruenLinie" or \
+                table == "FP_GruenPunkt":
+            joinLayer1 = self.getLayerForTable(
+                "FP_Landwirtschaft_Wald_und_Gruen",
+                "FP_Gruen_zweckbestimmung")
+            joins.append([joinLayer1, "FP_Gruen_gid", "zweckbestimmung"])
+
+            joinLayer2 = self.getLayerForTable(
+                "FP_Landwirtschaft_Wald_und_Gruen",
+                "FP_Gruen_besondereZweckbestimmung")
+            joins.append([joinLayer2, "FP_Gruen_gid", "besondereZweckbestimmung"])
+
+        elif table == "FP_PrivilegiertesVorhabenFlaeche" or \
+                table == "FP_PrivilegiertesVorhabenLinie" or \
+                table == "FP_PrivilegiertesVorhabenPunkt":
+            joinLayer1 = self.getLayerForTable(
+                "FP_Sonstiges",
+                "FP_PrivilegiertesVorhaben_zweckbestimmung")
+            joins.append([joinLayer1, "FP_PrivilegiertesVorhaben_gid", "zweckbestimmung"])
+
+            joinLayer2 = self.getLayerForTable(
+                "FP_Sonstiges",
+                "FP_PrivilegiertesVorhaben_besondereZweckbestimmung")
+            joins.append([joinLayer2, "FP_PrivilegiertesVorhaben_gid", "besondereZweckbestimmung"])
+
+        elif table == "FP_VerEntsorgungFlaeche" or \
+                table == "FP_VerEntsorgungLinie" or \
+                table == "FP_VerEntsorgungPunkt":
+            joinLayer1 = self.getLayerForTable(
+                "FP_Ver_und_Entsorgung",
+                "FP_VerEntsorgung_zweckbestimmung")
+            joins.append([joinLayer1, "FP_VerEntsorgung_gid", "zweckbestimmung"])
+
+            joinLayer2 = self.getLayerForTable(
+                "FP_Ver_und_Entsorgung",
+                "FP_VerEntsorgung_besondereZweckbestimmung")
+            joins.append([joinLayer2, "FP_VerEntsorgung_gid", "besondereZweckbestimmung"])
+
+        elif table == "FP_SpielSportanlageFlaeche" or \
+                table == "FP_SpielSportanlageLinie" or \
+                table == "FP_SpielSportanlagePunkt":
+            joinLayer1 = self.getLayerForTable(
+                "FP_Gemeinbedarf_Spiel_und_Sportanlagen",
+                "FP_SpielSportanlage_zweckbestimmung")
+            joins.append([joinLayer1, "FP_SpielSportanlage_gid", "zweckbestimmung"])
+
+        elif table == "FP_KennzeichnungFlaeche" or \
+                table == "FP_KennzeichnungLinie" or \
+                table == "FP_KennzeichnungPunkt":
+            joinLayer1 = self.getLayerForTable(
+                "FP_Sonstiges",
+                "FP_Kennzeichnung_zweckbestimmung")
+            joins.append([joinLayer1, "FP_Kennzeichnung_gid", "zweckbestimmung"])
+
+        elif table == "FP_WaldFlaeche":
+            joinLayer1 = self.getLayerForTable(
+                "FP_Landwirtschaft_Wald_und_Gruen",
+                "FP_WaldFlaeche_zweckbestimmung")
+            joins.append([joinLayer1, "FP_WaldFlaeche_gid", "zweckbestimmung"])
+
+        elif table == "FP_GenerischesObjektFlaeche" or \
+                table == "FP_GenerischesObjektLinie" or \
+                table == "FP_GenerischesObjektPunkt":
+            joinLayer1 = self.getLayerForTable(
+                "FP_Sonstiges",
+                "FP_GenerischesObjekt_zweckbestimmung")
+            joins.append([joinLayer1, "FP_GenerischesObjekt_gid", "zweckbestimmung"])
+
+        elif table == "BP_GruenFlaeche":
+            joinLayer1 = self.getLayerForTable(
+                "BP_Landwirtschaft_Wald_und_Gruen",
+                "BP_GruenFlaeche_zweckbestimmung")
+            joins.append([joinLayer1, "BP_GruenFlaeche_gid", "zweckbestimmung"])
+
+            joinLayer2 = self.getLayerForTable(
+                "BP_Landwirtschaft_Wald_und_Gruen",
+                "BP_GruenFlaeche_besondereZweckbestimmung")
+            joins.append([joinLayer2, "BP_Gruen_gid", "besondereZweckbestimmung"])
+
+        elif table == "BP_WaldFlaeche":
+            joinLayer1 = self.getLayerForTable(
+                "BP_Landwirtschaft_Wald_und_Gruen",
+                "BP_WaldFlaeche_zweckbestimmung")
+            joins.append([joinLayer1, "BP_WaldFlaeche_gid", "zweckbestimmung"])
+
+        elif table == "BP_GemeinbedarfsFlaeche":
+            joinLayer1 = self.getLayerForTable(
+                "BP_Gemeinbedarf_Spiel_und_Sportanlagen",
+                "BP_GemeinbedarfsFlaeche_zweckbestimmung")
+            joins.append([joinLayer1, "BP_GemeinbedarfsFlaeche_gid", "zweckbestimmung"])
+
+            joinLayer2 = self.getLayerForTable(
+                "BP_Gemeinbedarf_Spiel_und_Sportanlagen",
+                "BP_GemeinbedarfsFlaeche_besondereZweckbestimmung")
+            joins.append([joinLayer2, "BP_GemeinbedarfsFlaeche_gid", "besondereZweckbestimmung"])
+
+        elif table == "BP_SpielSportanlagenFlaeche":
+            joinLayer1 = self.getLayerForTable(
+                "BP_Gemeinbedarf_Spiel_und_Sportanlagen",
+                "BP_SpielSportanlagenFlaeche_zweckbestimmung")
+            joins.append([joinLayer1, "BP_SpielSportanlagenFlaeche_gid", "zweckbestimmung"])
+
+        elif table == "BP_KennzeichnungsFlaeche":
+            joinLayer1 = self.getLayerForTable(
+                "BP_Sonstiges",
+                "BP_KennzeichnungsFlaeche_zweckbestimmung")
+            joins.append([joinLayer1, "BP_KennzeichnungsFlaeche_gid", "zweckbestimmung"])
+
+        elif table == "BP_VerEntsorgungFlaeche" or \
+                table == "BP_VerEntsorgungPunkt":
+            joinLayer1 = self.getLayerForTable(
+                "BP_Ver_und_Entsorgung",
+                "BP_VerEntsorgung_zweckbestimmung")
+            joins.append([joinLayer1, "BP_VerEntsorgung_gid", "zweckbestimmung"])
+
+            joinLayer2 = self.getLayerForTable(
+                "BP_Ver_und_Entsorgung",
+                "BP_VerEntsorgung_besondereZweckbestimmung")
+            joins.append([joinLayer2, "BP_VerEntsorgung_gid", "besondereZweckbestimmung"])
+
+        # den virtualLayer machen
+        selectSql = "?query=SELECT g.gid, g.geometry"
+        fromSql = " FROM \"" + editLayer.name() + "\" g" \
+
+        for i in range(len(parentJoins)):
+            parentTableAlias = "p" + str(i)
+            selectSql += ", " + parentTableAlias + ".*"
+            fromSql += " JOIN \"" + parentJoins[i].name() + "\" " + parentTableAlias + \
+                " ON g.gid = " + parentTableAlias + ".gid"
+
+        for i in range(len(joins)):
+            aJoin = joins[i]
+            joinTableAlias = "j" + str(i)
+            selectSql += ", " + joinTableAlias + ".\"" + aJoin[2] + "\""
+            fromSql += " LEFT JOIN \"" + aJoin[0].name() + "\" " + joinTableAlias + \
+                " ON g.gid = " + joinTableAlias + ".\"" + aJoin[1] + "\""
+
+        sSql = selectSql + fromSql
+        newLayer = QgsVectorLayer(sSql, table, "virtual")
+
+        if newLayer.isValid():
+            QgsMapLayerRegistry.instance().addMapLayers([newLayer])
+        else:
+            newLayer = None
+
+        return newLayer
 
     def aktiverBereichLayerCheck(self,  layer):
         '''Prüfung, ob übergebener Layer und aktive Bereiche dem selben Objektbereich entsammen'''

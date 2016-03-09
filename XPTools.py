@@ -20,7 +20,7 @@ email                : bernhard.stroebl@jena.de
  ***************************************************************************/
 """
 # Import the PyQt and QGIS libraries
-from PyQt4 import QtCore, QtGui, QtSql,  QtXml
+from PyQt4 import QtGui, QtSql,  QtXml
 # Initialize Qt resources from file resources.py
 from qgis.core import *
 from qgis.gui import *
@@ -28,9 +28,10 @@ from XPlanDialog import BereichsauswahlDialog
 from XPlanDialog import StilauswahlDialog
 
 class XPTools():
-    def __init__(self, iface, standardName):
+    def __init__(self, iface, standardName, simpleStyleName):
         self.iface = iface
         self.standardName = standardName # Name des Standardstils
+        self.simpleStyleName = simpleStyleName
         self.bereiche = {}
         # dictionary, um den Typ eines Bereichs zu speichern, so dass nur
         # einmal pro Session und Bereich eine SQL-Abfrage nötig ist
@@ -76,71 +77,84 @@ class XPTools():
             else:
                 return stile[stilId]
 
-    def getLayerStyles(self, db, layer, showWarning = False):
+    def getLayerStyles(self, db, layer, schema, table, showWarning = False):
         '''
         Liste alle für diesen Layer in der DB gespeicherten XP-Stile
-        auf und gibt sie als Dict zurück Stil-Id:[Bereichsname, Stil(XML)]
+        auf und gibt sie als Dict zurück Stil-Id:[Bereichsname, Stil(XML),
+        default_color (hex)]
         '''
 
-        relation = self.getPostgresRelation(layer)
+        sel = "SELECT l.id, COALESCE(b.name,\'" + \
+            self.standardName + "\'), l.style, l.default_color \
+            FROM \"QGIS\".\"layer\" l \
+            LEFT JOIN \"XP_Basisobjekte\".\"XP_Bereich\" b ON l.\"XP_Bereich_gid\" = b.gid \
+            WHERE l.schemaname = :schema \
+                AND l.tablename = :table \
+            ORDER BY \"XP_Bereich_gid\" NULLS FIRST"
 
-        if relation:
-            sel = "SELECT l.id, COALESCE(b.name,\'" + \
-                self.standardName + "\'), l.style \
-                FROM \"QGIS\".\"layer\" l \
-                LEFT JOIN \"XP_Basisobjekte\".\"XP_Bereich\" b ON l.\"XP_Bereich_gid\" = b.gid \
-                WHERE l.schemaname = :schema \
-                    AND l.tablename = :table \
-                ORDER BY \"XP_Bereich_gid\" NULLS FIRST"
+        query = QtSql.QSqlQuery(db)
+        query.prepare(sel)
+        query.bindValue(":schema", schema)
+        query.bindValue(":table", table)
+        query.exec_()
 
-            query = QtSql.QSqlQuery(db)
-            query.prepare(sel)
-            query.bindValue(":schema", relation[0])
-            query.bindValue(":table", relation[1])
-            query.exec_()
-
-            if query.isActive():
-                if query.size() == 0:
-                    if showWarning:
-                        self.noStyleWarning(layer)
-                    query.finish()
-                    return None
-                else:
-                    stile = {}
-
-                    while query.next():
-                        styleId = query.value(0)
-                        bereich = query.value(1)
-                        style = unicode(query.value(2))
-                        stile[styleId] = [bereich, style]
-
-                    query.finish()
-                    return stile
-            else:
-                self.showQueryError(query)
+        if query.isActive():
+            if query.size() == 0:
+                if showWarning:
+                    self.noStyleWarning(layer)
                 query.finish()
                 return None
+            else:
+                stile = {}
+
+                while query.next():
+                    styleId = query.value(0)
+                    bereich = query.value(1)
+                    style = unicode(query.value(2))
+                    defaultColor = query.value(3)
+
+                    if defaultColor != None:
+                        stile[-1] = [self.simpleStyleName, defaultColor]
+
+                    stile[styleId] = [bereich, style]
+
+                query.finish()
+                return stile
         else:
+            self.showQueryError(query)
+            query.finish()
             return None
 
-    def loadStyles(self, db, layer):
+    def applyStyles(self, layer, stile):
         '''
         die Stile dieses Layers laden und auf den Layer anwenden
         '''
         styleMan = layer.styleManager()
-        stile = self.getLayerStyles(db, layer)
+        # den unbenannten Stil umbenennen
+        styleMan.renameStyle(u"", self.simpleStyleName)
 
         if stile != None:
             for key, value in stile.items():
                 bereich = value[0]
                 stil = value[1]
-                styleMan.renameStyle(bereich, bereich + "_old") # falls schon vorhanden
-                style = QgsMapLayerStyle(stil)
-                styleMan.addStyle(bereich, style)
-                styleMan.removeStyle(bereich + "_old")
 
-            if len(stile) > 0:
-                styleMan.removeStyle(u"") # den unbenannten Stil entfernen
+                if bereich == self.simpleStyleName:
+                    styleMan.setCurrentStyle(self.simpleStyleName)
+
+                    if layer.wkbType() in [1, 4]:
+                        sl = QgsMarkerSymbolV2.createSimple({"color":stil})
+                    elif layer.wkbType() in [2, 5]:
+                        sl = QgsLineSymbolV2.createSimple({"color":stil})
+                    elif layer.wkbType() in [3, 6]:
+                        sl = QgsFillSymbolV2.createSimple({"color":stil})
+
+                    layer.rendererV2().setSymbol(sl)
+                    self.iface.legendInterface().refreshLayerSymbology(layer)
+                else:
+                    styleMan.renameStyle(bereich, bereich + "_old") # falls schon vorhanden
+                    style = QgsMapLayerStyle(stil)
+                    styleMan.addStyle(bereich, style)
+                    styleMan.removeStyle(bereich + "_old")
 
     def useStyle(self, layer, bereich):
         '''
@@ -254,7 +268,8 @@ class XPTools():
         targetField ist das Feld im sourceLayer, an das geknüpft wird, joinField
         ist das Feld im joinLayer
         joinedFields ist ein Array mit den Feldnamen der Felder,
-        die gejoined werden sollen'''
+        die gejoined werden sollen
+        seit QGIS 2.14 nicht mehr benötigt, da virtualLayer'''
 
         for aJoinInfo in sourceLayer.vectorJoins():
             if aJoinInfo.joinLayerId == joinLayer.id():

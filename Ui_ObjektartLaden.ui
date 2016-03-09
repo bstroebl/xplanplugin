@@ -45,6 +45,19 @@
     </widget>
    </item>
    <item>
+    <widget class="QCheckBox" name="chkDisplay">
+     <property name="toolTip">
+      <string>Wenn der Haken gesetzt ist, wird zusätzlich ein Layer geladen, der die Objektart darstellt, dieser Layer zusätzliche Layer kann nicht editiert werden</string>
+     </property>
+     <property name="text">
+      <string>Darstellungsvariante zusätzlich laden</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>

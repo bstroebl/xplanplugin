@@ -199,6 +199,8 @@ class ChooseObjektart(XP_Chooser):
                     item.data(0, 0), # Tabelle
                     item.geomColumn, # Geometriespalte
                     item.description]) # Beschreibung
+
+        self.withDisplay = self.ui.chkDisplay.isChecked()
         self.done(1)
 
 class XPlanungConf(QtGui.QDialog):
