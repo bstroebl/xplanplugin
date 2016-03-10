@@ -3,8 +3,11 @@
 ## [Unreleased](https://gitlab.jena.de/Fachschale/XPlanung/compare/master...develop)
 
 ### Added
-- Laden einer Objektart: zusätzlich zur PostGIS-Tabelle als editierbarem Layer wird optional ein virtualLayer zur Darstellung geladen; er enthält alle joins. Der editierbare Layer enthält aus Performancegründen keine Joins mehr. Joins mussten zuletzt mit Memory cache ausgeführt werden, damit QGIS nicht mehr einfriert, weil ewig auf DB-Abfragen gewartet wurde. Der Darstellungslayer symbolisiert stets nach dem aktuellen Wert.
+- Laden einer Objektart: zusätzlich zur PostGIS-Tabelle als editierbarem Layer wird optional ein virtualLayer zur Darstellung geladen; er enthält alle benötigten joins. Der editierbare Layer enthält aus Performancegründen keine Joins mehr. Joins mussten zuletzt mit *Memory cache* ausgeführt werden, damit QGIS nicht mehr einfriert, weil ewig auf DB-Abfragen gewartet wurde. Der Darstellungslayer symbolisiert stets nach dem aktuellen Wert.
 - Neuer Stil *einfarbig* zur Darstellung des editierbaren Layers (wird dort per default eingestellt), andere Stile sind verfügbar (insbesondere zur Bearbeitung derselben), ihre Anwendung ergibt jedoch i.d.R. keinen Sinn.
+
+### Changed
+- Elterntabellen werden beim Darstellugnslayer nur gejoint, wenn eines ihrer Felder für die Darstellung benötigt wird.
 
 # 0.5.0 - 2016-02-25
 ### Added
