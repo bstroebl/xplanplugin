@@ -746,20 +746,29 @@ class XPlan():
         Laden von weiteren Tabellen und erzeugen des virtualLayer
         '''
 
-        ddTable = self.app.xpManager.ddLayers[editLayer.id()][0]
-        # TODO: Parent joins nur bei Layern machen, die das für die Darstellung benötigen
-        parents = self.ddUi.getParents(ddTable, self.db)
         parentJoins = []
+        tablesWithParentJoins = ["BP_BaugebietsTeilFlaeche",
+            "BP_AnpflanzungBindungErhaltungFlaeche",
+            "BP_AnpflanzungBindungErhaltungLinie",
+            "BP_AnpflanzungBindungErhaltungPunkt",
+            "BP_SchutzgebietFlaeche", "BP_SchutzgebietLinie",
+            "BP_SchutzgebietPunkt", "BP_StrassenkoerperFlaeche",
+            "BP_StrassenkoerperLinie", "BP_StrassenVerkehrsFlaeche",
+            "BP_VerEntsorgungLinie"]
 
-        while len(parents) > 0:
-            parentLayer = self.app.xpManager.findPostgresLayer(self.db, parents[0])
+        if tablesWithParentJoins.count(table) != 0:
+            ddTable = self.app.xpManager.ddLayers[editLayer.id()][0]
+            parents = self.ddUi.getParents(ddTable, self.db)
 
-            if parentLayer == None:
-                parentLayer = self.app.xpManager.loadPostGISLayer(self.db, parents[0])
+            while len(parents) > 0:
+                parentLayer = self.app.xpManager.findPostgresLayer(self.db, parents[0])
+
+                if parentLayer == None:
+                    parentLayer = self.app.xpManager.loadPostGISLayer(self.db, parents[0])
 
 
-            parentJoins.append(parentLayer)
-            parents = self.ddUi.getParents(parents[0], self.db)
+                parentJoins.append(parentLayer)
+                parents = self.ddUi.getParents(parents[0], self.db)
 
         joins = []
         # array, das alle Infos zu Joins aufnimmt:
@@ -858,7 +867,7 @@ class XPlan():
             joinLayer2 = self.getLayerForTable(
                 "BP_Landwirtschaft_Wald_und_Gruen",
                 "BP_GruenFlaeche_besondereZweckbestimmung")
-            joins.append([joinLayer2, "BP_Gruen_gid", "besondereZweckbestimmung"])
+            joins.append([joinLayer2, "BP_GruenFlaeche_gid", "besondereZweckbestimmung"])
 
         elif table == "BP_WaldFlaeche":
             joinLayer1 = self.getLayerForTable(
