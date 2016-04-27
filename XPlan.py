@@ -746,6 +746,7 @@ class XPlan():
         Laden von weiteren Tabellen und erzeugen des virtualLayer
         '''
 
+        otherFields = "" # Felder der Tabelle selbstm, die im VirtualLayer benötigt werden
         parentJoins = []
         tablesWithParentJoins = ["BP_BaugebietsTeilFlaeche",
             "BP_AnpflanzungBindungErhaltungFlaeche",
@@ -754,7 +755,8 @@ class XPlan():
             "BP_SchutzgebietFlaeche", "BP_SchutzgebietLinie",
             "BP_SchutzgebietPunkt", "BP_StrassenkoerperFlaeche",
             "BP_StrassenkoerperLinie", "BP_StrassenVerkehrsFlaeche",
-            "BP_VerEntsorgungLinie"]
+            "BP_VerEntsorgungLinie", "FP_VerEntsorgungLinie",
+            "FP_StrassenverkehrFlaeche"]
 
         if tablesWithParentJoins.count(table) != 0:
             ddTable = self.app.xpManager.ddLayers[editLayer.id()][0]
@@ -776,7 +778,9 @@ class XPlan():
         # 1: Feld in 0, an das gejoint wird (entspricht gid von schema.table)
         # 2: Feld in 0, das den relevanten Inhalt enthält
 
-        if table == "FP_GemeinbedarfFlaeche" or \
+        if table == "FP_BebauungsFlaeche":
+            otherFields = ", g.\"allgArtDerBaulNutzung\", g.\"besondereArtDerBaulNutzung\""
+        elif table == "FP_GemeinbedarfFlaeche" or \
                 table == "FP_GemeinbedarfLinie" or \
                 table == "FP_GemeinbedarfPunkt":
             joinLayer1 = self.getLayerForTable(
@@ -909,9 +913,13 @@ class XPlan():
                 "BP_Ver_und_Entsorgung",
                 "BP_VerEntsorgung_besondereZweckbestimmung")
             joins.append([joinLayer2, "BP_VerEntsorgung_gid", "besondereZweckbestimmung"])
+        elif table == "SO_SchienenverkehrsrechtFlaeche":
+            otherFields = ", g.\"flaechenschluss\""
+        elif table == "SO_StrassenverkehrsrechtFlaeche":
+            otherFields = ", g.\"flaechenschluss\""
 
         # den virtualLayer machen
-        selectSql = "?query=SELECT g.gid, g.geometry"
+        selectSql = "?query=SELECT g.gid, g.geometry" + otherFields
         fromSql = " FROM \"" + editLayer.name() + "\" g" \
 
         for i in range(len(parentJoins)):
