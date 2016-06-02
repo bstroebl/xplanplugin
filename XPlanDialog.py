@@ -135,6 +135,7 @@ class ChooseObjektart(XP_Chooser):
             ) cl \
                 ON f_table_schema = nspname AND f_table_name = relname \
             WHERE substring(f_table_schema,1,2) = :objektart \
+            AND f_table_name NOT LIKE '%_qv' \
             order by f_table_schema, f_table_name"
 
         query = QtSql.QSqlQuery(self.db)
