@@ -424,7 +424,19 @@ class XPlan():
                                     ddManagerName = "xpManager")
 
                             if withDisplay:
-                                displayLayer = self.createVirtualLayer(editLayer, tableName)
+                                ddView = DdTable(schemaName = schemaName,
+                                    tableName = tableName + "_qv")
+
+                                if self.app.xpManager.existsInDb(ddView, self.db):
+                                    displayLayer = self.app.xpManager.loadPostGISLayer(self.db,
+                                        ddView, displayName = tableName,
+                                        geomColumn = geomColumn, keyColumn = "gid")
+                                else:
+                                    # lade Layer als Darstelllungsvariante
+                                    # eigene Darstellungsvarianten gibt es nur, wenn nötig
+                                    displayLayer = self.app.xpManager.loadPostGISLayer(self.db,
+                                        ddTable, displayName = tableName,
+                                        geomColumn = geomColumn, keyColumn = "gid")
 
                                 if displayLayer != None:
                                     self.iface.legendInterface().moveLayer(
@@ -740,210 +752,6 @@ class XPlan():
                     self.iface)
 
         return ddInit
-
-    def createVirtualLayer(self, editLayer, table):
-        '''
-        Laden von weiteren Tabellen und erzeugen des virtualLayer
-        '''
-
-        otherFields = "" # Felder der Tabelle selbstm, die im VirtualLayer benötigt werden
-        parentJoins = []
-        tablesWithParentJoins = ["BP_BaugebietsTeilFlaeche",
-            "BP_AnpflanzungBindungErhaltungFlaeche",
-            "BP_AnpflanzungBindungErhaltungLinie",
-            "BP_AnpflanzungBindungErhaltungPunkt",
-            "BP_SchutzgebietFlaeche", "BP_SchutzgebietLinie",
-            "BP_SchutzgebietPunkt", "BP_StrassenkoerperFlaeche",
-            "BP_StrassenkoerperLinie", "BP_StrassenVerkehrsFlaeche",
-            "BP_VerEntsorgungLinie", "FP_VerEntsorgungLinie",
-            "FP_StrassenverkehrFlaeche"]
-
-        if tablesWithParentJoins.count(table) != 0:
-            ddTable = self.app.xpManager.ddLayers[editLayer.id()][0]
-            parents = self.ddUi.getParents(ddTable, self.db)
-
-            while len(parents) > 0:
-                parentLayer = self.app.xpManager.findPostgresLayer(self.db, parents[0])
-
-                if parentLayer == None:
-                    parentLayer = self.app.xpManager.loadPostGISLayer(self.db, parents[0])
-
-
-                parentJoins.append(parentLayer)
-                parents = self.ddUi.getParents(parents[0], self.db)
-
-        joins = []
-        # array, das alle Infos zu Joins aufnimmt:
-        # 0: layer, der gejoint wird
-        # 1: Feld in 0, an das gejoint wird (entspricht gid von schema.table)
-        # 2: Feld in 0, das den relevanten Inhalt enthält
-
-        if table == "FP_BebauungsFlaeche":
-            otherFields = ", g.\"allgArtDerBaulNutzung\", g.\"besondereArtDerBaulNutzung\""
-        elif table == "FP_GemeinbedarfFlaeche" or \
-                table == "FP_GemeinbedarfLinie" or \
-                table == "FP_GemeinbedarfPunkt":
-            joinLayer1 = self.getLayerForTable(
-                "FP_Gemeinbedarf_Spiel_und_Sportanlagen",
-                "FP_Gemeinbedarf_zweckbestimmung")
-            joins.append([joinLayer1, "FP_Gemeinbedarf_gid", "zweckbestimmung"])
-
-            joinLayer2 = self.getLayerForTable(
-                "FP_Gemeinbedarf_Spiel_und_Sportanlagen",
-                "FP_Gemeinbedarf_besondereZweckbestimmung")
-            joins.append([joinLayer2, "FP_Gemeinbedarf_gid", "besondereZweckbestimmung"])
-
-        elif table == "FP_GruenFlaeche" or \
-                table == "FP_GruenLinie" or \
-                table == "FP_GruenPunkt":
-            joinLayer1 = self.getLayerForTable(
-                "FP_Landwirtschaft_Wald_und_Gruen",
-                "FP_Gruen_zweckbestimmung")
-            joins.append([joinLayer1, "FP_Gruen_gid", "zweckbestimmung"])
-
-            joinLayer2 = self.getLayerForTable(
-                "FP_Landwirtschaft_Wald_und_Gruen",
-                "FP_Gruen_besondereZweckbestimmung")
-            joins.append([joinLayer2, "FP_Gruen_gid", "besondereZweckbestimmung"])
-
-        elif table == "FP_PrivilegiertesVorhabenFlaeche" or \
-                table == "FP_PrivilegiertesVorhabenLinie" or \
-                table == "FP_PrivilegiertesVorhabenPunkt":
-            joinLayer1 = self.getLayerForTable(
-                "FP_Sonstiges",
-                "FP_PrivilegiertesVorhaben_zweckbestimmung")
-            joins.append([joinLayer1, "FP_PrivilegiertesVorhaben_gid", "zweckbestimmung"])
-
-            joinLayer2 = self.getLayerForTable(
-                "FP_Sonstiges",
-                "FP_PrivilegiertesVorhaben_besondereZweckbestimmung")
-            joins.append([joinLayer2, "FP_PrivilegiertesVorhaben_gid", "besondereZweckbestimmung"])
-
-        elif table == "FP_VerEntsorgungFlaeche" or \
-                table == "FP_VerEntsorgungLinie" or \
-                table == "FP_VerEntsorgungPunkt":
-            joinLayer1 = self.getLayerForTable(
-                "FP_Ver_und_Entsorgung",
-                "FP_VerEntsorgung_zweckbestimmung")
-            joins.append([joinLayer1, "FP_VerEntsorgung_gid", "zweckbestimmung"])
-
-            joinLayer2 = self.getLayerForTable(
-                "FP_Ver_und_Entsorgung",
-                "FP_VerEntsorgung_besondereZweckbestimmung")
-            joins.append([joinLayer2, "FP_VerEntsorgung_gid", "besondereZweckbestimmung"])
-
-        elif table == "FP_SpielSportanlageFlaeche" or \
-                table == "FP_SpielSportanlageLinie" or \
-                table == "FP_SpielSportanlagePunkt":
-            joinLayer1 = self.getLayerForTable(
-                "FP_Gemeinbedarf_Spiel_und_Sportanlagen",
-                "FP_SpielSportanlage_zweckbestimmung")
-            joins.append([joinLayer1, "FP_SpielSportanlage_gid", "zweckbestimmung"])
-
-        elif table == "FP_KennzeichnungFlaeche" or \
-                table == "FP_KennzeichnungLinie" or \
-                table == "FP_KennzeichnungPunkt":
-            joinLayer1 = self.getLayerForTable(
-                "FP_Sonstiges",
-                "FP_Kennzeichnung_zweckbestimmung")
-            joins.append([joinLayer1, "FP_Kennzeichnung_gid", "zweckbestimmung"])
-
-        elif table == "FP_WaldFlaeche":
-            joinLayer1 = self.getLayerForTable(
-                "FP_Landwirtschaft_Wald_und_Gruen",
-                "FP_WaldFlaeche_zweckbestimmung")
-            joins.append([joinLayer1, "FP_WaldFlaeche_gid", "zweckbestimmung"])
-
-        elif table == "FP_GenerischesObjektFlaeche" or \
-                table == "FP_GenerischesObjektLinie" or \
-                table == "FP_GenerischesObjektPunkt":
-            joinLayer1 = self.getLayerForTable(
-                "FP_Sonstiges",
-                "FP_GenerischesObjekt_zweckbestimmung")
-            joins.append([joinLayer1, "FP_GenerischesObjekt_gid", "zweckbestimmung"])
-
-        elif table == "BP_GruenFlaeche":
-            joinLayer1 = self.getLayerForTable(
-                "BP_Landwirtschaft_Wald_und_Gruen",
-                "BP_GruenFlaeche_zweckbestimmung")
-            joins.append([joinLayer1, "BP_GruenFlaeche_gid", "zweckbestimmung"])
-
-            joinLayer2 = self.getLayerForTable(
-                "BP_Landwirtschaft_Wald_und_Gruen",
-                "BP_GruenFlaeche_besondereZweckbestimmung")
-            joins.append([joinLayer2, "BP_GruenFlaeche_gid", "besondereZweckbestimmung"])
-
-        elif table == "BP_WaldFlaeche":
-            joinLayer1 = self.getLayerForTable(
-                "BP_Landwirtschaft_Wald_und_Gruen",
-                "BP_WaldFlaeche_zweckbestimmung")
-            joins.append([joinLayer1, "BP_WaldFlaeche_gid", "zweckbestimmung"])
-
-        elif table == "BP_GemeinbedarfsFlaeche":
-            joinLayer1 = self.getLayerForTable(
-                "BP_Gemeinbedarf_Spiel_und_Sportanlagen",
-                "BP_GemeinbedarfsFlaeche_zweckbestimmung")
-            joins.append([joinLayer1, "BP_GemeinbedarfsFlaeche_gid", "zweckbestimmung"])
-
-            joinLayer2 = self.getLayerForTable(
-                "BP_Gemeinbedarf_Spiel_und_Sportanlagen",
-                "BP_GemeinbedarfsFlaeche_besondereZweckbestimmung")
-            joins.append([joinLayer2, "BP_GemeinbedarfsFlaeche_gid", "besondereZweckbestimmung"])
-
-        elif table == "BP_SpielSportanlagenFlaeche":
-            joinLayer1 = self.getLayerForTable(
-                "BP_Gemeinbedarf_Spiel_und_Sportanlagen",
-                "BP_SpielSportanlagenFlaeche_zweckbestimmung")
-            joins.append([joinLayer1, "BP_SpielSportanlagenFlaeche_gid", "zweckbestimmung"])
-
-        elif table == "BP_KennzeichnungsFlaeche":
-            joinLayer1 = self.getLayerForTable(
-                "BP_Sonstiges",
-                "BP_KennzeichnungsFlaeche_zweckbestimmung")
-            joins.append([joinLayer1, "BP_KennzeichnungsFlaeche_gid", "zweckbestimmung"])
-
-        elif table == "BP_VerEntsorgungFlaeche" or \
-                table == "BP_VerEntsorgungPunkt":
-            joinLayer1 = self.getLayerForTable(
-                "BP_Ver_und_Entsorgung",
-                "BP_VerEntsorgung_zweckbestimmung")
-            joins.append([joinLayer1, "BP_VerEntsorgung_gid", "zweckbestimmung"])
-
-            joinLayer2 = self.getLayerForTable(
-                "BP_Ver_und_Entsorgung",
-                "BP_VerEntsorgung_besondereZweckbestimmung")
-            joins.append([joinLayer2, "BP_VerEntsorgung_gid", "besondereZweckbestimmung"])
-        elif table == "SO_SchienenverkehrsrechtFlaeche":
-            otherFields = ", g.\"flaechenschluss\""
-        elif table == "SO_StrassenverkehrsrechtFlaeche":
-            otherFields = ", g.\"flaechenschluss\""
-
-        # den virtualLayer machen
-        selectSql = "?query=SELECT g.gid, g.geometry" + otherFields
-        fromSql = " FROM \"" + editLayer.name() + "\" g" \
-
-        for i in range(len(parentJoins)):
-            parentTableAlias = "p" + str(i)
-            selectSql += ", " + parentTableAlias + ".*"
-            fromSql += " JOIN \"" + parentJoins[i].name() + "\" " + parentTableAlias + \
-                " ON g.gid = " + parentTableAlias + ".gid"
-
-        for i in range(len(joins)):
-            aJoin = joins[i]
-            joinTableAlias = "j" + str(i)
-            selectSql += ", " + joinTableAlias + ".\"" + aJoin[2] + "\""
-            fromSql += " LEFT JOIN \"" + aJoin[0].name() + "\" " + joinTableAlias + \
-                " ON g.gid = " + joinTableAlias + ".\"" + aJoin[1] + "\""
-
-        sSql = selectSql + fromSql
-        newLayer = QgsVectorLayer(sSql, table, "virtual")
-
-        if newLayer.isValid():
-            QgsMapLayerRegistry.instance().addMapLayers([newLayer])
-        else:
-            newLayer = None
-
-        return newLayer
 
     def aktiverBereichLayerCheck(self,  layer):
         '''Prüfung, ob übergebener Layer und aktive Bereiche dem selben Objektbereich entsammen'''
