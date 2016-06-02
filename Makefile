@@ -22,6 +22,8 @@ PY_FILES = XPlan.py XPlanDialog.py __init__.py HandleDb.py XPTools.py
 
 EXTRAS = tools/icons/logo_xplanung.png
 
+LICENSE = license.txt
+
 METADATA = metadata.txt
 
 UI_FILES = Ui_Bereichsauswahl.py Ui_conf.py Ui_ObjektartLaden.py Ui_Stilauswahl.py
@@ -49,6 +51,7 @@ deploy: compile
 	cp -vf $(PY_FILES) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
 	cp -vf $(UI_FILES) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
 	cp -vf $(METADATA) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
+	cp -vf $(LICENSE) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
 	#cp -vf $(RESOURCE_FILES) $(HOME)/.qgis/python/plugins/$(PLUGINNAME)/tools
 	cp -vf $(EXTRAS) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/tools/icons
 
