@@ -516,32 +516,38 @@ class XPTools():
                 ok = layer.startEditing()
 
                 if not ok and showErrorMsg:
-                    msg = u"Bitte sorgen Sie dafür, dass der Layer " + layer.name() + u" editierbar ist!"
-                    if iface:
-                        iface.messageBar().pushMessage(title, msg, level=QgsMessageBar.CRITICAL)
-                    else:
-                        QtGui.QMessageBox.information(None, title, msg)
-
+                    msg = u"Bitte sorgen Sie dafür, dass der Layer " + \
+                        layer.name() + u" editierbar ist!"
+                    self.showError(msg, title)
         else:
             if showErrorMsg:
                 msg = u"Der Layer " + layer.name() + u" ist kein Vektorlayer " + \
                     u" und damit nicht editierbar!"
-
-                if iface:
-                    iface.messageBar().pushMessage(title, msg, level=QgsMessageBar.CRITICAL)
-                else:
-                    QtGui.QMessageBox.information(None, title, msg)
+                self.showError(msg, title)
 
         return ok
 
     def showQueryError(self, query):
-        QtGui.QMessageBox.warning(None, "DBError",  "Database Error: \
-            %(error)s \n %(query)s" % {"error": query.lastError().text(),  "query": query.lastQuery()})
+        self.showError(
+            "%(error)s" % {"error": query.lastError().text()}, "DB-Fehler")
+        self.showError(
+            "%(query)s" % {"query": query.lastQuery()},
+            "Abfrage war", "DB-Fehler")
+
+    def showInfo(self, msg, title = "XPlanung"):
+        self.iface.messageBar().pushMessage(
+            title, msg, duration = 10)
+
+    def showWarning(self, msg, title = "XPlanung"):
+        self.iface.messageBar().pushMessage(title, msg,
+            level=QgsMessageBar.WARNING, duration = 10)
+
+    def showError(self, msg, title = "XPlanung"):
+        self.iface.messageBar().pushMessage(title,
+            msg, level=QgsMessageBar.CRITICAL, duration = 10)
 
     def noStyleWarning(self, layer):
-        self.iface.messageBar().pushMessage(
-            "XPlanung", u"Für den Layer " + layer.name() + u" sind keine Stile gespeichert",
-            level=QgsMessageBar.WARNING, duration = 10)
+        self.showWarning(u"Für den Layer " + layer.name() + u" sind keine Stile gespeichert")
 
     def debug(self,  msg):
         QtGui.QMessageBox.information(None, "Debug",  msg)
