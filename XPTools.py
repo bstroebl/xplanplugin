@@ -550,4 +550,4 @@ class XPTools():
         self.showWarning(u"Für den Layer " + layer.name() + u" sind keine Stile gespeichert")
 
     def debug(self,  msg):
-        QtGui.QMessageBox.information(None, "Debug",  msg)
+        QgsMessageLog.logMessage("Debug" + "\n" + msg)
