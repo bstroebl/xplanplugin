@@ -114,7 +114,7 @@ class XPTools():
                     defaultColor = query.value(3)
 
                     if defaultColor != None:
-                        stile[-1] = [self.simpleStyleName, defaultColor]
+                        stile[9999] = [self.simpleStyleName, defaultColor]
 
                     stile[styleId] = [bereich, style]
 
