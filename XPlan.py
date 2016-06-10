@@ -561,6 +561,7 @@ class XPlan():
         relation = self.tools.getPostgresRelation(layer)
         schemaName = relation[0]
         tableName = relation[1]
+        tableName = tableName.replace("_qv", "")
         stilId = self.getStyleId(schemaName, tableName, bereich)
         self.app.xpManager.removeAction(layer, actionName = "XP_Sachdaten")
         doc = self.tools.getXmlLayerStyle(layer)
