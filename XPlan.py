@@ -29,7 +29,10 @@ try:
 except:
     pass
 
-import sys
+import sys, os
+
+BASEDIR = os.path.dirname( unicode(__file__,sys.getfilesystemencoding()) )
+
 from HandleDb import DbHandler
 from XPTools import XPTools
 from XPlanDialog import XPlanungConf
@@ -93,6 +96,13 @@ class XPlan():
             XpError(u"Bitte installieren Sie das Plugin " + \
                 "DataDrivenInputMask aus dem QGIS Official Repository!",
                 self.iface)
+
+        qs = QtCore.QSettings( "QGIS", "QGIS2" )
+        svgpaths = qs.value( "svg/searchPathsForSVG", "", type=str ).split("|")
+        svgpath = os.path.abspath( os.path.join( BASEDIR, "svg" ) )
+        if not svgpath.upper() in map(unicode.upper, svgpaths):
+            svgpaths.append( svgpath )
+            qs.setValue( "svg/searchPathsForSVG", u"|".join( svgpaths ) )
 
     def initGui(self):
         # Code von fTools
