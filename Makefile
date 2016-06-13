@@ -48,12 +48,14 @@ deploy: compile
 	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
 	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/tools
 	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/tools/icons
+	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/svg/XPlanung_qgis
 	cp -vf $(PY_FILES) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
 	cp -vf $(UI_FILES) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
 	cp -vf $(METADATA) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
 	cp -vf $(LICENSE) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
 	#cp -vf $(RESOURCE_FILES) $(HOME)/.qgis/python/plugins/$(PLUGINNAME)/tools
 	cp -vf $(EXTRAS) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/tools/icons
+	cp -vf svg/XPlanung_qgis/*.svg $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/svg/XPlanung_qgis
 
 # The derase deletes deployed plugin
 derase:
