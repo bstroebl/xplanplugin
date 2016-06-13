@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="2.6875"
+   height="1.1562665"
+   id="svg3419"
+   version="1.1"
+   inkscape:version="0.48.3.1 r9886"
+   sodipodi:docname="F_BP_Waserwirtschaft.svg">
+  <defs
+     id="defs3421">
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect20002"
+       is_visible="true" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect19998"
+       is_visible="true" />
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="105.60636"
+     inkscape:cx="1.0859659"
+     inkscape:cy="0.56604611"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:window-width="1920"
+     inkscape:window-height="1030"
+     inkscape:window-x="0"
+     inkscape:window-y="27"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata3424">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-2.25,-1049.5938)">
+    <path
+       style="fill:#007bce;fill-opacity:1;stroke:#8cbf8c;stroke-width:0.00094691;stroke-linecap:square;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       d="m 3.5464045,1050.6674 c -0.119244,-0.031 -0.282624,-0.1282 -0.6770426,-0.4023 -0.1686991,-0.1172 -0.3124457,-0.1784 -0.471089,-0.2005 l -0.082855,-0.012 0,-0.1967 0,-0.1968 1.2783321,0 1.2783321,0 0,0.1975 0,0.1975 -0.074791,0.01 c -0.1526936,0.013 -0.3157845,0.073 -0.4445291,0.1637 -0.034667,0.024 -0.1252848,0.1071 -0.2013727,0.1836 -0.2181068,0.2193 -0.3156374,0.2746 -0.4818862,0.2734 -0.03906,-3e-4 -0.094455,-0.01 -0.1230986,-0.014 z"
+       id="path27663-6"
+       inkscape:connector-curvature="0" />
+  </g>
+</svg>

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="7.1875"
+   height="4.78125"
+   id="svg3419"
+   version="1.1"
+   inkscape:version="0.48.3.1 r9886"
+   sodipodi:docname="P_FP_Strassenverkehr_zweckbestimmung_1400_besZ_14002.svg">
+  <defs
+     id="defs3421" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="90.509668"
+     inkscape:cx="3.1312787"
+     inkscape:cy="3.9703467"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:window-width="1920"
+     inkscape:window-height="1030"
+     inkscape:window-x="0"
+     inkscape:window-y="27"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata3424">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-1047.7813)">
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke:#8cbf8c;stroke-width:0;stroke-linecap:square;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       id="rect12147"
+       width="4"
+       height="4"
+       x="1.59375"
+       y="1048.1719" />
+    <g
+       id="g17351"
+       transform="translate(0.48358276,0.01176801)">
+      <path
+         inkscape:connector-curvature="0"
+         id="path5640"
+         style="fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none"
+         d="m 3.0029515,1048.9433 c -0.1659311,0.014 -0.3109962,-0.1109 -0.323721,-0.2763 -0.013748,-0.166 0.1099431,-0.3111 0.2758775,-0.3238 0.1664393,-0.014 0.3115044,0.1099 0.3242293,0.2764 0.013227,0.1659 -0.1109596,0.311 -0.2763858,0.3237" />
+      <path
+         inkscape:connector-curvature="0"
+         id="path5642"
+         style="fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none"
+         d="m 3.2579598,1049.067 c -0.059044,-0.042 -0.1323403,-0.069 -0.2112336,-0.063 -0.1033266,0.01 -0.1888365,0.073 -0.2397359,0.1511 l -0.3043797,0.6027 -0.4143228,0.285 c -0.03563,0.027 -0.057008,0.072 -0.053447,0.1196 0.00609,0.074 0.071769,0.1303 0.146593,0.1242 0.022381,0 0.040211,-0.01 0.062096,-0.02 l 0.4524974,-0.311 c 0.013747,-0.012 0.024955,-0.025 0.033594,-0.041 l 0.1145236,-0.226 0.1353928,0.6016 -0.5339351,0.6311 c -0.012217,0.02 -0.020361,0.042 -0.024955,0.065 l -0.1445537,0.7624 c 6.54e-4,0.017 -0.00163,0.028 -6.54e-4,0.042 0.00867,0.1125 0.1068906,0.196 0.2193781,0.1868 0.092638,-0.01 0.1623704,-0.076 0.184256,-0.1608 l 0.1359043,-0.7147 0.4336643,-0.4754 0.1012905,0.4633 c 0.00293,0.022 0.031568,0.068 0.040719,0.086 l 0.4158507,0.7018 c 0.042247,0.065 0.1114678,0.1054 0.1913808,0.099 0.1124875,-0.01 0.1964728,-0.1074 0.1873119,-0.2194 -0.00196,-0.032 -0.015768,-0.065 -0.026974,-0.088 l -0.3878567,-0.6505 -0.3221933,-1.4313 0.2107255,0.171 0.1114678,0.51 c 0.014757,0.065 0.074824,0.1181 0.1450651,0.1125 0.074821,-0.01 0.1308124,-0.071 0.1252122,-0.1466 l -0.00293,-0.018 -0.1328485,-0.5945 c -0.00713,-0.027 -0.021892,-0.049 -0.041738,-0.066 l -0.6051954,-0.4906 z" />
+    </g>
+  </g>
+</svg>

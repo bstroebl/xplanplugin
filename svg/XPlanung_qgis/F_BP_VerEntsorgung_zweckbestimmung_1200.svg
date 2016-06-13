@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="7.1875"
+   height="4.78125"
+   id="svg3419"
+   version="1.1"
+   inkscape:version="0.48.3.1 r9886"
+   sodipodi:docname="F_BP_VerEntsorgung_zweckbestimmung_1200.svg">
+  <defs
+     id="defs3421" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="128"
+     inkscape:cx="3.8623469"
+     inkscape:cy="3.4003831"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:window-width="1920"
+     inkscape:window-height="1030"
+     inkscape:window-x="0"
+     inkscape:window-y="27"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata3424">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-1047.7813)">
+    <use
+       xlink:href="#SymbolElektrizitaet"
+       transform="matrix(0.1,0,0,0.1,15,1055.2813)"
+       id="use28595"
+       x="0"
+       y="0"
+       width="1"
+       height="1" />
+    <use
+       xlink:href="#SymbolElektrizitaet"
+       transform="matrix(0.1,0,0,0.1,15,1055.2813)"
+       id="use28595-7"
+       x="0"
+       y="0"
+       width="1"
+       height="1" />
+    <path
+       sodipodi:type="arc"
+       style="fill:#ffffff;stroke:#000000;stroke-width:0.10030583000000000;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="path30088"
+       sodipodi:cx="16.114649"
+       sodipodi:cy="8.6942673"
+       sodipodi:rx="2.0382166"
+       sodipodi:ry="1.9745224"
+       d="m 18.152865,8.6942673 a 2.0382166,1.9745224 0 1 1 -4.076433,0 2.0382166,1.9745224 0 1 1 4.076433,0 z"
+       transform="matrix(0.95058205,0,0,0.98125961,-11.724546,1041.6406)" />
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.00078125;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       d="m 2.2207035,1048.7618 c 0,-0.01 0.1217041,-0.1249 0.1914521,-0.1803 0.273924,-0.2177 0.5779864,-0.3463 0.9452666,-0.3998 0.091077,-0.013 0.3612463,-0.013 0.4570313,-2e-4 0.418334,0.058 0.7881696,0.2347 1.0807024,0.5172 l 0.071641,0.069 -1.3730469,3e-4 c -0.7640601,2e-4 -1.3730468,0 -1.3730468,-0.01 z"
+       id="path30757"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.00078125;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       d="m 4.967,1051.5821 c 0,0.01 -0.1217,0.1249 -0.1915,0.1803 -0.2739,0.2177 -0.578,0.3463 -0.9453,0.3998 -0.091,0.013 -0.3612,0.013 -0.457,2e-4 -0.4183,-0.058 -0.7882,-0.2347 -1.0807,-0.5172 l -0.072,-0.069 1.373,-3e-4 c 0.7641,-2e-4 1.3731,0 1.3731,0.01 z"
+       id="path30757-2"
+       inkscape:connector-curvature="0" />
+  </g>
+</svg>

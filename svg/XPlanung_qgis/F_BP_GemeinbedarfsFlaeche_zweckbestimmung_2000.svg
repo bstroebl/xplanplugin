@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="7.1875"
+   height="4.78125"
+   id="svg3419"
+   version="1.1"
+   inkscape:version="0.48.3.1 r9886"
+   sodipodi:docname="F_BP_GemeinbedarfsFlaeche_zweckbestimmung_2000.svg">
+  <defs
+     id="defs3421" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="105.60636"
+     inkscape:cx="1.8701188"
+     inkscape:cy="2.7289373"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:window-width="1920"
+     inkscape:window-height="1030"
+     inkscape:window-x="0"
+     inkscape:window-y="27"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata3424">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-1047.7813)">
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.85163373;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="rect3427"
+       width="6.3483658"
+       height="3.9483662"
+       x="0.41956711"
+       y="1048.1978" />
+    <path
+       sodipodi:type="star"
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="path5892"
+       sodipodi:sides="3"
+       sodipodi:cx="3.6022778"
+       sodipodi:cy="2.2101076"
+       sodipodi:r1="5.1175704"
+       sodipodi:r2="2.558785"
+       sodipodi:arg1="0.5233655"
+       sodipodi:arg2="1.570563"
+       inkscape:flatsided="false"
+       inkscape:rounded="0"
+       inkscape:randomized="0"
+       d="m 8.0348205,4.7678588 -4.4319457,0.00103 -4.43194599,0.00103 L 1.3860065,0.93123216 3.601084,-2.9074627 5.817952,0.93019807 z"
+       transform="matrix(-0.56220241,0,0,-0.49338694,5.6192948,1050.6314)"
+       inkscape:transform-center-x="0.00037709218"
+       inkscape:transform-center-y="0.63097459" />
+  </g>
+</svg>
