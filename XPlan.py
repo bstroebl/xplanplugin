@@ -23,7 +23,12 @@ email                : bernhard.stroebl@jena.de
 from PyQt4 import QtCore, QtGui, QtSql
 from qgis.core import *
 from qgis.gui import *
-from DataDrivenInputMask.ddattribute import DdTable
+
+try:
+    from DataDrivenInputMask.ddattribute import DdTable
+except:
+    pass
+
 import sys
 from HandleDb import DbHandler
 from XPTools import XPTools
