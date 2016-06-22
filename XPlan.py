@@ -117,6 +117,8 @@ class XPlan():
         self.fpMenu.setToolTip(u"Fachschema FPlan für Flächennutzungspläne")
         self.lpMenu = QtGui.QMenu(u"LPlan")
         self.lpMenu.setToolTip(u"Fachschema LPlan für Landschaftspläne")
+        self.rpMenu = QtGui.QMenu(u"Regionalplan")
+        self.rpMenu.setToolTip(u"Fachschema für Regionalpläne")
         self.soMenu = QtGui.QMenu(u"SonstigePlanwerke")
         self.soMenu.setToolTip(u"Fachschema zur Modellierung nachrichtlicher Übernahmen " + \
             u"aus anderen Rechtsbereichen und sonstiger raumbezogener Pläne nach BauGB. ")
@@ -178,6 +180,8 @@ class XPlan():
         self.action26 = QtGui.QAction(u"räuml. Geltungsbereiche neu berechnen",
             self.iface.mainWindow())
         self.action26.triggered.connect(self.geltungsbereichBerechnen)
+        self.action27 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
+        self.action27.triggered.connect(self.loadRP)
 
         self.xpMenu.addActions([self.action20, self.action25,
             self.action6, self.action10])
@@ -186,6 +190,7 @@ class XPlan():
         self.bpMenu.addActions([self.action21, self.action26])
         self.fpMenu.addActions([self.action22])
         self.lpMenu.addActions([self.action23])
+        self.rpMenu.addActions([self.action27])
         self.soMenu.addActions([self.action24])
         self.xpDbMenu.addActions([self.action9, self.action7, self.action8])
         # Add toolbar button and menu item
@@ -197,6 +202,7 @@ class XPlan():
         self.vectorMenu.addMenu(self.bpMenu)
         self.vectorMenu.addMenu(self.fpMenu)
         self.vectorMenu.addMenu(self.lpMenu)
+        self.vectorMenu.addMenu(self.rpMenu)
         self.vectorMenu.addMenu(self.soMenu)
         self.iface.removePluginVectorMenu("tmp", self.tmpAct)
         self.iface.addPluginToDatabaseMenu("tmp", self.tmpAct)
@@ -213,6 +219,7 @@ class XPlan():
             self.vectorMenu.removeAction(self.bpMenu.menuAction())
             self.vectorMenu.removeAction(self.fpMenu.menuAction())
             self.vectorMenu.removeAction(self.lpMenu.menuAction())
+            self.vectorMenu.removeAction(self.rpMenu.menuAction())
             self.iface.removePluginVectorMenu("tmp", self.tmpAct)
             self.iface.addPluginToDatabaseMenu("tmp", self.tmpAct)
             self.databaseMenu.removeAction(self.xpDbMenu.menuAction())
@@ -475,6 +482,9 @@ class XPlan():
 
     def loadLP(self):
         self.loadObjektart("LP")
+
+    def loadRP(self):
+        self.loadObjektart("RP")
 
     def loadSO(self):
         self.loadObjektart("SO")
