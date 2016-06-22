@@ -1,13 +1,19 @@
 # Change Log
 
-## [Unreleased](https://gitlab.jena.de/Fachschale/XPlanung/compare/master...develop)
+## [Unreleased](https://gitlab.jena.de/Fachschale/XPlanung/compare/v1.0.0...develop)
 
+# 1.0.0 - 2016-06-22
 ### Added
-- Laden einer Objektart: zusätzlich zur PostGIS-Tabelle als editierbarem Layer wird optional ein virtualLayer zur Darstellung geladen; er enthält alle benötigten joins. Der editierbare Layer enthält aus Performancegründen keine Joins mehr. Joins mussten zuletzt mit *Memory cache* ausgeführt werden, damit QGIS nicht mehr einfriert, weil ewig auf DB-Abfragen gewartet wurde. Der Darstellungslayer symbolisiert stets nach dem aktuellen Wert.
-- Neuer Stil *einfarbig* zur Darstellung des editierbaren Layers (wird dort per default eingestellt), andere Stile sind verfügbar (insbesondere zur Bearbeitung derselben), ihre Anwendung ergibt jedoch i.d.R. keinen Sinn.
+- Laden einer Objektart: zusätzlich zur PostGIS-Tabelle als editierbarem Layer wird optional ein View zur Darstellung geladen; er enthält alle benötigten joins. Der editierbare Layer enthält aus Performancegründen keine Joins mehr. Joins mussten zuletzt mit *Memory cache* ausgeführt werden, damit QGIS nicht mehr einfriert, weil ewig auf DB-Abfragen gewartet wurde. Der Darstellungslayer symbolisiert stets nach dem aktuellen Wert.
+- Neuer Stil *einfarbig* zur Darstellung des editierbaren Layers (wird dort per default eingestellt), andere Stile sind verfügbar (insbesondere zur Bearbeitung derselben), ihre Anwendung auf den editierbaren Layer ergibt jedoch i.d.R. keinen Sinn.
+- Modellbereich Regionalplan_Kernmodell ansprechbar
+- Die SVG-Dateien sind nun Bestandteil des Plugins, der QGIS-SVG-Pfad wird entsprechend ergänzt.
 
 ### Changed
 - Elterntabellen werden beim Darstellugnslayer nur gejoint, wenn eines ihrer Felder für die Darstellung benötigt wird.
+- Ausgaben an den Nutzer werden mit einheitlichen Methoden über die MessageBar ausgegeben.
+- Debug-Ausgaben werden über QgsMessageLog ausgegeben.
+- Der Layername ist nun nur noch der Tabellenname.
 
 # 0.5.0 - 2016-02-25
 ### Added
