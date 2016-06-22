@@ -1,6 +1,6 @@
 # Change Log
 
-## [Unreleased](https://gitlab.jena.de/Fachschale/XPlanung/compare/v1.0.0...develop)
+## [Unreleased](https://github.com/Fachschale/XPlanung/compare/v1.0.0...develop)
 
 # 1.0.0 - 2016-06-22
 ### Added
