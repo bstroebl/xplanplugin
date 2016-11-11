@@ -1,5 +1,6 @@
 XPlanung.e4p
 .eric5project/
+.eric6project/
 .ropeproject/
 tools/*.py
 images/
