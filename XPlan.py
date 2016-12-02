@@ -965,7 +965,7 @@ class XPlan():
                                     # layer initialisieren
                                     if self.layerInitialize(aLayer,  msg=True,  layerCheck = False):
                                         # Stil des Layers aus der DB holen und anwenden
-                                        self.tools.useStyle(layer, bereichDict[bereich])
+                                        self.tools.useStyle(aLayer, bereichDict[bereich])
                                         self.app.xpManager.addAction(aLayer, actionName = "XP_Sachdaten",
                                             ddManagerName = "xpManager")
 
