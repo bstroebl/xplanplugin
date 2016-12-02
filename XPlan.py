@@ -948,8 +948,7 @@ class XPlan():
                     filter = "gid IN (SELECT \"" + bereichTyp + "_Objekt_gid\" " + \
                         "FROM \""+ bereichTyp + "_Basisobjekte\".\"" + \
                         bereichTyp + "_Objekt_gehoertZu" + bereichTyp + "_Bereich\" " + \
-                        bereichTyp + "_Objekt_gehoertZu" + bereichTyp + "_Bereich\" " + \
-                        "WHERE \"" + bereichTyp + "_Bereich_gid\" = " + str(bereich) + ")"
+                        "WHERE \"gehoertZu" + bereichTyp + "_Bereich\" = " + str(bereich) + ")"
 
                     for aLayerType in layers:
                         for aKey in aLayerType.iterkeys():
