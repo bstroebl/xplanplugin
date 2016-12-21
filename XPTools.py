@@ -341,6 +341,20 @@ class XPTools():
 
         if len(bereichGids) > 0:
             bereichTyp = self.getBereichTyp(db, bereichGids[0])
+            modellBereiche = []
+            sel = "SELECT \"Kurz\" FROM public.\"XP_Modellbereich\" WHERE \"Kurz\" != :modellbereich;"
+            query = QtSql.QSqlQuery(db)
+            query.prepare(sel)
+            query.bindValue(":modellbereich", bereichTyp)
+            query.exec_()
+
+            if query.isActive():
+                while query.next():
+                    modellBereiche.append(query.value(0))
+            else:
+                    self.showQueryError(query)
+                    query.finish()
+                    return []
 
             bereiche = ""
 
@@ -353,13 +367,28 @@ class XPTools():
             if bereichTyp:
                 sel = "SELECT \"Objektart\",  \
                 CASE \"Objektart\" LIKE \'%Punkt\' WHEN true THEN \'Punkt\' ELSE \
-                    CASE \"Objektart\" LIKE \'%Linie\' WHEN true THEN \'Linie\' ELSE \'Flaeche\' \
+                    CASE \"Objektart\" LIKE \'%Linie\' WHEN true THEN \'Linie\' ELSE  \
+                        CASE \"Objektart\" LIKE \'%Flaeche\' WHEN true THEN \'Flaeche\' ELSE \'Label\' \
+                        END \
                     END \
                 END as typ, \
-                \"Objektartengruppe\" FROM ( \
+                \"Objektartengruppe\" \
+            FROM ( \
+                SELECT DISTINCT \"Objektart\", \'XP_Praesentationsobjekte\' as \"Objektartengruppe\" \
+                FROM \"XP_Praesentationsobjekte\".\"XP_AbstraktePraesentationsobjekte\" \
+                WHERE \"gehoertZuBereich\" IN (" + bereiche + ") \
+                UNION \
                 SELECT DISTINCT \"Objektart\", \"Objektartengruppe\" \
                 FROM \"" + bereichTyp +"_Basisobjekte\".\"" + bereichTyp + "_Objekte\" \
-                WHERE \"" + bereichTyp +"_Bereich_gid\" IN (" + bereiche + ")) foo"
+                WHERE \"" + bereichTyp +"_Bereich_gid\" IN (" + bereiche + ")"
+
+                for mBereich in modellBereiche:
+                    sel += "UNION \
+                SELECT DISTINCT \"Objektart\", \"Objektartengruppe\" \
+                FROM \"" + mBereich +"_Basisobjekte\".\"" + mBereich + "_Objekte\" \
+                WHERE \"nachrichtlich\" IN (" + bereiche + ")"
+
+                sel += ") foo"
                 query = QtSql.QSqlQuery(db)
                 query.prepare(sel)
                 query.exec_()
@@ -368,6 +397,7 @@ class XPTools():
                     if query.size() == 0:
                         return []
 
+                    labelLayer = {}
                     punktLayer = {}
                     linienLayer = {}
                     flaechenLayer = {}
@@ -377,7 +407,13 @@ class XPTools():
                         art = query.value(1)
                         gruppe = query.value(2)
 
-                        if art == "Punkt":
+                        if art == "Label":
+                            try:
+                                lLayerList = labelLayer[gruppe]
+                                lLayerList.append(layer)
+                            except KeyError:
+                                labelLayer[gruppe] = [layer]
+                        elif art == "Punkt":
                             try:
                                 pLayerList = punktLayer[gruppe]
                                 pLayerList.append(layer)
@@ -397,7 +433,7 @@ class XPTools():
                                 flaechenLayer[gruppe] = [layer]
 
                     query.finish()
-                    return [punktLayer,  linienLayer,  flaechenLayer]
+                    return [flaechenLayer, linienLayer, punktLayer, labelLayer]
                 else:
                     self.showQueryError(query)
                     query.finish()
@@ -469,6 +505,20 @@ class XPTools():
                 break
 
         return retValue
+
+    def createGroup(self,  grpName):
+        grpIdx = self.iface.legendInterface().addGroup(grpName,  False) # False = expand
+
+        if QGis.QGIS_VERSION_INT >= 20400:
+            # Gruppe an der Spitze des LAyerbaums einfügen
+            root=QgsProject.instance().layerTreeRoot()
+            group = root.findGroup(grpName)
+            group2 = group.clone()
+            root.insertChildNode(0,  group2)
+            root.removeChildNode(group)
+            grpIdx = self.getGroupIndex(grpName)
+
+        return grpIdx
 
     def createFeature(self,  layer, fid = None):
         '''Ein Feature für den übergebenen Layer erzeugen'''

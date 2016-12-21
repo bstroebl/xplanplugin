@@ -923,9 +923,8 @@ class XPlan():
                     break
 
                 if bereich >= 0:
-                    # rausbekommen, welche Layer Elemente im Bereich haben
+                    # rausbekommen, welche Layer Elemente im Bereich haben, auch nachrichtlich
                     layers = self.tools.getLayerInBereich(self.db, [bereich])
-                    #rausbekommen, welche Layer nachrichtlich Elemente im Bereich haben?
 
                     if len(layers) == 0:
                         self.iface.messageBar().pushMessage(
@@ -935,20 +934,23 @@ class XPlan():
 
                     # eine Gruppe für den Bereich machen
                     lIface = self.iface.legendInterface()
-                    lIface.addGroup(bereichDict[bereich],  False)
-                    groupIdx = self.tools.getGroupIndex(bereichDict[bereich])
+                    groupIdx = self.tools.createGroup(bereichDict[bereich])
 
                     if groupIdx == -1:
                         return None
 
-                    lIface.setGroupExpanded(groupIdx, False)
-
                     # Layer in die Gruppe laden und features entsprechend einschränken
                     bereichTyp = self.tools.getBereichTyp(self.db,  bereich)
-                    filter = "gid IN (SELECT \"" + bereichTyp + "_Objekt_gid\" " + \
+                    bereichFilter = "gid IN (SELECT \"" + bereichTyp + "_Objekt_gid\" " + \
                         "FROM \""+ bereichTyp + "_Basisobjekte\".\"" + \
                         bereichTyp + "_Objekt_gehoertZu" + bereichTyp + "_Bereich\" " + \
                         "WHERE \"gehoertZu" + bereichTyp + "_Bereich\" = " + str(bereich) + ")"
+                    nachrichtlichFilter = "gid IN (SELECT \"XP_Objekt_gid\" " + \
+                        "FROM \"XP_Basisobjekte\".\"XP_Objekt_gehoertNachrichtlichZuBereich\" " + \
+                        "WHERE \"gehoertNachrichtlichZuBereich\" = " + str(bereich) + ")"
+                    labelFilter = "gid IN (SELECT \"gid\" " + \
+                        "FROM \"XP_Praesentationsobjekte\".\"XP_AbstraktesPraesentationsobjekt\" " + \
+                        "WHERE \"gehoertZuBereich\" = " + str(bereich) + ")"
 
                     for aLayerType in layers:
                         for aKey in aLayerType.iterkeys():
@@ -957,6 +959,14 @@ class XPlan():
                                     aKey, aRelName, withOid = False, withComment = False)
 
                                 if aDdTable != None:
+                                    if aRelName[0:2] == bereichTyp:
+                                        filter = bereichFilter
+                                    else:
+                                        if aKey == "XP_Praesentationsobjekte":
+                                            filter = labelFilter
+                                        else:
+                                            filter = nachrichtlichFilter
+
                                     aLayer = self.app.xpManager.loadPostGISLayer(self.db,
                                         aDdTable, geomColumn = 'position',
                                         whereClause = filter)
