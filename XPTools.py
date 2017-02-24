@@ -80,8 +80,8 @@ class XPTools():
     def getLayerStyles(self, db, layer, schema, table, showWarning = False):
         '''
         Liste alle für diesen Layer in der DB gespeicherten XP-Stile
-        auf und gibt sie als Dict zurück Stil-Id:[Bereichsname, Stil(XML),
-        default_color (hex)]
+        auf und gibt sie als Dict zurück layer.id:[Bereichsname, Stil(XML)],
+        9999:[simpleStyleName, default_color (hex)]
         '''
 
         sel = "SELECT l.id, COALESCE(b.name,\'" + \
