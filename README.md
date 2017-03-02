@@ -5,7 +5,7 @@ XPlanung ist ein Standard für den Datenaustausch von Bauleitplänen, Raumordnun
 
 # Voraussetzungen
 ## Datenbank
-Es muß eine PostGIS-Datenbank vorhanden sein, in die Schemas des [XPlan-PostGIS-Projektes](https://github.com/bstroebl/xplanPostGIS)) eingeladen wurden. 
+Es muß eine PostGIS-Datenbank vorhanden sein, in die Schemas des [XPlan-PostGIS-Projektes](https://github.com/bstroebl/xplanPostGIS) eingeladen wurden. 
 
 ## Plugin DataDrivenInputMask
 Zur Anzeige und zum Editieren von Sachdaten ist das Plugin [DataDrivenInputMask](http://plugins.qgis.org/plugins/DataDrivenInputMask/) aus dem offiziellen Plugin Repository zu installieren.
