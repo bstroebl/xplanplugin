@@ -860,7 +860,7 @@ class XPlan():
                 # da nur Bereiche einer Art ausgewählt werden können,
                 # reicht es, den Typ des ersten Bereiches festzustellen
                 gehoertZuSchema = bereichTyp + "_Basisobjekte"
-                gehoertZuTable = "gehoertZu" + bereichTyp + "_Bereich"
+                gehoertZuTable = bereichTyp + "_Objekt_gehoertZu" + bereichTyp + "_Bereich"
                 gehoertZuLayer = self.getLayerForTable(
                     gehoertZuSchema, gehoertZuTable)
 
@@ -871,7 +871,7 @@ class XPlan():
                         if not gehoertZuLayer.startEditing():
                             return False
 
-                    bereichFld = gehoertZuLayer.fieldNameIndex(bereichTyp + "_Bereich_gid")
+                    bereichFld = gehoertZuLayer.fieldNameIndex("gehoertZu" + bereichTyp + "_Bereich")
                     objektFld = gehoertZuLayer.fieldNameIndex(bereichTyp + "_Objekt_gid")
                     bereitsZugeordnet = self.tools.getBereicheFuerFeatures(self.db,  bereichTyp,  layer.selectedFeaturesIds())
 
