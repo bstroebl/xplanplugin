@@ -408,18 +408,9 @@ class XPlan():
                     tableName = aSel[1]
                     geomColumn = aSel[2]
                     description = aSel[3]
-                    ddTable = self.app.xpManager.createDdTable(self.db,
-                        schemaName, tableName, withOid = False,
-                        withComment = False)
-
-                    isView = ddTable == None
-
-                    if isView:
-                        ddTable = DdTable(schemaName = schemaName, tableName = tableName)
-
-                    editLayer = self.app.xpManager.loadPostGISLayer(self.db,
-                        ddTable, displayName = tableName + " (editierbar)",
-                        geomColumn = geomColumn, keyColumn = "gid")
+                    displayName = tableName + " (editierbar)"
+                    editLayer, isView = self.loadTable(schemaName, tableName,
+                        geomColumn, displayName = displayName)
 
                     if editLayer != None:
                         grpIdx = self.getGroupIndex(schemaName)
@@ -446,19 +437,14 @@ class XPlan():
                                     ddManagerName = "xpManager")
 
                             if withDisplay:
-                                ddView = DdTable(schemaName = schemaName,
-                                    tableName = tableName + "_qv")
+                                displayLayer, isView = self.loadTable(schemaName, tableName + "_qv",
+                                    geomColumn)
 
-                                if self.app.xpManager.existsInDb(ddView, self.db):
-                                    displayLayer = self.app.xpManager.loadPostGISLayer(self.db,
-                                        ddView, displayName = tableName,
-                                        geomColumn = geomColumn, keyColumn = "gid")
-                                else:
+                                if displayLayer == None:
                                     # lade Layer als Darstelllungsvariante
                                     # eigene Darstellungsvarianten gibt es nur, wenn nötig
-                                    displayLayer = self.app.xpManager.loadPostGISLayer(self.db,
-                                        ddTable, displayName = tableName,
-                                        geomColumn = geomColumn, keyColumn = "gid")
+                                    displayLayer, isView = self.loadTable(schemaName, tableName,
+                                        geomColumn)
 
                                 if displayLayer != None:
                                     self.iface.legendInterface().moveLayer(
@@ -470,6 +456,33 @@ class XPlan():
 
                                         if stil != None:
                                             self.tools.useStyle(displayLayer, stil)
+
+    def loadTable(self,  schemaName, tableName, geomColumn,
+            displayName = None, filter = None):
+        '''eine Relation als Layer laden'''
+
+        thisLayer = None
+
+        if displayName == None:
+            displayName = tableName
+
+        if self.db != None:
+            ddTable = self.app.xpManager.createDdTable(self.db,
+                schemaName, tableName, withOid = False,
+                withComment = False)
+
+            isView = ddTable == None
+
+            if isView:
+                ddTable = DdTable(schemaName = schemaName, tableName = tableName)
+
+            if self.app.xpManager.existsInDb(ddTable, self.db):
+                thisLayer = self.app.xpManager.loadPostGISLayer(self.db,
+                    ddTable, displayName = displayName,
+                    geomColumn = geomColumn, keyColumn = "gid",
+                    whereClause = filter,  intoDdGroup = False)
+
+        return [thisLayer, isView]
 
     def loadXP(self):
         self.loadObjektart("XP")
@@ -847,7 +860,7 @@ class XPlan():
                 # da nur Bereiche einer Art ausgewählt werden können,
                 # reicht es, den Typ des ersten Bereiches festzustellen
                 gehoertZuSchema = bereichTyp + "_Basisobjekte"
-                gehoertZuTable = "gehoertZu" + bereichTyp + "_Bereich"
+                gehoertZuTable = bereichTyp + "_Objekt_gehoertZu" + bereichTyp + "_Bereich"
                 gehoertZuLayer = self.getLayerForTable(
                     gehoertZuSchema, gehoertZuTable)
 
@@ -858,7 +871,7 @@ class XPlan():
                         if not gehoertZuLayer.startEditing():
                             return False
 
-                    bereichFld = gehoertZuLayer.fieldNameIndex(bereichTyp + "_Bereich_gid")
+                    bereichFld = gehoertZuLayer.fieldNameIndex("gehoertZu" + bereichTyp + "_Bereich")
                     objektFld = gehoertZuLayer.fieldNameIndex(bereichTyp + "_Objekt_gid")
                     bereitsZugeordnet = self.tools.getBereicheFuerFeatures(self.db,  bereichTyp,  layer.selectedFeaturesIds())
 
@@ -923,9 +936,8 @@ class XPlan():
                     break
 
                 if bereich >= 0:
-                    # rausbekommen, welche Layer Elemente im Bereich haben
+                    # rausbekommen, welche Layer Elemente im Bereich haben, auch nachrichtlich
                     layers = self.tools.getLayerInBereich(self.db, [bereich])
-                    #rausbekommen, welche Layer nachrichtlich Elemente im Bereich haben?
 
                     if len(layers) == 0:
                         self.iface.messageBar().pushMessage(
@@ -935,38 +947,52 @@ class XPlan():
 
                     # eine Gruppe für den Bereich machen
                     lIface = self.iface.legendInterface()
-                    lIface.addGroup(bereichDict[bereich],  False)
-                    groupIdx = self.tools.getGroupIndex(bereichDict[bereich])
+                    groupIdx = self.tools.createGroup(bereichDict[bereich])
 
                     if groupIdx == -1:
                         return None
 
-                    lIface.setGroupExpanded(groupIdx, False)
-
                     # Layer in die Gruppe laden und features entsprechend einschränken
                     bereichTyp = self.tools.getBereichTyp(self.db,  bereich)
-                    filter = "gid IN (SELECT \"" + bereichTyp + "_Objekt_gid\" " + \
+                    bereichFilter = "gid IN (SELECT \"" + bereichTyp + "_Objekt_gid\" " + \
                         "FROM \""+ bereichTyp + "_Basisobjekte\".\"" + \
                         bereichTyp + "_Objekt_gehoertZu" + bereichTyp + "_Bereich\" " + \
                         "WHERE \"gehoertZu" + bereichTyp + "_Bereich\" = " + str(bereich) + ")"
+                    nachrichtlichFilter = "gid IN (SELECT \"XP_Objekt_gid\" " + \
+                        "FROM \"XP_Basisobjekte\".\"XP_Objekt_gehoertNachrichtlichZuBereich\" " + \
+                        "WHERE \"gehoertNachrichtlichZuBereich\" = " + str(bereich) + ")"
+                    labelFilter = "gid IN (SELECT \"gid\" " + \
+                        "FROM \"XP_Praesentationsobjekte\".\"XP_AbstraktesPraesentationsobjekt\" " + \
+                        "WHERE \"gehoertZuBereich\" = " + str(bereich) + ")"
 
                     for aLayerType in layers:
                         for aKey in aLayerType.iterkeys():
                             for aRelName in aLayerType[aKey]:
-                                aDdTable = self.app.xpManager.createDdTable(self.db,
-                                    aKey, aRelName, withOid = False, withComment = False)
+                                if aRelName[0:2] == bereichTyp:
+                                    filter = bereichFilter
+                                else:
+                                    if aKey == "XP_Praesentationsobjekte":
+                                        filter = labelFilter
+                                    else:
+                                        filter = nachrichtlichFilter
 
-                                if aDdTable != None:
-                                    aLayer = self.app.xpManager.loadPostGISLayer(self.db,
-                                        aDdTable, geomColumn = 'position',
-                                        whereClause = filter)
+                                # lade view, falls vorhanden
+                                aLayer, isView = self.loadTable(aKey, aRelName + "_qv",  "position",
+                                    displayName = aRelName, filter = filter)
 
-                                    # layer initialisieren
-                                    if self.layerInitialize(aLayer,  msg=True,  layerCheck = False):
-                                        # Stil des Layers aus der DB holen und anwenden
+                                if aLayer == None:
+                                    # lade Tabelle
+                                    aLayer, isView = self.loadTable(aKey, aRelName,  "position",
+                                        displayName = aRelName, filter = filter)
+
+                                if aLayer != None:
+                                    # Stil des Layers aus der DB holen und anwenden
+                                    stile = self.tools.getLayerStyles(self.db,
+                                        aLayer, aKey, aRelName)
+
+                                    if stile != None:
+                                        self.tools.applyStyles(aLayer, stile)
                                         self.tools.useStyle(aLayer, bereichDict[bereich])
-                                        self.app.xpManager.addAction(aLayer, actionName = "XP_Sachdaten",
-                                            ddManagerName = "xpManager")
 
                                     lIface.moveLayer(aLayer,  groupIdx)
                                     lIface.setLayerVisible(aLayer,  True)

@@ -2,6 +2,13 @@
 
 ## [Unreleased](https://github.com/bstroebl/xplanplugin/compare/v1.0.0...develop)
 
+### Fixed
+- Bereichszuordnung auf neue Bereichsnamen angepasst
+
+# 1.1.0 - 2017-02-27
+### Added
+- Laden eines Bereichs: Lädt auch nachrichtliche und Präsentationsobjekte und wendet passenden Stil an
+
 # 1.0.0 - 2016-06-22
 ### Added
 - Laden einer Objektart: zusätzlich zur PostGIS-Tabelle als editierbarem Layer wird optional ein View zur Darstellung geladen; er enthält alle benötigten joins. Der editierbare Layer enthält aus Performancegründen keine Joins mehr. Joins mussten zuletzt mit *Memory cache* ausgeführt werden, damit QGIS nicht mehr einfriert, weil ewig auf DB-Abfragen gewartet wurde. Der Darstellungslayer symbolisiert stets nach dem aktuellen Wert.
