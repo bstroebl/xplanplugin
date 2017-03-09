@@ -12,7 +12,7 @@
 name=XPlanung
 qgisMinimumVersion=2.8
 description=XPlanung Plugin für QGIS, benötigt eine PostGIS-DB mit dem Xplanungs-Schema und das Plugin DataDrivenInputMask
-version=1.1.0
+version=1.1.1
 
 # end of mandatory metadata
 
