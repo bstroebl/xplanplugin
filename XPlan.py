@@ -68,6 +68,8 @@ class XPlan():
         # Liste der implementierten Fachschemata
         self.implementedSchemas = []
         self.willAktivenBereich = True # Nutzer möchte aktive Bereiche festlegen
+        self.gehoertZuLayer = None # Layer der die Zuordnung von Objekten zu Bereichen enthält
+                                                        # Bsp. BP_Objekt_gehoerhtZuBP_Bereich
 
         #importiere DataDrivenInputMask
         pluginDir = QtCore.QFileInfo(QgsApplication.qgisUserDbFilePath()).path() + "/python/plugins/"
@@ -517,6 +519,21 @@ class XPlan():
                     self.aktiveBereiche = bereichsAuswahl
 
                 self.willAktivenBereich = True
+                for k in self.aktiveBereiche.iterkeys():
+                    bereichGid = k
+                    break
+
+                bereichTyp = self.tools.getBereichTyp(self.db,  bereichGid) #
+                # da nur Bereiche einer Art ausgewählt werden können,
+                # reicht es, den Typ des ersten Bereiches festzustellen
+                self.gehoertZuLayer = self.getAktivenBereichZuordnungsLayer(bereichTyp)
+                if self.gehoertZuLayer != None:
+                    try:
+                        self.gehoertZuLayer.layerDeleted.disconnect(self.onGehoertZuLayerDeleted)
+                    except:
+                        pass
+
+                    self.gehoertZuLayer.layerDeleted.connect(self.onGehoertZuLayerDeleted)
             else:
                 self.aktiveBereiche = bereichsAuswahl # keine Auswahl => keine aktiven Bereiche
 
@@ -840,6 +857,11 @@ class XPlan():
 
         return retValue
 
+    def getAktivenBereichZuordnungsLayer(self, bereichTyp):
+        gehoertZuSchema = bereichTyp + "_Basisobjekte"
+        gehoertZuTable = bereichTyp + "_Objekt_gehoertZu" + bereichTyp + "_Bereich"
+        return self.getLayerForTable(gehoertZuSchema, gehoertZuTable)
+
     def aktivenBereichenZuordnenSlot(self):
         layer = self.iface.activeLayer()
         self.aktivenBereichenZuordnen(layer)
@@ -859,30 +881,26 @@ class XPlan():
                 bereichTyp = self.tools.getBereichTyp(self.db,  bereichGid) #
                 # da nur Bereiche einer Art ausgewählt werden können,
                 # reicht es, den Typ des ersten Bereiches festzustellen
-                gehoertZuSchema = bereichTyp + "_Basisobjekte"
-                gehoertZuTable = bereichTyp + "_Objekt_gehoertZu" + bereichTyp + "_Bereich"
-                gehoertZuLayer = self.getLayerForTable(
-                    gehoertZuSchema, gehoertZuTable)
 
-                if gehoertZuLayer == None:
+                if self.gehoertZuLayer == None:
                     return False
                 else:
-                    if not gehoertZuLayer.isEditable():
-                        if not gehoertZuLayer.startEditing():
+                    if not self.gehoertZuLayer.isEditable():
+                        if not self.gehoertZuLayer.startEditing():
                             return False
 
-                    bereichFld = gehoertZuLayer.fieldNameIndex("gehoertZu" + bereichTyp + "_Bereich")
-                    objektFld = gehoertZuLayer.fieldNameIndex(bereichTyp + "_Objekt_gid")
+                    bereichFld = self.gehoertZuLayer.fieldNameIndex("gehoertZu" + bereichTyp + "_Bereich")
+                    objektFld = self.gehoertZuLayer.fieldNameIndex(bereichTyp + "_Objekt_gid")
                     bereitsZugeordnet = self.tools.getBereicheFuerFeatures(self.db,  bereichTyp,  layer.selectedFeaturesIds())
 
-                    gehoertZuLayer.beginEditCommand(u"Ausgewählte Features von " + layer.name() + u" den aktiven Bereichen zugeordnet.")
+                    self.gehoertZuLayer.beginEditCommand(u"Ausgewählte Features von " + layer.name() + u" den aktiven Bereichen zugeordnet.")
                     newFeat = None #ini
 
                     for aGid in layer.selectedFeaturesIds():
                         if aGid < 0:
                             XpError(u"Bereichszuordnung: Bitte speichern Sie zuerst den Layer " + layer.name(),
                                 self.iface)
-                            gehoertZuLayer.destroyEditCommand()
+                            self.gehoertZuLayer.destroyEditCommand()
                         else:
                             for aBereichGid in self.aktiveBereiche:
                                 doInsert = True
@@ -899,16 +917,16 @@ class XPlan():
                                         break
 
                                 if doInsert:
-                                    newFeat = self.tools.createFeature(gehoertZuLayer)
-                                    gehoertZuLayer.addFeature(newFeat,  False)
-                                    gehoertZuLayer.changeAttributeValue(newFeat.id(),  bereichFld, aBereichGid)
-                                    gehoertZuLayer.changeAttributeValue(newFeat.id(),  objektFld, aGid)
+                                    newFeat = self.tools.createFeature(self.gehoertZuLayer)
+                                    self.gehoertZuLayer.addFeature(newFeat,  False)
+                                    self.gehoertZuLayer.changeAttributeValue(newFeat.id(),  bereichFld, aBereichGid)
+                                    self.gehoertZuLayer.changeAttributeValue(newFeat.id(),  objektFld, aGid)
 
                     if newFeat == None: # keine neuen Einträge
-                        gehoertZuLayer.destroyEditCommand()
+                        self.gehoertZuLayer.destroyEditCommand()
                         return False
                     else:
-                        gehoertZuLayer.endEditCommand()
+                        self.gehoertZuLayer.endEditCommand()
                         return True
             else:
                 return False
@@ -1021,14 +1039,21 @@ class XPlan():
                     layer.select(newGids)
 
                     if self.aktivenBereichenZuordnen(layer):
-                        if not gehoertZuLayer.commitChanges():
-                            XpError(u"Konnte Änderungen am Layer " + \
-                                gehoertZuLayer.name() + " nicht speichern!",
+                        if self.gehoertZuLayer != None:
+                            if not self.gehoertZuLayer.commitChanges():
+                                XpError(u"Konnte Änderungen am Layer " + \
+                                    self.gehoertZuLayer.name() + " nicht speichern!",
+                                    self.iface)
+                        else:
+                            XpError("Layer Bla_Objekt_gehoertZu_BlaBereich nicht (mehr) vorhanden",
                                 self.iface)
                 except KeyError:
                     continue
 
         self.iface.mapCanvas().refresh() # neuzeichnen
+
+    def onGehoertZuLayerDeleted(self): # Slot
+        self.gehoertZuLayer = None
 
     def featuresAdded(self,  layerId,  featureList):
         newGeoms = []

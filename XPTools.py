@@ -582,7 +582,7 @@ class XPTools():
             "%(error)s" % {"error": query.lastError().text()}, "DB-Fehler")
         self.showError(
             "%(query)s" % {"query": query.lastQuery()},
-            "Abfrage war", "DB-Fehler")
+            "Abfrage war")
 
     def showInfo(self, msg, title = "XPlanung"):
         self.iface.messageBar().pushMessage(
