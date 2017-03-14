@@ -1028,6 +1028,10 @@ class XPlan():
             for layer in selLayers:
                 try:
                     newGeoms = self.addedGeometries[layer.id()]
+
+                    if len(newGeoms) == 0:
+                        continue
+
                     layer.reload() # damit gids geladen werden
                     newGids = []
 
