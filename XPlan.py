@@ -891,6 +891,12 @@ class XPlan():
 
                     bereichFld = self.gehoertZuLayer.fieldNameIndex("gehoertZu" + bereichTyp + "_Bereich")
                     objektFld = self.gehoertZuLayer.fieldNameIndex(bereichTyp + "_Objekt_gid")
+
+                    if len(layer.selectedFeaturesIds()) == 0:
+                        XpError(u"Bereichszuordnung: Der Layer " + layer.name() + u" hat keine Auswahl!",
+                            self.iface)
+                        return False
+
                     bereitsZugeordnet = self.tools.getBereicheFuerFeatures(self.db,  bereichTyp,  layer.selectedFeaturesIds())
 
                     self.gehoertZuLayer.beginEditCommand(u"Ausgewählte Features von " + layer.name() + u" den aktiven Bereichen zugeordnet.")
