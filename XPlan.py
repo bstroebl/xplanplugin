@@ -37,6 +37,7 @@ from HandleDb import DbHandler
 from XPTools import XPTools
 from XPlanDialog import XPlanungConf
 from XPlanDialog import ChooseObjektart
+from XPlanDialog import XPNutzungsschablone
 
 class XpError(object):
     '''General error'''
@@ -59,6 +60,8 @@ class XPlan():
         self.simpleStyleName = "einfarbig"
         self.tmpAct = QtGui.QAction(self.iface.mainWindow()) # eine nicht benötigte QAction
         self.app = QgsApplication.instance()
+        self.app.xpPlugin = self
+        self.nutzungsschablone = None
         self.dbHandler = DbHandler(self.iface)
         self.db = None
         self.tools = XPTools(self.iface, self.standardName, self.simpleStyleName)
@@ -184,12 +187,14 @@ class XPlan():
         self.action26.triggered.connect(self.geltungsbereichBerechnen)
         self.action27 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
         self.action27.triggered.connect(self.loadRP)
+        self.action28 = QtGui.QAction(u"Nutzungsschablone konfigurieren", self.iface.mainWindow())
+        self.action28.triggered.connect(self.konfiguriereNutzungsschablone)
 
         self.xpMenu.addActions([self.action20, self.action25,
             self.action6, self.action10])
         self.bereichMenu.addActions([self.action1, self.action3, self.action3a,
             self.action4, self.action5])
-        self.bpMenu.addActions([self.action21, self.action26])
+        self.bpMenu.addActions([self.action21, self.action26, self.action28])
         self.fpMenu.addActions([self.action22])
         self.lpMenu.addActions([self.action23])
         self.rpMenu.addActions([self.action27])
@@ -278,7 +283,210 @@ class XPlan():
             self.showQueryError(query)
             return None
 
+    def erzeugeNutzungsschablone(self, gid):
+        '''
+        die Werte für die Nutzungsschablone aus der DB auslesen
+        und als String zurückgeben
+        '''
+        returnValue = [None, None, None]
+
+        if self.nutzungsschablone != None:
+            # Anzeahl Zeilen und Spalten feststellen
+            if self.nutzungsschablone[1] != None or \
+                    self.nutzungsschablone[3] != None or \
+                    self.nutzungsschablone[5] != None:
+                anzSpalten = 2
+            else:
+                anzSpalten = 1
+
+            if self.nutzungsschablone[2] != None or \
+                    self.nutzungsschablone[3] != None:
+                anzZeilen = 2
+
+                if self.nutzungsschablone[4] != None or \
+                        self.nutzungsschablone[5] != None:
+                    anzZeilen = 3
+            else:
+                anzZeilen = 1
+
+            # Abfrage bauen
+            sQuery = "SELECT "
+
+            for fld in self.nutzungsschablone:
+                if fld == None:
+                    fld = "NULL"
+                else:
+                    fld = "\"" + fld + "\""
+
+                if sQuery != "SELECT ":
+                    sQuery += ","
+
+                sQuery += fld
+
+            sQuery += " FROM \"BP_Bebauung\".\"BP_BaugebietsTeilFlaeche\" b \
+            JOIN \"BP_Bebauung\".\"BP_BaugebietObjekt\" o ON b.gid = o.gid \
+            JOIN \"BP_Bebauung\".\"BP_FestsetzungenBaugebiet\" f ON b.gid = f.gid \
+            WHERE b.gid = :gid;"
+            query = QtSql.QSqlQuery(self.db)
+            query.prepare(sQuery)
+            query.bindValue(":gid", gid)
+            # DB abfragen
+            query.exec_()
+
+            if query.isActive():
+                werte = []
+                while query.next():
+                    for i in range(len(self.nutzungsschablone)):
+                        werte.append(query.value(i))
+
+                query.finish()
+            else:
+                self.tools.showQueryError(query)
+                return returnValue
+
+            #Text zusammenbauen
+            allgArtBlNtzg = {1000:"W", 2000:"M", 3000:"G", 4000:"S", 9999:"Sonst"}
+            besArtBlNtzg = {1000:"WS", 1100:"WR", 1200:"WA", 1300:"WB", 1400:"MD", 1500:"MI",
+                1600:"MK", 1700:"GE", 1800:"GI", 2000:"SO", 2100:"SO", 3000:"SO", 4000:"SO", 9999:"Sonst"}
+            bauweise = {1000:"o", 2000:"g"}
+            #bebArt = {1000:"E", 2000:"D", 3000:"H", 4000:"ED", 5000:"EH", 6000:"DH", 7000:"R"}
+            geschoss = {1:"I", 2:"II", 3:"III", 4:"IV", 5:"V", 6:"VI", 7:"VII", 8:"VIII", 9:"IX", 10:"X",
+                11:"XI", 12:"XII", 13:"XIII", 14:"XIV", 15:"XV", 16:"XVI", 17:"XVII", 18:"XVIII", 19:"XIX", 20:"XX"}
+            schablonenText = ""
+            loc = QtCore.QLocale.system()
+
+            for i in range(len(self.nutzungsschablone)):
+                fld = self.nutzungsschablone[i]
+                wert = werte[i]
+
+                if fld != None and wert != None:
+                    if fld == "allgArtDerBaulNutzung":
+                        thisStr = allgArtBlNtzg[wert]
+                    elif fld == "besondereArtDerBaulNutzung":
+                        thisStr = besArtBlNtzg[wert]
+                    elif fld == "bauweise":
+                        thisStr = bauweise[wert]
+                    elif fld == "GFZ" or fld == "GFZmin":
+                        thisStr = "GFZ " + loc.toString(wert)
+                    elif fld == "GFZmax":
+                        thisStr = "bis " + loc.toString(wert)
+                    elif fld == "GF" or fld == "GFmin":
+                        thisStr = "GF " + str(wert) + u" m²"
+                    elif fld == "GFmax":
+                        thisStr = "bis " + str(wert) + u" m²"
+                    elif fld == "BMZ" or fld == "BMZmin":
+                        thisStr = "BMZ " + loc.toString(wert)
+                    elif fld == "BMZmax":
+                        thisStr = "bis " + loc.toString(wert)
+                    elif fld == "BM" or fld == "BMmin":
+                        thisStr = "BM " + str(wert) + u" m³"
+                    elif fld == "BMmax":
+                        thisStr = "bis " + str(wert) + u" m³"
+                    elif fld == "GRZ" or fld == "GRZmin":
+                        thisStr = "GRZ " + loc.toString(wert)
+                    elif fld == "GRZmax":
+                        thisStr = "bis " + loc.toString(wert)
+                    elif fld == "GR" or fld == "GRmin":
+                        thisStr = "GR " + str(wert) + u" m²"
+                    elif fld == "GRmax":
+                        thisStr = "bis " + str(wert) + u" m²"
+                    elif fld == "Z" or  fld == "Zmin":
+                        thisStr = geschoss[wert]
+                    elif fld == "Zmax":
+                        thisStr = " - " + geschoss[wert]
+                else:
+                    thisStr = ""
+
+                if i in [0, 2, 4]:
+                    zeile = " " + thisStr
+                else:
+                    while len(zeile) < 10:
+                        zeile += " " # mit Leerzeichen auffüllen
+
+                    zeile += thisStr
+
+                    if (i == 1 and anzZeilen > 1) or (i == 3 and anzZeilen > 2):
+                        zeile += "\n"
+
+                    schablonenText += zeile
+
+            returnValue = [anzSpalten, anzZeilen, schablonenText]
+        return returnValue
+
+    def plaziereNutzungsschablone(self, gid, x, y):
+        ''' gid von BP_Baugebietsteilflaeche'''
+
+        if self.nutzungsschablone == None:
+            self.konfiguriereNutzungsschablone()
+
+        if self.db == None:
+            self.initialize(False)
+
+        if self.db != None:
+            anzSpalten,  anzZeilen, schablonenText = self.erzeugeNutzungsschablone(gid)
+
+            if anzSpalten == None and anzZeilen == None:
+                return None
+
+            nutzungsschabloneLayer = self.getLayerForTable(
+                "XP_Praesentationsobjekte", "XP_Nutzungsschablone",
+                geomColumn = "position")
+
+            if nutzungsschabloneLayer == None:
+                return None
+
+            tpoLayer = self.getLayerForTable(
+                "XP_Praesentationsobjekte", "XP_TPO")
+
+            if tpoLayer == None:
+                return None
+
+            nutzungsschabloneFeat = self.tools.createFeature(nutzungsschabloneLayer)
+            nutzungsschabloneFeat[nutzungsschabloneLayer.fieldNameIndex("spaltenAnz")] = anzSpalten
+            nutzungsschabloneFeat[nutzungsschabloneLayer.fieldNameIndex("zeilenAnz")] = anzZeilen
+            nutzungsschabloneFeat.setGeometry(QgsGeometry.fromPoint(QgsPoint(x, y)))
+
+            if self.tools.setEditable(nutzungsschabloneLayer):
+                if not nutzungsschabloneLayer.addFeature(nutzungsschabloneFeat):
+                    self.tools.showError(u"Konnte neue Nutzungsschablone nicht hinzufügen")
+                    return None
+                else:
+                    if not nutzungsschabloneLayer.commitChanges():
+                        self.tools.showError(u"Konnte neue Nutzungsschablone nicht speichern")
+                        return None
+                    else:
+                        expr = "round($x,2) = round(" + str(x) + ",2) and round($y,2) = round(" + str(y) + ",2)"
+                        #runden wegen unterschiedlicher Präzision
+                        savedFeat = QgsFeature()
+
+                        if nutzungsschabloneLayer.getFeatures(
+                                QgsFeatureRequest().setFilterExpression(expr)).nextFeature(savedFeat):
+                            newGid = savedFeat[nutzungsschabloneLayer.fieldNameIndex("gid")]
+                        else:
+                            self.tools.showError(u"Neu angelegtes Objekt nicht gefunden!")
+                            return None
+
+                        if self.tools.setEditable(tpoLayer):
+                            expr = "gid = " + str(newGid)
+                            tpoFeat = QgsFeature()
+
+                            if tpoLayer.getFeatures(
+                                    QgsFeatureRequest().setFilterExpression(expr)).nextFeature(tpoFeat):
+                                tpoLayer.changeAttributeValue(tpoFeat.id(), tpoLayer.fieldNameIndex("schriftinhalt"),
+                                    schablonenText)
+                                if not tpoLayer.commitChanges():
+                                    self.tools.showError(u"Konnte Schriftinhalt nicht speichern")
+                                    return None
+
     #Slots
+    def konfiguriereNutzungsschablone(self):
+        dlg = XPNutzungsschablone(self.nutzungsschablone)
+        dlg.show()
+        result = dlg.exec_()
+
+        if result == 1:
+            self.nutzungsschablone = dlg.nutzungsschablone
+
     def geltungsbereichBerechnen(self):
         '''raeumlicherGeltungsbereich für alle (selektierten)
         BP_Plan aus den Geltungsbereichen
@@ -1066,6 +1274,7 @@ class XPlan():
         self.gehoertZuLayer = None
 
     def featuresAdded(self,  layerId,  featureList):
+        '''Slot der aufgerufen wird, wenn neue Features in einen XP-Layer eingefügt werden'''
         newGeoms = []
 
         for aFeature in featureList:
