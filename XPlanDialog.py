@@ -28,6 +28,7 @@ from Ui_Bereichsauswahl import Ui_Bereichsauswahl
 from Ui_Stilauswahl import Ui_Stilauswahl
 from Ui_conf import Ui_conf
 from Ui_ObjektartLaden import Ui_ObjektartLaden
+from Ui_Nutzungsschablone import Ui_Nutzungsschablone
 
 class XP_Chooser(QtGui.QDialog):
     '''Ein Dialog mit einem TreeWidget um ein Element auszuwählen, abstrakt'''
@@ -472,3 +473,80 @@ class StilauswahlDialog(QtGui.QDialog):
             %(error)s \n %(query)s" % {"error": query.lastError().text(),
             "query": query.lastQuery()}, level=QgsMessageBar.CRITICAL)
 
+class XPNutzungsschablone(QtGui.QDialog):
+    '''Ein Dialog zur Konfiguraton der Nutzungsschablone (BPlan'''
+
+    def __init__(self, nutzungsschablone):
+        QtGui.QDialog.__init__(self)
+
+        if nutzungsschablone == None:
+            self.nutzungsschablone = [None, None, None, None, None, None]
+        else:
+            self.nutzungsschablone = nutzungsschablone
+
+        self.ui = Ui_Nutzungsschablone()
+        self.ui.setupUi(self)
+        self.ui.buttonBox.accepted.connect(self.accept)
+        self.ui.buttonBox.rejected.connect(self.reject)
+        self.cbxList = [self.ui.z1s1, self.ui.z1s2, self.ui.z2s1,  self.ui.z2s2,  self.ui.z3s1,  self.ui.z3s2]
+        self.initialize()
+
+    def initialize(self):
+        thisDict = { \
+            None:"",
+            "allgArtDerBaulNutzung": u"allgemeine Art d. baul. Nutzung",
+            "besondereArtDerBaulNutzung": u"besondere Art d. baul. Nutzung",
+            "bauweise":"Bauweise",
+            "GFZ":u"Geschoßflächenzahl",
+            "GFZmin":u"Geschoßflächenzahl (min)",
+            "GFZmax":u"Geschoßflächenzahl (max)",
+            "GF":u"Geschoßfläche",
+            "GFmin":u"Geschoßfläche (min)",
+            "GFmax":u"Geschoßfläche (max)",
+            "BMZ":u"Baumassenzahl",
+            "BMZmin":u"Baumassenzahl (min)",
+            "BMZmax":u"Baumassenzahl (max)",
+            "BM":u"Baumasse",
+            "BMmin":u"Baumasse (min)",
+            "BMmax":u"Baumasse (max)",
+            "GRZ":u"Grundflächenzahl",
+            "GRZmin":u"Grundflächenzahl (min)",
+            "GRZmax":u"Grundflächenzahl (max)",
+            "GR":u"Grundfläche",
+            "GRmin":u"Grundfläche (min)",
+            "GRmax":u"Grundfläche (max)",
+            "Z":u"Zahl der Vollgeschosse (Höchstmaß)",
+            "Zmin":u"Zahl der Vollgeschosse (min)",
+            "Zmax":u"Zahl der Vollgeschosse (max)"}
+
+        keys = [None,  "allgArtDerBaulNutzung",
+            "besondereArtDerBaulNutzung",  "bauweise",
+            "BM", "BMmin",  "BMmax", "BMZ", "BMZmin",  "BMZmax",
+            "GF",  "GFmin", "GFmax", "GFZ", "GFZmin", "GFZmax",
+            "GR", "GRmin", "GRmax", "GRZ", "GRZmin", "GRZmax",
+            "Z", "Zmin", "Zmax"]
+
+        for i in range(len(self.cbxList)):
+            cbx = self.cbxList[i]
+
+            for key in keys:
+                value = thisDict[key]
+                cbx.addItem( value, key )
+
+            nutzung = self.nutzungsschablone[i]
+
+            for j in range( cbx.count() ):
+                if cbx.itemData(j) == nutzung:
+                    cbx.setCurrentIndex(j)
+                    break
+
+    def reject(self):
+        self.done(0)
+
+    def accept(self):
+        for i in range(len(self.cbxList)):
+            cbx = self.cbxList[i]
+            nutzung = cbx.itemData(cbx.currentIndex())
+            self.nutzungsschablone[i] = nutzung
+
+        self.done(1)
