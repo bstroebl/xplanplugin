@@ -646,6 +646,22 @@ class XPlan():
                                     actionName = "XP_Sachdaten",
                                     ddManagerName = "xpManager")
 
+                            if tableName == "BP_BaugebietsTeilFlaeche":
+                                actionNutzungsschablone = u"Nutzungsschablone plazieren"
+                                createNewAction= True
+
+                                for i in range(editLayer.actions().size()):
+                                    act = editLayer.actions().at(i)
+
+                                    if act.name() == actionNutzungsschablone:
+                                        createNewAction = False
+                                        break
+
+                                if createNewAction:
+                                    editLayer.actions().addAction(1, actionNutzungsschablone, # actionType 1: Python
+                                        "app=QgsApplication.instance();app.xpPlugin.plaziereNutzungsschablone(" + \
+                                        "[% \"gid\" %],[% $clickx %],[% $clicky %]);")
+
                             if withDisplay:
                                 displayLayer, isView = self.loadTable(schemaName, tableName + "_qv",
                                     geomColumn)
