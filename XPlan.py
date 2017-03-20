@@ -420,7 +420,7 @@ class XPlan():
             self.konfiguriereNutzungsschablone()
 
         if self.db == None:
-            self.initialize(False)
+            self.initialize((self.willAktivenBereich and len(self.aktiveBereiche) == 0))
 
         if self.db != None:
             anzSpalten,  anzZeilen, schablonenText = self.erzeugeNutzungsschablone(gid)
@@ -434,6 +434,8 @@ class XPlan():
 
             if nutzungsschabloneLayer == None:
                 return None
+            else:
+                self.layerInitialize(nutzungsschabloneLayer)
 
             tpoLayer = self.getLayerForTable(
                 "XP_Praesentationsobjekte", "XP_TPO")
@@ -999,29 +1001,30 @@ class XPlan():
                 if layerRelation[2]: # Layer hat Geometrien
                     schema = layerRelation[0]
                     table = layerRelation[1]
+                    schemaTyp = schema[:2]
 
-                    if schema != "XP_Praesentationsobjekte":
-                        schemaTyp = schema[:2]
-
-                        if table != schemaTyp + "_Plan" and table != schemaTyp + "_Bereich":
+                    if table != schemaTyp + "_Plan" and table != schemaTyp + "_Bereich":
+                        if schema != "XP_Praesentationsobjekte":
                             if self.implementedSchemas.count(schemaTyp) > 0:
-                                # disconnect slots in case they are already connected
-                                try:
-                                    layer.committedFeaturesAdded.disconnect(self.featuresAdded)
-                                except:
-                                    pass
-
-                                try:
-                                    layer.editingStopped.disconnect(self.editingHasStopped)
-                                except:
-                                    pass
-
-                                layer.committedFeaturesAdded.connect(self.featuresAdded)
-                                layer.editingStopped.connect(self.editingHasStopped)
-                                self.addedGeometries[layer.id()] = []
-
                                 if layerCheck:
                                     self.aktiverBereichLayerCheck(layer)
+
+                        # disconnect slots in case they are already connected
+                        try:
+                            layer.committedFeaturesAdded.disconnect(self.featuresAdded)
+                        except:
+                            pass
+
+                        try:
+                            layer.editingStopped.disconnect(self.editingHasStopped)
+                        except:
+                            pass
+
+                        layer.committedFeaturesAdded.connect(self.featuresAdded)
+                        layer.editingStopped.connect(self.editingHasStopped)
+                        self.addedGeometries[layer.id()] = []
+
+
             else:
                 if msg:
                     XpError("Der Layer " + layer.name() + " ist kein PostgreSQL-Layer!",
@@ -1170,6 +1173,45 @@ class XPlan():
     def aktivenBereichenNachrichtlichZuordnen(self):
         pass
 
+    def apoGehoertZuBereichFuellen(self, layer):
+        '''
+        Präsentationsobjekte können nur in einem Bereich sein, dafür gibt es das Feld
+        XP_AbstraktesPraesentationsobjekt.gehoertZuBereich; es wird hier gefüllt,
+        wenn aktive Bereiche festgelegt wurden.
+        '''
+
+        if len(self.aktiveBereiche) == 0:
+            self.tools.showWarning(u"Keine aktiven Bereiche festgelegt")
+            return False
+        elif len(self.aktiveBereiche) == 0:
+            self.tools.showError(u"Präsentationsobjekte können nur einem Bereich zugeordnet werden!")
+            return False
+        else:
+            for k in self.aktiveBereiche.iterkeys():
+                bereichGid = k
+            apoLayer = self.getLayerForTable("XP_Praesentationsobjekte",
+                "XP_AbstraktesPraesentationsobjekt")
+
+            if apoLayer != None:
+                if not self.tools.setEditable(apoLayer, True):
+                    return False
+                else:
+                    fldIdx = apoLayer.fieldNameIndex("gehoertZuBereich")
+
+                    for gid in layer.selectedFeaturesIds():
+                        if not apoLayer.changeAttributeValue(gid, fldIdx, bereichGid):
+                            self.tools.showError(u"Konnte XP_AbstraktesPraesentationsobjekt.gehoertZuBereich nicht ändern!")
+                            apoLayer.rollBack()
+                            return False
+
+                    if not apoLayer.commitChanges():
+                        self.tools.showError(u"Konnte Layer XP_AbstraktesPraesentationsobjekt nicht speichern")
+                        return False
+                    else:
+                        return True
+            else:
+                return False
+
     def bereichLaden(self):
         '''Laden aller Layer, die Elemente in einem auszuwählenden Bereich haben'''
         if self.db == None:
@@ -1247,21 +1289,30 @@ class XPlan():
             self.iface.mapCanvas().refresh() # neuzeichnen
 
     def editingHasStopped(self):
+
         if len(self.aktiveBereiche) > 0:
-            selLayers = self.iface.legendInterface().selectedLayers()
-            for layer in selLayers:
+            for layer in self.iface.legendInterface().layers():
                 try:
                     newGeoms = self.addedGeometries[layer.id()]
 
                     if len(newGeoms) == 0:
                         continue
 
+                    if layer.isEditable(): # für diesen Layer wurde das Editieren nicht beendet
+                        continue
+
                     layer.reload() # damit gids geladen werden
                     newGids = []
 
                     for aGeom in newGeoms:
+                        if aGeom.type() == 0: #Punkt
+                            newP = aGeom.asPoint()
+                            bbox = QgsRectangle(newP.x() - 1, newP.y() -1, newP.x() + 1, newP.y() + 1)
+                        else:
+                            aGeom.boundingBox()
+
                         layer.removeSelection()
-                        layer.select(aGeom.boundingBox(),  True)
+                        layer.select(bbox,  True)
 
                         for selFeature in layer.selectedFeatures():
                             if selFeature.geometry().isGeosEqual(aGeom):
@@ -1272,15 +1323,23 @@ class XPlan():
                     layer.removeSelection()
                     layer.select(newGids)
 
-                    if self.aktivenBereichenZuordnen(layer):
-                        if self.gehoertZuLayer != None:
-                            if not self.gehoertZuLayer.commitChanges():
-                                XpError(u"Konnte Änderungen am Layer " + \
-                                    self.gehoertZuLayer.name() + " nicht speichern!",
-                                    self.iface)
+                    rel = self.tools.getPostgresRelation(layer)
+
+                    if rel != None:
+                        schemaName = rel[0]
+
+                        if schemaName == "XP_Praesentationsobjekte":
+                            self.apoGehoertZuBereichFuellen(layer)
                         else:
-                            XpError("Layer Bla_Objekt_gehoertZu_BlaBereich nicht (mehr) vorhanden",
-                                self.iface)
+                            if self.aktivenBereichenZuordnen(layer):
+                                if self.gehoertZuLayer != None:
+                                    if not self.gehoertZuLayer.commitChanges():
+                                        XpError(u"Konnte Änderungen am Layer " + \
+                                            self.gehoertZuLayer.name() + " nicht speichern!",
+                                            self.iface)
+                                else:
+                                    XpError("Layer Bla_Objekt_gehoertZu_BlaBereich nicht (mehr) vorhanden",
+                                        self.iface)
                 except KeyError:
                     continue
 
