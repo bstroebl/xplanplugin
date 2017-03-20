@@ -997,39 +997,39 @@ class XPlan():
             layerRelation = self.tools.getPostgresRelation(layer)
 
             if layerRelation != None: # PostgreSQL-Layer
-                try:
-                    self.app.xpManager.ddLayers[layer.id()] # bereits initialisiert
-                    ddInit = True
-                except KeyError:
-                    ddInit = self.app.xpManager.initLayer(layer,  skip = [], createAction = False,  db = self.db)
+                schema = layerRelation[0]
+                table = layerRelation[1]
 
-                if layerRelation[2]: # Layer hat Geometrien
-                    schema = layerRelation[0]
-                    table = layerRelation[1]
-                    schemaTyp = schema[:2]
+                if table[:3] in ["XP_", "BP_", "FP_", "LP_", "RP_", "SO_"] and table[len(table) -3:] != "_qv":
+                    try:
+                        self.app.xpManager.ddLayers[layer.id()] # bereits initialisiert
+                        ddInit = True
+                    except KeyError:
+                        ddInit = self.app.xpManager.initLayer(layer,  skip = [], createAction = False,  db = self.db)
 
-                    if table != schemaTyp + "_Plan" and table != schemaTyp + "_Bereich":
-                        if schema != "XP_Praesentationsobjekte":
-                            if self.implementedSchemas.count(schemaTyp) > 0:
-                                if layerCheck:
-                                    self.aktiverBereichLayerCheck(layer)
+                    if layerRelation[2]: # Layer hat Geometrien
+                        schemaTyp = schema[:2]
 
-                        # disconnect slots in case they are already connected
-                        try:
-                            layer.committedFeaturesAdded.disconnect(self.featuresAdded)
-                        except:
-                            pass
+                        if table != schemaTyp + "_Plan" and table != schemaTyp + "_Bereich":
+                            if schema != "XP_Praesentationsobjekte":
+                                if self.implementedSchemas.count(schemaTyp) > 0:
+                                    if layerCheck:
+                                        self.aktiverBereichLayerCheck(layer)
 
-                        try:
-                            layer.editingStopped.disconnect(self.editingHasStopped)
-                        except:
-                            pass
+                            # disconnect slots in case they are already connected
+                            try:
+                                layer.committedFeaturesAdded.disconnect(self.featuresAdded)
+                            except:
+                                pass
 
-                        layer.committedFeaturesAdded.connect(self.featuresAdded)
-                        layer.editingStopped.connect(self.editingHasStopped)
-                        self.addedGeometries[layer.id()] = []
+                            try:
+                                layer.editingStopped.disconnect(self.editingHasStopped)
+                            except:
+                                pass
 
-
+                            layer.committedFeaturesAdded.connect(self.featuresAdded)
+                            layer.editingStopped.connect(self.editingHasStopped)
+                            self.addedGeometries[layer.id()] = []
             else:
                 if msg:
                     XpError("Der Layer " + layer.name() + " ist kein PostgreSQL-Layer!",
