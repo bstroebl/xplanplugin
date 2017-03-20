@@ -65,7 +65,7 @@ class XPlan():
         self.dbHandler = DbHandler(self.iface)
         self.db = None
         self.tools = XPTools(self.iface, self.standardName, self.simpleStyleName)
-        self.aktiveBereiche = []
+        self.aktiveBereiche = {}
         self.addedGeometries = {}
         self.layerLayer = None
         # Liste der implementierten Fachschemata
@@ -148,6 +148,7 @@ class XPlan():
         self.action3a = QtGui.QAction(u"Aktive Bereiche löschen", self.iface.mainWindow())
         self.action3a.setToolTip(u"Elemente von Layern können automatisch oder händisch den aktiven " +\
             u"Bereichen zugewiesen werden. Damit werden sie zum originären Inhalt des Planbereichs.")
+        self.action3a.setEnabled(False)
         self.action3a.triggered.connect(self.aktiveBereicheLoeschen)
         self.action4 = QtGui.QAction(u"Auswahl den aktiven Bereichen zuordnen", self.iface.mainWindow())
         self.action4.setToolTip(u"aktiver Layer: ausgewählte Elemente den aktiven Bereichen zuweisen. " +\
@@ -741,6 +742,7 @@ class XPlan():
             if len(bereichsAuswahl) > 0: # Auswahl wurde getroffen oder es wurde abgebrochen
                 try:
                     bereichsAuswahl[-1] #Abbruch; bisherigen aktive Bereiche bleiben aktiv
+                    return None
                 except KeyError:
                     self.aktiveBereiche = bereichsAuswahl
 
@@ -763,9 +765,12 @@ class XPlan():
             else:
                 self.aktiveBereiche = bereichsAuswahl # keine Auswahl => keine aktiven Bereiche
 
+        self.action3a.setEnabled(len(self.aktiveBereiche) > 0)
+
     def aktiveBereicheLoeschen(self):
         self.aktiveBereiche = []
         self.willAktivenBereich = True
+        self.action3a.setEnabled(False)
 
     def layerInitializeSlot(self):
         layer = self.iface.activeLayer()
