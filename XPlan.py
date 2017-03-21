@@ -109,6 +109,8 @@ class XPlan():
             svgpaths.append( svgpath )
             qs.setValue( "svg/searchPathsForSVG", u"|".join( svgpaths ) )
 
+        self.initializeAllLayers()
+
     def initGui(self):
         # Code von fTools
 
@@ -572,6 +574,11 @@ class XPlan():
 
         if result == 1:
             self.initialize()
+
+    def initializeAllLayers(self):
+        self.debug("initializeAllLayers")
+        for layer in self.iface.legendInterface().layers():
+            self.layerInitialize(layer)
 
     def initialize(self,  aktiveBereiche = True):
         self.db = self.dbHandler.dbConnect()
@@ -1117,9 +1124,8 @@ class XPlan():
                 if self.gehoertZuLayer == None:
                     return False
                 else:
-                    if not self.gehoertZuLayer.isEditable():
-                        if not self.gehoertZuLayer.startEditing():
-                            return False
+                    if not self.tools.setEditable(self.gehoertZuLayer):
+                        return False
 
                     bereichFld = self.gehoertZuLayer.fieldNameIndex("gehoertZu" + bereichTyp + "_Bereich")
                     objektFld = self.gehoertZuLayer.fieldNameIndex(bereichTyp + "_Objekt_gid")
@@ -1133,14 +1139,14 @@ class XPlan():
 
                     self.gehoertZuLayer.beginEditCommand(u"Ausgewählte Features von " + layer.name() + u" den aktiven Bereichen zugeordnet.")
                     newFeat = None #ini
+                    zugeordnet = 0 # Zähler
 
                     for aGid in layer.selectedFeaturesIds():
                         if aGid < 0:
-                            XpError(u"Bereichszuordnung: Bitte speichern Sie zuerst den Layer " + layer.name(),
-                                self.iface)
-                            self.gehoertZuLayer.destroyEditCommand()
+                            self.tools.showError(u"Bereichszuordnung: Bitte speichern Sie zuerst den Layer " + layer.name())
+                            break
                         else:
-                            for aBereichGid in self.aktiveBereiche:
+                            for aBereichGid in self.aktiveBereiche.iterkeys():
                                 doInsert = True
                                 #prüfen, ob dieses XP_Objekt bereits diesem XP_Bereich zugewiesen ist
                                 try:
@@ -1149,7 +1155,6 @@ class XPlan():
                                     objektBereiche = []
 
                                 for objektBereich in objektBereiche:
-
                                     if objektBereich == aBereichGid:
                                         doInsert = False
                                         break
@@ -1159,13 +1164,34 @@ class XPlan():
                                     self.gehoertZuLayer.addFeature(newFeat,  False)
                                     self.gehoertZuLayer.changeAttributeValue(newFeat.id(),  bereichFld, aBereichGid)
                                     self.gehoertZuLayer.changeAttributeValue(newFeat.id(),  objektFld, aGid)
+                                    zugeordnet += 1
 
                     if newFeat == None: # keine neuen Einträge
                         self.gehoertZuLayer.destroyEditCommand()
-                        return False
+                        self.gehoertZuLayer.rollBack()
+
+                        if aGid < 0:
+                            return False
+                        else:
+                            self.tools.showInfo(u"Alle Objekte waren bereits zugeordnet")
+                            return True
                     else:
                         self.gehoertZuLayer.endEditCommand()
-                        return True
+
+                        if not self.gehoertZuLayer.commitChanges():
+                            self.tools.showError(u"Konnte Änderungen an " + self.gehoertZuLayer.name() + " nicht speichern!")
+                            return False
+                        else:
+                            infoMsg = str(zugeordnet) + u" Objekte "
+
+                            if len(self.aktiveBereiche) == 1:
+                                infoMsg += u"dem Bereich " + self.aktiveBereiche[aBereichGid]
+                            else:
+                                infoMsg += str(len(self.aktiveBereiche)) + u" Bereichen"
+
+                            infoMsg += u" zugeordnet"
+                            self.tools.showInfo(infoMsg)
+                            return True
             else:
                 return False
         else:
