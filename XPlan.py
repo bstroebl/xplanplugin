@@ -1340,7 +1340,7 @@ class XPlan():
                             newP = aGeom.asPoint()
                             bbox = QgsRectangle(newP.x() - 1, newP.y() -1, newP.x() + 1, newP.y() + 1)
                         else:
-                            aGeom.boundingBox()
+                            bbox = aGeom.boundingBox()
 
                         layer.removeSelection()
                         layer.select(bbox,  True)
@@ -1363,12 +1363,7 @@ class XPlan():
                             self.apoGehoertZuBereichFuellen(layer)
                         else:
                             if self.aktivenBereichenZuordnen(layer):
-                                if self.gehoertZuLayer != None:
-                                    if not self.gehoertZuLayer.commitChanges():
-                                        XpError(u"Konnte Änderungen am Layer " + \
-                                            self.gehoertZuLayer.name() + " nicht speichern!",
-                                            self.iface)
-                                else:
+                                if self.gehoertZuLayer == None:
                                     XpError("Layer Bla_Objekt_gehoertZu_BlaBereich nicht (mehr) vorhanden",
                                         self.iface)
                 except KeyError:
