@@ -576,7 +576,6 @@ class XPlan():
             self.initialize()
 
     def initializeAllLayers(self):
-        self.debug("initializeAllLayers")
         for layer in self.iface.legendInterface().layers():
             self.layerInitialize(layer)
 
@@ -1051,13 +1050,15 @@ class XPlan():
     def aktiverBereichLayerCheck(self,  layer):
         '''Prüfung, ob übergebener Layer und aktive Bereiche dem selben Objektbereich entsammen'''
         layerRelation = self.tools.getPostgresRelation(layer)
-        retValue = False
+        retValue = 0
 
         if layerRelation != None: #  PostgreSQL-Layer
             if layerRelation[2]: # Geometrielayer
                 schema = layerRelation[0]
 
-                if schema !="XP_Praesentationsobjekte":
+                if schema =="XP_Praesentationsobjekte":
+                    retValue = 2
+                else:
                     schemaTyp = schema[:2] # z.B. FP, LP
 
                     while(True):
@@ -1080,7 +1081,7 @@ class XPlan():
                             bereichTyp = self.tools.getBereichTyp(self.db,  bereichGid)
 
                             if bereichTyp == schemaTyp:
-                                retValue = True
+                                retValue = 1
                                 break
                             else:
                                 thisChoice = QtGui.QMessageBox.question(None, "Falscher Objektbereich",
@@ -1112,7 +1113,8 @@ class XPlan():
             self.initialize()
 
         if self.db:
-            if self.aktiverBereichLayerCheck(layer):
+            layerCheck = self.aktiverBereichLayerCheck(layer)
+            if layerCheck == 1:
                 for k in self.aktiveBereiche.iterkeys():
                     bereichGid = k
                     break
@@ -1136,7 +1138,6 @@ class XPlan():
                         return False
 
                     bereitsZugeordnet = self.tools.getBereicheFuerFeatures(self.db,  bereichTyp,  layer.selectedFeaturesIds())
-
                     self.gehoertZuLayer.beginEditCommand(u"Ausgewählte Features von " + layer.name() + u" den aktiven Bereichen zugeordnet.")
                     newFeat = None #ini
                     zugeordnet = 0 # Zähler
@@ -1192,6 +1193,8 @@ class XPlan():
                             infoMsg += u" zugeordnet"
                             self.tools.showInfo(infoMsg)
                             return True
+            elif layerCheck == 2: # Präsentationsobjekt
+                self.apoGehoertZuBereichFuellen(layer)
             else:
                 return False
         else:
@@ -1214,7 +1217,7 @@ class XPlan():
         if len(self.aktiveBereiche) == 0:
             self.tools.showWarning(u"Keine aktiven Bereiche festgelegt")
             return False
-        elif len(self.aktiveBereiche) == 0:
+        elif len(self.aktiveBereiche) > 1:
             self.tools.showError(u"Präsentationsobjekte können nur einem Bereich zugeordnet werden!")
             return False
         else:
@@ -1320,7 +1323,6 @@ class XPlan():
             self.iface.mapCanvas().refresh() # neuzeichnen
 
     def editingHasStopped(self):
-
         if len(self.aktiveBereiche) > 0:
             for layer in self.iface.legendInterface().layers():
                 try:
@@ -1336,11 +1338,13 @@ class XPlan():
                     newGids = []
 
                     for aGeom in newGeoms:
+                        bbox = aGeom.boundingBox()
                         if aGeom.type() == 0: #Punkt
-                            newP = aGeom.asPoint()
-                            bbox = QgsRectangle(newP.x() - 1, newP.y() -1, newP.x() + 1, newP.y() + 1)
-                        else:
-                            bbox = aGeom.boundingBox()
+                            newMP = aGeom.asMultiPoint()
+
+                            if len(newMP) == 1:
+                                newP = newMP[0]
+                                bbox = QgsRectangle(newP.x() - 1, newP.y() -1, newP.x() + 1, newP.y() + 1)
 
                         layer.removeSelection()
                         layer.select(bbox,  True)
@@ -1354,18 +1358,10 @@ class XPlan():
                     layer.removeSelection()
                     layer.select(newGids)
 
-                    rel = self.tools.getPostgresRelation(layer)
-
-                    if rel != None:
-                        schemaName = rel[0]
-
-                        if schemaName == "XP_Praesentationsobjekte":
-                            self.apoGehoertZuBereichFuellen(layer)
-                        else:
-                            if self.aktivenBereichenZuordnen(layer):
-                                if self.gehoertZuLayer == None:
-                                    XpError("Layer Bla_Objekt_gehoertZu_BlaBereich nicht (mehr) vorhanden",
-                                        self.iface)
+                    if self.aktivenBereichenZuordnen(layer):
+                        if self.gehoertZuLayer == None:
+                            XpError("Layer Bla_Objekt_gehoertZu_BlaBereich nicht (mehr) vorhanden",
+                                self.iface)
                 except KeyError:
                     continue
 
