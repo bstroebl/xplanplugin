@@ -1262,6 +1262,7 @@ class XPlan():
                 if bereich >= 0:
                     # rausbekommen, welche Layer Elemente im Bereich haben, auch nachrichtlich
                     layers = self.tools.getLayerInBereich(self.db, [bereich])
+                    self.debug(str(layers))
 
                     if len(layers) == 0:
                         self.iface.messageBar().pushMessage(

@@ -366,25 +366,21 @@ class XPTools():
 
             if bereichTyp:
                 sel = "SELECT \"Objektart\",  \
-                CASE \"Objektart\" LIKE \'%Punkt\' WHEN true THEN \'Punkt\' ELSE \
-                    CASE \"Objektart\" LIKE \'%Linie\' WHEN true THEN \'Linie\' ELSE  \
-                        CASE \"Objektart\" LIKE \'%Flaeche\' WHEN true THEN \'Flaeche\' ELSE \'Label\' \
-                        END \
-                    END \
-                END as typ, \
+                typ, \
                 \"Objektartengruppe\" \
             FROM ( \
-                SELECT DISTINCT \"Objektart\", \'XP_Praesentationsobjekte\' as \"Objektartengruppe\" \
+                SELECT DISTINCT \"Objektart\", \'XP_Praesentationsobjekte\' as \"Objektartengruppe\", \
+                \'Label\' as typ \
                 FROM \"XP_Praesentationsobjekte\".\"XP_AbstraktePraesentationsobjekte\" \
                 WHERE \"gehoertZuBereich\" IN (" + bereiche + ") \
                 UNION \
-                SELECT DISTINCT \"Objektart\", \"Objektartengruppe\" \
+                SELECT DISTINCT \"Objektart\", \"Objektartengruppe\", typ \
                 FROM \"" + bereichTyp +"_Basisobjekte\".\"" + bereichTyp + "_Objekte\" \
                 WHERE \"" + bereichTyp +"_Bereich_gid\" IN (" + bereiche + ")"
 
                 for mBereich in modellBereiche:
                     sel += "UNION \
-                SELECT DISTINCT \"Objektart\", \"Objektartengruppe\" \
+                SELECT DISTINCT \"Objektart\", \"Objektartengruppe\", typ \
                 FROM \"" + mBereich +"_Basisobjekte\".\"" + mBereich + "_Objekte\" \
                 WHERE \"nachrichtlich\" IN (" + bereiche + ")"
 
