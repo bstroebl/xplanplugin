@@ -649,7 +649,7 @@ class XPlan():
         self.layerLayer = None
 
     def setSettings(self):
-        dlg = XPlanungConf(self.dbHandler)
+        dlg = XPlanungConf(self.dbHandler, self.tools)
         dlg.show()
         result = dlg.exec_()
 

@@ -206,17 +206,21 @@ class ChooseObjektart(XP_Chooser):
         self.done(1)
 
 class XPlanungConf(QtGui.QDialog):
-    def __init__(self, dbHandler):
+    def __init__(self, dbHandler, tools):
         QtGui.QDialog.__init__(self)
         self.dbHandler = dbHandler
+        self.tools = tools
         self.ui = Ui_conf()
         self.ui.setupUi(self)
 
         s = QtCore.QSettings( "XPlanung", "XPlanung-Erweiterung" )
-        self.ui.leSERVICE.setText( s.value( "service", "" ) )
-        self.ui.leHOST.setText( s.value( "host", "" ) )
+        self.wasService = s.value( "service", "" )
+        self.ui.leSERVICE.setText( self.wasService )
+        self.wasHost = s.value( "host", "" )
+        self.ui.leHOST.setText( self.wasHost )
         self.ui.lePORT.setText( s.value( "port", "5432" ) )
-        self.ui.leDBNAME.setText( s.value( "dbname", "" ) )
+        self.wasDbName = s.value( "dbname", "" )
+        self.ui.leDBNAME.setText( self.wasDbName )
         self.ui.leUID.setText( s.value( "uid", "" ) )
         self.ui.lePWD.setText( s.value( "pwd", "" ) )
 
@@ -231,10 +235,13 @@ class XPlanungConf(QtGui.QDialog):
 
     def accept(self):
         s = QtCore.QSettings( "XPlanung", "XPlanung-Erweiterung" )
-        s.setValue( "service", self.ui.leSERVICE.text() )
-        s.setValue( "host", self.ui.leHOST.text() )
+        isService = self.ui.leSERVICE.text()
+        s.setValue( "service", isService )
+        isHost = self.ui.leHOST.text()
+        s.setValue( "host", isHost )
         s.setValue( "port", self.ui.lePORT.text() )
-        s.setValue( "dbname", self.ui.leDBNAME.text() )
+        isDbName = self.ui.leDBNAME.text()
+        s.setValue( "dbname", isDbName )
         s.setValue( "uid", self.ui.leUID.text() )
         s.setValue( "pwd", self.ui.lePWD.text() )
 
@@ -245,6 +252,11 @@ class XPlanungConf(QtGui.QDialog):
 
         if db != None:
             self.dbHandler.dbDisconnect(db)
+
+            if (self.wasService != "" and self.wasService != isService) or \
+                    (self.wasHost != "" and self.wasHost != isHost) or \
+                    (self.wasDbName != "" and self.wasDbName != isDbName):
+                self.tools.showWarning(u"Nach einem Wechsel der DB-Verbindung wird empfohlen, QGIS neu zu starten")
             self.done(1)
 
 class BereichsauswahlDialog(QtGui.QDialog):
