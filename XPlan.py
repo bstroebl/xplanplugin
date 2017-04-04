@@ -232,6 +232,7 @@ class XPlan():
             self.vectorMenu.removeAction(self.fpMenu.menuAction())
             self.vectorMenu.removeAction(self.lpMenu.menuAction())
             self.vectorMenu.removeAction(self.rpMenu.menuAction())
+            self.vectorMenu.removeAction(self.soMenu.menuAction())
             self.iface.removePluginVectorMenu("tmp", self.tmpAct)
             self.iface.addPluginToDatabaseMenu("tmp", self.tmpAct)
             self.databaseMenu.removeAction(self.xpDbMenu.menuAction())
