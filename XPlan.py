@@ -192,8 +192,10 @@ class XPlan():
         self.action27.triggered.connect(self.loadRP)
         self.action28 = QtGui.QAction(u"Nutzungsschablone konfigurieren", self.iface.mainWindow())
         self.action28.triggered.connect(self.konfiguriereNutzungsschablone)
+        self.action29 = QtGui.QAction(u"Stylesheetparameter konfigurieren", self.iface.mainWindow())
+        self.action29.triggered.connect(self.konfiguriereStylesheet)
 
-        self.xpMenu.addActions([self.action20, self.action25,
+        self.xpMenu.addActions([self.action20, self.action25, self.action29,
             self.action6, self.action10])
         self.bereichMenu.addActions([self.action1, self.action3, self.action3a,
             self.action4, self.action5])
@@ -491,6 +493,84 @@ class XPlan():
 
         if result == 1:
             self.nutzungsschablone = dlg.nutzungsschablone
+
+    def konfiguriereStylesheet(self, isChecked = False, forCode = None):
+        if self.db == None:
+            self.initialize()
+
+        stylesheetParameterLayer = self.getLayerForTable("QGIS","XP_StylesheetParameter")
+        stylesheetLayer = self.getLayerForTable("XP_Praesentationsobjekte","XP_StylesheetListe")
+
+        if stylesheetParameterLayer != None and stylesheetLayer != None:
+            if forCode == None:
+                forCode, ok = QtGui.QInputDialog.getInt(None, u"Stylesheetparameter konfigurieren",
+                    u"Code des Stylesheets eingeben", min = 1)
+            else:
+                ok = True
+
+            if ok:
+                paraFeat = QgsFeature()
+                expr = "\"Code\" = " + str(forCode)
+
+                if stylesheetParameterLayer.getFeatures(QgsFeatureRequest().setFilterExpression(expr)).nextFeature(paraFeat):
+                    # gibt es bereits; editieren
+                    self.app.xpManager.showFeatureForm(
+                            stylesheetParameterLayer, paraFeat, askForSave = False)
+                else:
+                    # prüfen, ob es das stylesheet schon gibt, ansonsten anlegen
+                    styleFeat = QgsFeature()
+
+                    if not stylesheetLayer.getFeatures(QgsFeatureRequest().setFilterExpression(expr)).nextFeature(styleFeat):
+                        styleFeat = self.tools.createFeature(stylesheetLayer)
+
+                        if styleFeat != None and self.tools.setEditable(stylesheetLayer, True, self.iface):
+                            if not stylesheetLayer.addFeature(styleFeat):
+                                self.tools.showError(u"Konnte neues Stylesheetfeature nicht einfügen")
+                                stylesheetLayer.rollBack()
+                                return None
+                            else:
+                                if not stylesheetLayer.changeAttributeValue(
+                                        styleFeat.id(), stylesheetLayer.fieldNameIndex("Code"), forCode):
+                                    self.tools.showError(u"Konnte Code für stylesheet nicht ändern")
+                                    stylesheetLayer.rollBack()
+                                    return None
+                                else:
+                                    if not stylesheetLayer.changeAttributeValue(
+                                            styleFeat.id(), stylesheetLayer.fieldNameIndex("Bezeichner"), "Code " + str(forCode)):
+                                        self.tools.showError(u"Konnte Bezeichner für stylesheet nicht ändern")
+                                        stylesheetLayer.rollBack()
+                                        return None
+                                    else:
+                                        if not stylesheetLayer.commitChanges():
+                                            self.tools.showError(u"Konnte Änderungen in XP_StylesheetListe nicht speichern")
+                                            return None
+                                        else:
+                                            self.konfiguriereStylesheet(forCode = forCode)
+                    else:
+                        paraFeat = self.tools.createFeature(stylesheetParameterLayer)
+
+                        if paraFeat != None and self.tools.setEditable(stylesheetParameterLayer, True, self.iface):
+                            if not stylesheetParameterLayer.addFeature(paraFeat):
+                                self.tools.showError(u"Konnte neues StylesheetParameterfeature nicht einfügen")
+                                stylesheetParameterLayer.rollBack()
+                                return None
+                            else:
+                                if not stylesheetParameterLayer.changeAttributeValue(
+                                        paraFeat.id(), stylesheetParameterLayer.fieldNameIndex("Code"), forCode):
+                                    self.tools.showError(u"Konnte Code für stylesheetParameter nicht ändern")
+                                    stylesheetParameterLayer.rollBack()
+                                    return None
+                                else:
+                                    if not stylesheetParameterLayer.commitChanges():
+                                        self.tools.showError(u"Konnte Änderungen in XP_StylesheetParamenter nicht speichern")
+                                        return None
+                                    else:
+                                        # zeige die DataDrivenInputMask
+                                        if stylesheetParameterLayer.getFeatures(
+                                                QgsFeatureRequest().setFilterExpression(expr)).nextFeature(paraFeat):
+                                            self.app.xpManager.showFeatureForm(
+                                                    stylesheetParameterLayer, paraFeat, askForSave = False)
+
 
     def geltungsbereichBerechnen(self):
         '''raeumlicherGeltungsbereich für alle (selektierten)
