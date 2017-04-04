@@ -695,7 +695,6 @@ class XPlan():
     def loadTable(self,  schemaName, tableName, geomColumn,
             displayName = None, filter = None):
         '''eine Relation als Layer laden'''
-
         thisLayer = None
 
         if displayName == None:
@@ -1260,15 +1259,17 @@ class XPlan():
                     break
 
                 if bereich >= 0:
+                    bereichTyp = self.tools.getBereichTyp(self.db,  bereich)
                     # rausbekommen, welche Layer Elemente im Bereich haben, auch nachrichtlich
                     layers = self.tools.getLayerInBereich(self.db, [bereich])
-                    self.debug(str(layers))
 
                     if len(layers) == 0:
                         self.iface.messageBar().pushMessage(
                             "XPlanung", u"In diesem Bereich sind keine Objekte vorhanden!",
                             level=QgsMessageBar.WARNING, duration = 10)
                         return None
+                    else: # den Bereich selbst reintun
+                        layers[2][bereichTyp + "_Basisobjekte"] = [bereichTyp + "_Bereich"]
 
                     # eine Gruppe für den Bereich machen
                     lIface = self.iface.legendInterface()
@@ -1278,7 +1279,6 @@ class XPlan():
                         return None
 
                     # Layer in die Gruppe laden und features entsprechend einschränken
-                    bereichTyp = self.tools.getBereichTyp(self.db,  bereich)
                     bereichFilter = "gid IN (SELECT \"" + bereichTyp + "_Objekt_gid\" " + \
                         "FROM \""+ bereichTyp + "_Basisobjekte\".\"" + \
                         bereichTyp + "_Objekt_gehoertZu" + bereichTyp + "_Bereich\" " + \
@@ -1289,12 +1289,16 @@ class XPlan():
                     labelFilter = "gid IN (SELECT \"gid\" " + \
                         "FROM \"XP_Praesentationsobjekte\".\"XP_AbstraktesPraesentationsobjekt\" " + \
                         "WHERE \"gehoertZuBereich\" = " + str(bereich) + ")"
+                    xpBereichFilter = "gid = " + str(bereich)
 
                     for aLayerType in layers:
                         for aKey in aLayerType.iterkeys():
                             for aRelName in aLayerType[aKey]:
                                 if aRelName[0:2] == bereichTyp:
-                                    filter = bereichFilter
+                                    if aRelName == bereichTyp + "_Bereich":
+                                        filter = xpBereichFilter
+                                    else:
+                                        filter = bereichFilter
                                 else:
                                     if aKey == "XP_Praesentationsobjekte":
                                         filter = labelFilter
@@ -1302,12 +1306,17 @@ class XPlan():
                                         filter = nachrichtlichFilter
 
                                 # lade view, falls vorhanden
-                                aLayer, isView = self.loadTable(aKey, aRelName + "_qv",  "position",
+                                if aRelName == bereichTyp + "_Bereich":
+                                    geomFld = "geltungsbereich"
+                                else:
+                                    geomFld = "position"
+
+                                aLayer, isView = self.loadTable(aKey, aRelName + "_qv",  geomFld,
                                     displayName = aRelName, filter = filter)
 
                                 if aLayer == None:
                                     # lade Tabelle
-                                    aLayer, isView = self.loadTable(aKey, aRelName,  "position",
+                                    aLayer, isView = self.loadTable(aKey, aRelName,  geomFld,
                                         displayName = aRelName, filter = filter)
 
                                 if aLayer != None:
