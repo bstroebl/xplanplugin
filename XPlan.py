@@ -1285,7 +1285,7 @@ class XPlan():
         self.aktivenBereichenNachrichtlichZuordnen(layer)
 
     def aktivenBereichenNachrichtlichZuordnen(self):
-        pass
+        self.tools.showInfo("noch nicht implementiert")
 
     def apoGehoertZuBereichFuellen(self, layer):
         '''
