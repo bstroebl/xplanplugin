@@ -260,6 +260,16 @@ class XPTools():
 
         return Features(layer)
 
+    def intListToString(self, list):
+        result = ""
+        for i in range(len(list)):
+            if i > 0:
+                result += ","
+
+            result += str(list[i])
+
+        return result
+
     def joinLayer(self, sourceLayer, joinLayer, targetField = "gid",
             joinField = "gid", prefix = None, memoryCache = True,
             joinedFields = []):

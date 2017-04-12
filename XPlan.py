@@ -1326,6 +1326,25 @@ class XPlan():
             else:
                 return False
 
+    def getBereichFilter(self,  bereichTyp, bereiche):
+        sBereiche = self.tools.intListToString(bereiche)
+        return "gid IN (SELECT \"" + bereichTyp + "_Objekt_gid\" " + \
+                        "FROM \""+ bereichTyp + "_Basisobjekte\".\"" + \
+                        bereichTyp + "_Objekt_gehoertZu" + bereichTyp + "_Bereich\" " + \
+                        "WHERE \"gehoertZu" + bereichTyp + "_Bereich\" IN (" +sBereiche + "))"
+
+    def getNachrichtlichFilter(self, bereiche):
+        sBereiche = self.tools.intListToString(bereiche)
+        return "gid IN (SELECT \"XP_Objekt_gid\" " + \
+                        "FROM \"XP_Basisobjekte\".\"XP_Objekt_gehoertNachrichtlichZuBereich\" " + \
+                        "WHERE \"gehoertNachrichtlichZuBereich\" IN (" + sBereiche + "))"
+
+    def getLabelFilter(self, bereiche):
+        sBereiche = self.tools.intListToString(bereiche)
+        return "gid IN (SELECT \"gid\" " + \
+                        "FROM \"XP_Praesentationsobjekte\".\"XP_AbstraktesPraesentationsobjekt\" " + \
+                        "WHERE \"gehoertZuBereich\" IN ("+ sBereiche + "))"
+
     def bereichLaden(self):
         '''Laden aller Layer, die Elemente in einem auszuwählenden Bereich haben'''
         if self.db == None:
@@ -1360,16 +1379,9 @@ class XPlan():
                         return None
 
                     # Layer in die Gruppe laden und features entsprechend einschränken
-                    bereichFilter = "gid IN (SELECT \"" + bereichTyp + "_Objekt_gid\" " + \
-                        "FROM \""+ bereichTyp + "_Basisobjekte\".\"" + \
-                        bereichTyp + "_Objekt_gehoertZu" + bereichTyp + "_Bereich\" " + \
-                        "WHERE \"gehoertZu" + bereichTyp + "_Bereich\" = " + str(bereich) + ")"
-                    nachrichtlichFilter = "gid IN (SELECT \"XP_Objekt_gid\" " + \
-                        "FROM \"XP_Basisobjekte\".\"XP_Objekt_gehoertNachrichtlichZuBereich\" " + \
-                        "WHERE \"gehoertNachrichtlichZuBereich\" = " + str(bereich) + ")"
-                    labelFilter = "gid IN (SELECT \"gid\" " + \
-                        "FROM \"XP_Praesentationsobjekte\".\"XP_AbstraktesPraesentationsobjekt\" " + \
-                        "WHERE \"gehoertZuBereich\" = " + str(bereich) + ")"
+                    bereichFilter = self.getBereichFilter(bereichTyp, [bereich])
+                    nachrichtlichFilter = self.getNachrichtlichFilter([bereich])
+                    labelFilter = self.getLabelFilter([bereich])
                     xpBereichFilter = "gid = " + str(bereich)
 
                     for aLayerType in layers:
