@@ -121,7 +121,8 @@ class ChoosePlan(XP_Chooser):
 
 
 class ChooseObjektart(XP_Chooser):
-    def __init__(self, objektart, db):
+    def __init__(self, objektart, db, bereiche = []):
+        self.bereiche = bereiche
         XP_Chooser.__init__(self, objektart, db, u"Objektart laden")
 
     def initialize(self):
@@ -170,6 +171,10 @@ class ChooseObjektart(XP_Chooser):
             query.finish()
 
         self.ui.layerChooser.resizeColumnToContents(0)
+
+        if len(self.bereiche) > 1:
+            self.ui.chkBereich.setLabel(u"nur Objekte der aktiven Bereiche laden")
+
     @QtCore.pyqtSlot(QtGui.QTreeWidgetItem, int)
     def on_layerChooser_itemDoubleClicked(self, thisItem, thisColumn):
         if thisItem.geomColumn == None:
@@ -203,6 +208,7 @@ class ChooseObjektart(XP_Chooser):
                     item.description]) # Beschreibung
 
         self.withDisplay = self.ui.chkDisplay.isChecked()
+        self.aktiveBereiche = self.ui.chkAktiverBereich.isChecked()
         self.done(1)
 
 class XPlanungConf(QtGui.QDialog):

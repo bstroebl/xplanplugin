@@ -606,6 +606,9 @@ class XPTools():
 
         return ok
 
+    def noActiveLayerWarning(self):
+        self.showWarning(u"Kein aktiver Layer")
+
     def showQueryError(self, query):
         self.showError(
             "%(error)s" % {"error": query.lastError().text()}, "DB-Fehler")

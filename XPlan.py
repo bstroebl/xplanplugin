@@ -147,11 +147,13 @@ class XPlan():
         self.action3.setToolTip(u"Elemente von Layern können automatisch oder händisch den aktiven " +\
             u"Bereichen zugewiesen werden. Damit werden sie zum originären Inhalt des Planbereichs.")
         self.action3.triggered.connect(self.aktiveBereicheFestlegen)
-        self.action3a = QtGui.QAction(u"Aktive Bereiche löschen", self.iface.mainWindow())
-        self.action3a.setToolTip(u"Elemente von Layern können automatisch oder händisch den aktiven " +\
-            u"Bereichen zugewiesen werden. Damit werden sie zum originären Inhalt des Planbereichs.")
+        self.action3a = QtGui.QAction(u"Aktive Bereiche entfernen", self.iface.mainWindow())
+        self.action3a.setToolTip(u"")
         self.action3a.setEnabled(False)
         self.action3a.triggered.connect(self.aktiveBereicheLoeschen)
+        self.action3b = QtGui.QAction(u"Nur Objekte in aktiven Bereichen anzeigen", self.iface.mainWindow())
+        self.action3b.setToolTip(u"")
+        self.action3b.triggered.connect(self.aktiveBereicheFilternSlot)
         self.action4 = QtGui.QAction(u"Auswahl den aktiven Bereichen zuordnen", self.iface.mainWindow())
         self.action4.setToolTip(u"aktiver Layer: ausgewählte Elemente den aktiven Bereichen zuweisen. " +\
                                 u"Damit werden sie zum originären Inhalt des Planbereichs.")
@@ -198,7 +200,7 @@ class XPlan():
         self.xpMenu.addActions([self.action20, self.action25, self.action29,
             self.action6, self.action10])
         self.bereichMenu.addActions([self.action1, self.action3, self.action3a,
-            self.action4, self.action5])
+            self.action3b, self.action4, self.action5])
         self.bpMenu.addActions([self.action21, self.action26, self.action28])
         self.fpMenu.addActions([self.action22])
         self.lpMenu.addActions([self.action23])
@@ -696,12 +698,21 @@ class XPlan():
             self.initialize(False)
 
         if self.db != None:
-            dlg = ChooseObjektart(objektart, self.db)
+            dlg = ChooseObjektart(objektart, self.db, self.aktiveBereiche)
             dlg.show()
             result = dlg.exec_()
 
             if result == 1:
                 withDisplay = dlg.withDisplay
+                nurAktiveBereiche = dlg.aktiveBereiche
+
+                if nurAktiveBereiche:
+                    if len(self.aktiveBereiche) == 0:
+                        if self.aktiveBereicheFestlegen():
+                            if len(self.aktiveBereiche) == 0:
+                                nurAktiveBereiche = False
+
+                    aktiveBereiche = self.aktiveBereicheGids()
 
                 for aSel in dlg.selection:
                     schemaName = aSel[0]
@@ -736,6 +747,9 @@ class XPlan():
                                     actionName = "XP_Sachdaten",
                                     ddManagerName = "xpManager")
 
+                            if nurAktiveBereiche:
+                                self.layerFilterBereich(editLayer, aktiveBereiche)
+
                             if tableName == "BP_BaugebietsTeilFlaeche":
                                 actionNutzungsschablone = u"Nutzungsschablone plazieren"
                                 createNewAction= True
@@ -763,6 +777,9 @@ class XPlan():
                                         geomColumn)
 
                                 if displayLayer != None:
+                                    if nurAktiveBereiche:
+                                        self.layerFilterBereich(displayLayer, aktiveBereiche)
+
                                     self.iface.legendInterface().moveLayer(
                                         displayLayer, grpIdx)
 
@@ -817,6 +834,14 @@ class XPlan():
     def loadSO(self):
         self.loadObjektart("SO")
 
+    def aktiveBereicheGids(self):
+        bereiche = []
+
+        for aKey, aValue in self.aktiveBereiche.iteritems():
+            bereiche.append(aKey)
+
+        return bereiche
+
     def aktiveBereicheFestlegen(self):
         '''Auswahl der Bereiche, in die neu gezeichnete Elemente eingefügt werden sollen'''
         if self.db == None:
@@ -852,6 +877,7 @@ class XPlan():
                 self.aktiveBereiche = bereichsAuswahl # keine Auswahl => keine aktiven Bereiche
 
         self.action3a.setEnabled(len(self.aktiveBereiche) > 0)
+        return True
 
     def aktiveBereicheLoeschen(self):
         self.aktiveBereiche = []
@@ -1127,6 +1153,21 @@ class XPlan():
 
         return ddInit
 
+    def layerFilterBereich(self, layer, bereiche):
+        ''' wende einen Filter auf layer an, so dass nur Objekte in bereiche dargestellt werden'''
+
+        if len(bereiche) > 0:
+            bereichTyp = self.tools.getBereichTyp(self.db, bereiche[0])
+            relation = self.tools.getPostgresRelation(layer)
+
+            if relation != None:
+                schemaName = relation[0]
+                relName = relation[1]
+                filter = self.getBereichFilter(schemaName, relName, bereichTyp, bereiche)
+
+                if layer.setSubsetString(filter):
+                    layer.reload()
+
     def aktiverBereichLayerCheck(self,  layer):
         '''Prüfung, ob übergebener Layer und aktive Bereiche dem selben Objektbereich entsammen'''
         layerRelation = self.tools.getPostgresRelation(layer)
@@ -1182,9 +1223,25 @@ class XPlan():
         gehoertZuTable = bereichTyp + "_Objekt_gehoertZu" + bereichTyp + "_Bereich"
         return self.getLayerForTable(gehoertZuSchema, gehoertZuTable)
 
+    def aktiveBereicheFilternSlot(self):
+        layer = self.iface.activeLayer()
+
+        if layer == None:
+            self.tools.noActiveLayerWarning
+        else:
+            layerCheck = self.aktiverBereichLayerCheck(layer)
+
+            if layerCheck == 1:
+                bereiche = self.aktiveBereicheGids()
+                self.layerFilterBereich(layer, bereiche)
+
     def aktivenBereichenZuordnenSlot(self):
         layer = self.iface.activeLayer()
-        self.aktivenBereichenZuordnen(layer)
+
+        if layer == None:
+            self.tools.noActiveLayerWarning
+        else:
+            self.aktivenBereichenZuordnen(layer)
 
     def aktivenBereichenZuordnen(self,  layer):
         '''fügt alle ausgewählten Features im übergebenen Layer den aktiven Bereichen zu
@@ -1326,24 +1383,30 @@ class XPlan():
             else:
                 return False
 
-    def getBereichFilter(self,  bereichTyp, bereiche):
+    def getBereichFilter(self, aSchemaName, aRelName, bereichTyp, bereiche):
+        ''' einen passenden Filter für aSchemaName.aRelName machen,
+        der nur Objekte aus bereiche lädt'''
         sBereiche = self.tools.intListToString(bereiche)
-        return "gid IN (SELECT \"" + bereichTyp + "_Objekt_gid\" " + \
+
+        if aRelName[0:2] == bereichTyp:
+            if aRelName == bereichTyp + "_Bereich":
+                filter = "gid IN (" + sBereiche + ")"
+            else:
+                filter = "gid IN (SELECT \"" + bereichTyp + "_Objekt_gid\" " + \
                         "FROM \""+ bereichTyp + "_Basisobjekte\".\"" + \
                         bereichTyp + "_Objekt_gehoertZu" + bereichTyp + "_Bereich\" " + \
                         "WHERE \"gehoertZu" + bereichTyp + "_Bereich\" IN (" +sBereiche + "))"
-
-    def getNachrichtlichFilter(self, bereiche):
-        sBereiche = self.tools.intListToString(bereiche)
-        return "gid IN (SELECT \"XP_Objekt_gid\" " + \
+        else:
+            if aSchemaName == "XP_Praesentationsobjekte":
+                filter = "gid IN (SELECT \"gid\" " + \
+                        "FROM \"XP_Praesentationsobjekte\".\"XP_AbstraktesPraesentationsobjekt\" " + \
+                        "WHERE \"gehoertZuBereich\" IN (" + sBereiche + "))"
+            else:
+                filter = "gid IN (SELECT \"XP_Objekt_gid\" " + \
                         "FROM \"XP_Basisobjekte\".\"XP_Objekt_gehoertNachrichtlichZuBereich\" " + \
                         "WHERE \"gehoertNachrichtlichZuBereich\" IN (" + sBereiche + "))"
 
-    def getLabelFilter(self, bereiche):
-        sBereiche = self.tools.intListToString(bereiche)
-        return "gid IN (SELECT \"gid\" " + \
-                        "FROM \"XP_Praesentationsobjekte\".\"XP_AbstraktesPraesentationsobjekt\" " + \
-                        "WHERE \"gehoertZuBereich\" IN ("+ sBereiche + "))"
+        return filter
 
     def bereichLaden(self):
         '''Laden aller Layer, die Elemente in einem auszuwählenden Bereich haben'''
@@ -1379,24 +1442,10 @@ class XPlan():
                         return None
 
                     # Layer in die Gruppe laden und features entsprechend einschränken
-                    bereichFilter = self.getBereichFilter(bereichTyp, [bereich])
-                    nachrichtlichFilter = self.getNachrichtlichFilter([bereich])
-                    labelFilter = self.getLabelFilter([bereich])
-                    xpBereichFilter = "gid = " + str(bereich)
-
                     for aLayerType in layers:
                         for aKey in aLayerType.iterkeys():
                             for aRelName in aLayerType[aKey]:
-                                if aRelName[0:2] == bereichTyp:
-                                    if aRelName == bereichTyp + "_Bereich":
-                                        filter = xpBereichFilter
-                                    else:
-                                        filter = bereichFilter
-                                else:
-                                    if aKey == "XP_Praesentationsobjekte":
-                                        filter = labelFilter
-                                    else:
-                                        filter = nachrichtlichFilter
+                                filter = self.getBereichFilter(aKey, aRelName, bereichTyp, [bereich])
 
                                 # lade view, falls vorhanden
                                 if aRelName == bereichTyp + "_Bereich":
