@@ -2,14 +2,40 @@
 
 ## [Unreleased](https://github.com/bstroebl/xplanplugin/compare/v1.0.0...develop)
 
+# 1.2.0 - 2017-08-11
+
+### Added
+- Nutzungsschablone wird über einen Dialog definiert und durch Klick in eine BP_BaugebietsTeilFlaeche erzeugt
+- Weise Präsentationsobjekte beim Digitalisieren dem aktiven Bereich zu
+- Deaktiviere Menüpunkt "Aktive Bereiche löschen", wenn kein Bereich aktiv ist
+- Prüfe beim Initialisieren, ob es sich um einen XP-Layer und nicht um einen _qv-View handelt
+- Lese den Typ (Punkt/Linie/Fläche) der Objektart aus dem Objekte-View eines Fachschemas aus
+- Lade das Bereichsobjekt selbst mit bei "Bereich laden"
+- Ermögliche die Bearbeitung der Stylesheetparameter aus QGIS heraus
+- Empfehle Neustart nach Wechsel der DB
+- Lade Flächenschlussobjekte als unterstes in den Bereich
+- Ermögliche Bereichsfilter auf beliebiege Objektklassen
+- Neue SVG-Dateien
+
+### Changed
+- Modularisiere Erzeugung der Bereichsfilter
+
 ### Fixed
-- Bereichszuordnung auf neue Bereichsnamen angepasst
+- Bereichszuordnung von Objekten auf neue Bereichsnamen angepasst
+- Stelle Auswahl sicher, dass eine Auswahl exisitert
+- Stelle sicher, dass Geometrien hinzugefügt wurden
+- Gebe Nutzerausgaben aus, bei Bereichszuordnung
+- Beseitige Laufzeitfehler
+- Ermögliche Bereichszuordnung auch für Punktobjekte
+- Entlade SO-Menü beim Entladen des Plugins
 
 # 1.1.0 - 2017-02-27
+
 ### Added
 - Laden eines Bereichs: Lädt auch nachrichtliche und Präsentationsobjekte und wendet passenden Stil an
 
 # 1.0.0 - 2016-06-22
+
 ### Added
 - Laden einer Objektart: zusätzlich zur PostGIS-Tabelle als editierbarem Layer wird optional ein View zur Darstellung geladen; er enthält alle benötigten joins. Der editierbare Layer enthält aus Performancegründen keine Joins mehr. Joins mussten zuletzt mit *Memory cache* ausgeführt werden, damit QGIS nicht mehr einfriert, weil ewig auf DB-Abfragen gewartet wurde. Der Darstellungslayer symbolisiert stets nach dem aktuellen Wert.
 - Neuer Stil *einfarbig* zur Darstellung des editierbaren Layers (wird dort per default eingestellt), andere Stile sind verfügbar (insbesondere zur Bearbeitung derselben), ihre Anwendung auf den editierbaren Layer ergibt jedoch i.d.R. keinen Sinn.
