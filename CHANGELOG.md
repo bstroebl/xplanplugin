@@ -2,6 +2,9 @@
 
 ## [Unreleased](https://github.com/bstroebl/xplanplugin/compare/v1.0.0...develop)
 
+### Fixed
+- Nutze authcfg (falls eingestellt) zum Laden von Objektklassen
+
 # 1.2.0 - 2017-08-11
 
 ### Added
