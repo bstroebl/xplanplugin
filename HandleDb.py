@@ -47,6 +47,8 @@ class DbHandler():
             qgis.core.QgsAuthManager.instance().loadAuthenticationConfig( authcfg, amc, True)
             username = amc.config( "username", username )
             passwd = amc.config( "password", passwd )
+        else:
+            authcfg = None
 
         if thisPassword:
             passwd = thisPassword
@@ -58,6 +60,7 @@ class DbHandler():
         db.setDatabaseName(database)
         db.setUserName(username)
         db.setPassword(passwd)
+        db.authcfg = authcfg # für DDIM
         ok2 = db.open()
 
         if not ok2:
