@@ -4,6 +4,7 @@
 
 ### Fixed
 - Nutze authcfg (falls eingestellt) zum Laden von Objektklassen
+- Ordne neue Objekte bereits geladener LAyer dem aktiven Bereich zu
 
 # 1.2.0 - 2017-08-11
 
