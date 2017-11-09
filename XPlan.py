@@ -873,6 +873,7 @@ class XPlan():
                         pass
 
                     self.gehoertZuLayer.layerDeleted.connect(self.onGehoertZuLayerDeleted)
+                self.initializeAllLayers()
             else:
                 self.aktiveBereiche = bereichsAuswahl # keine Auswahl => keine aktiven Bereiche
 
