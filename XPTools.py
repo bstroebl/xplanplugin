@@ -308,7 +308,12 @@ class XPTools():
         if isinstance(layer, QgsVectorLayer):
             if layer.dataProvider().storageType().find("PostgreSQL") != -1:
                 retValue = []
-                for s in str(layer.source()).split(" "):
+                try:
+                    layerSource = str(layer.source())
+                except:
+                    return None
+
+                for s in layerSource.split(" "):
                     if s.startswith("table="):
                         for val in s.replace("table=", "").split("."):
                             retValue.append(val.replace('"',  ''))
