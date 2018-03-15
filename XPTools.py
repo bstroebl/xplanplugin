@@ -56,17 +56,25 @@ class XPTools():
         stile = {}
         styleMan = layer.styleManager()
         i = 0
+        standardStil = None
 
         for aStyle in styleMan.styles():
             if aStyle != u"":
                i += 1
                stile[i] = aStyle
 
+               if aStyle == self.standardName:
+                   standardStil = aStyle
+
         if len(stile) == 0:
             self.noStyleWarning(layer)
             return None
-        elif len(stile) == 1:
-            return stile[1]
+        else:
+            if standardStil == None:
+                standardStil = stile[1]
+
+        if len(stile) <= 2:
+            return standardStil # entweder einfarbig oder default
         else:
             dlg = StilauswahlDialog(self.iface, stile, title = layer.name() + " - Stilauswahl")
             dlg.show()
