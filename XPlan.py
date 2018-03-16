@@ -1154,7 +1154,7 @@ class XPlan():
             if relation != None:
                 schemaName = relation[0]
                 relName = relation[1]
-                filter = self.getBereichFilter(schemaName, relName, bereichTyp, bereiche)
+                filter = self.getBereichFilter(schemaName, relName, bereiche)
 
                 if layer.setSubsetString(filter):
                     layer.reload()
@@ -1351,28 +1351,19 @@ class XPlan():
             else:
                 return False
 
-    def getBereichFilter(self, aSchemaName, aRelName, bereichTyp, bereiche):
+    def getBereichFilter(self, aSchemaName, aRelName, bereiche):
         ''' einen passenden Filter für aSchemaName.aRelName machen,
         der nur Objekte aus bereiche lädt'''
         sBereiche = self.tools.intListToString(bereiche)
 
-        if aRelName[0:2] == bereichTyp:
-            if aRelName == bereichTyp + "_Bereich":
-                filter = "gid IN (" + sBereiche + ")"
-            else:
-                filter = "gid IN (SELECT \"" + bereichTyp + "_Objekt_gid\" " + \
-                        "FROM \""+ bereichTyp + "_Basisobjekte\".\"" + \
-                        bereichTyp + "_Objekt_gehoertZu" + bereichTyp + "_Bereich\" " + \
-                        "WHERE \"gehoertZu" + bereichTyp + "_Bereich\" IN (" +sBereiche + "))"
+        if aSchemaName == "XP_Praesentationsobjekte":
+            filter = "gid IN (SELECT \"gid\" " + \
+                    "FROM \"XP_Praesentationsobjekte\".\"XP_AbstraktesPraesentationsobjekt\" " + \
+                    "WHERE \"gehoertZuBereich\" IN (" + sBereiche + "))"
         else:
-            if aSchemaName == "XP_Praesentationsobjekte":
-                filter = "gid IN (SELECT \"gid\" " + \
-                        "FROM \"XP_Praesentationsobjekte\".\"XP_AbstraktesPraesentationsobjekt\" " + \
-                        "WHERE \"gehoertZuBereich\" IN (" + sBereiche + "))"
-            else:
-                filter = "gid IN (SELECT \"XP_Objekt_gid\" " + \
-                        "FROM \"XP_Basisobjekte\".\"XP_Objekt_gehoertNachrichtlichZuBereich\" " + \
-                        "WHERE \"gehoertNachrichtlichZuBereich\" IN (" + sBereiche + "))"
+            filter = "gid IN (SELECT \"XP_Objekt_gid\" " + \
+                    "FROM \"XP_Basisobjekte\".\"XP_Objekt_gehoertZuBereich\" " + \
+                    "WHERE \"gehoertZuBereich\" IN (" + sBereiche + "))"
 
         return filter
 
@@ -1413,7 +1404,7 @@ class XPlan():
                     for aLayerType in layers:
                         for aKey in aLayerType.iterkeys():
                             for aRelName in aLayerType[aKey]:
-                                filter = self.getBereichFilter(aKey, aRelName, bereichTyp, [bereich])
+                                filter = self.getBereichFilter(aKey, aRelName, [bereich])
 
                                 # lade view, falls vorhanden
                                 if aRelName == bereichTyp + "_Bereich":
