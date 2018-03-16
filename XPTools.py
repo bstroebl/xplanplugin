@@ -33,19 +33,23 @@ class XPTools():
         self.standardName = standardName # Name des Standardstils
         self.simpleStyleName = simpleStyleName
         self.bereiche = {}
+        self.bereichsAuswahlDlg = None
         # dictionary, um den Typ eines Bereichs zu speichern, so dass nur
         # einmal pro Session und Bereich eine SQL-Abfrage nötig ist
 
     def chooseBereich(self,  db,  multiSelect = False,  title = "Bereichsauswahl"):
         '''Starte Dialog zur Bereichsauswahl'''
-        dlg = BereichsauswahlDialog(self.iface,  db,  multiSelect,  title)
-        dlg.show()
-        result = dlg.exec_()
+
+        if self.bereichsAuswahlDlg == None:
+            self.bereichsAuswahlDlg = BereichsauswahlDialog(self.iface,  db,  multiSelect,  title)
+
+        self.bereichsAuswahlDlg.show()
+        result = self.bereichsAuswahlDlg.exec_()
 
         if result == 0: #Abbruch
             return {-1: -1}
         else:
-            return dlg.selected
+            return self.bereichsAuswahlDlg.selected
 
     def chooseStyle(self, layer):
         '''
