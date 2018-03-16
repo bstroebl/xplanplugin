@@ -376,12 +376,10 @@ class XPTools():
         im XP_Bereich mit den übergebenen gids haben'''
 
         if len(bereichGids) > 0:
-            bereichTyp = self.getBereichTyp(db, bereichGids[0])
             modellBereiche = []
-            sel = "SELECT \"Kurz\" FROM public.\"XP_Modellbereich\" WHERE \"Kurz\" != :modellbereich;"
+            sel = "SELECT \"Kurz\" FROM public.\"XP_Modellbereich\";"
             query = QtSql.QSqlQuery(db)
             query.prepare(sel)
-            query.bindValue(":modellbereich", bereichTyp)
             query.exec_()
 
             if query.isActive():
@@ -392,108 +390,95 @@ class XPTools():
                     query.finish()
                     return []
 
-            bereiche = ""
+            bereiche = self.intListToString(bereichGids)
 
-            for bereichGid in bereichGids:
-                if bereiche != "":
-                    bereiche += ","
-
-                bereiche += str(bereichGid)
-
-            if bereichTyp:
-                sel = "SELECT \"Objektart\",  \
-                typ, \
-                \"Objektartengruppe\", \
-                flaechenschluss \
+            sel = "SELECT \"Objektart\",  \
+            typ, \
+            \"Objektartengruppe\", \
+            flaechenschluss \
             FROM ( \
-                SELECT DISTINCT \"Objektart\", \'XP_Praesentationsobjekte\' as \"Objektartengruppe\", \
-                \'Label\' as typ, NULL::Boolean as flaechenschluss \
-                FROM \"XP_Praesentationsobjekte\".\"XP_AbstraktePraesentationsobjekte\" \
-                WHERE \"gehoertZuBereich\" IN (" + bereiche + ") \
-                UNION \
-                SELECT DISTINCT \"Objektart\", \"Objektartengruppe\", typ, flaechenschluss \
-                FROM \"" + bereichTyp +"_Basisobjekte\".\"" + bereichTyp + "_Objekte\" \
-                WHERE \"" + bereichTyp +"_Bereich_gid\" IN (" + bereiche + ")"
+            SELECT DISTINCT \"Objektart\", \'XP_Praesentationsobjekte\' as \"Objektartengruppe\", \
+            \'Label\' as typ, NULL::Boolean as flaechenschluss \
+            FROM \"XP_Praesentationsobjekte\".\"XP_AbstraktePraesentationsobjekte\" \
+            WHERE \"gehoertZuBereich\" IN (" + bereiche + ")"
 
-                for mBereich in modellBereiche:
-                    sel += "UNION \
-                SELECT DISTINCT \"Objektart\", \"Objektartengruppe\", typ, flaechenschluss \
-                FROM \"" + mBereich +"_Basisobjekte\".\"" + mBereich + "_Objekte\" \
-                WHERE \"nachrichtlich\" IN (" + bereiche + ")"
+            for mBereich in modellBereiche:
+                sel += " UNION \
+            SELECT DISTINCT \"Objektart\", \"Objektartengruppe\", typ, flaechenschluss \
+            FROM \"" + mBereich +"_Basisobjekte\".\"" + mBereich + "_Objekte\" \
+            WHERE \"XP_Bereich_gid\" IN (" + bereiche + ")"
 
-                sel += ") foo ORDER BY flaechenschluss"
-                query = QtSql.QSqlQuery(db)
-                query.prepare(sel)
-                query.exec_()
+            sel += ") foo ORDER BY flaechenschluss"
+            query = QtSql.QSqlQuery(db)
+            query.prepare(sel)
+            query.exec_()
 
-                if query.isActive():
-                    if query.size() == 0:
-                        return []
-
-                    labelLayer = {}
-                    punktLayer = {}
-                    linienLayer = {}
-                    flaechenLayer = {}
-                    flaechenschlussLayer = {}
-
-                    while query.next(): # returns false when all records are done
-                        layer = query.value(0)
-                        art = query.value(1)
-                        gruppe = query.value(2)
-
-                        if art == "Label":
-                            try:
-                                lLayerList = labelLayer[gruppe]
-                                lLayerList.append(layer)
-                            except KeyError:
-                                labelLayer[gruppe] = [layer]
-                        elif art == "Punkt":
-                            try:
-                                pLayerList = punktLayer[gruppe]
-                                pLayerList.append(layer)
-                            except KeyError:
-                                punktLayer[gruppe] = [layer]
-                        elif art == "Linie":
-                            try:
-                                lLayerList = linienLayer[gruppe]
-                                lLayerList.append(layer)
-                            except KeyError:
-                                linienLayer[gruppe] = [layer]
-                        elif art == "Flaeche":
-                            flaechenschluss = query.value(3)
-                            # falls in einem Layer true und false vorkommen, ist true immer
-                            # der zweite Wert (ORDER BY flaechenschluss)
-                            # Einzelne Objekte können flaechenschluss = true sein, ohne dass
-                            # alle Objekte der  Objektart zwingend Flaechenschlussobjekte sind
-
-                            if flaechenschluss:
-                                # prüfen, ob bereits in fLayerList
-                                try:
-                                    fLayerList = flaechenLayer[gruppe]
-                                    bereitsInFlaechenLayer = (fLayerList.count(layer) > 0)
-                                except KeyError:
-                                    bereitsInFlaechenLayer = False
-
-                                if not bereitsInFlaechenLayer:
-                                    try:
-                                        fsLayerList = flaechenschlussLayer[gruppe]
-                                        fsLayerList.append(layer)
-                                    except KeyError:
-                                        flaechenschlussLayer[gruppe] = [layer]
-                            else:
-                                try:
-                                    fLayerList = flaechenLayer[gruppe]
-                                    fLayerList.append(layer)
-                                except KeyError:
-                                    flaechenLayer[gruppe] = [layer]
-
-                    query.finish()
-                    return [flaechenschlussLayer, flaechenLayer, linienLayer, punktLayer, labelLayer]
-                else:
-                    self.showQueryError(query)
-                    query.finish()
+            if query.isActive():
+                if query.size() == 0:
                     return []
+
+                labelLayer = {}
+                punktLayer = {}
+                linienLayer = {}
+                flaechenLayer = {}
+                flaechenschlussLayer = {}
+
+                while query.next(): # returns false when all records are done
+                    layer = query.value(0)
+                    art = query.value(1)
+                    gruppe = query.value(2)
+
+                    if art == "Label":
+                        try:
+                            lLayerList = labelLayer[gruppe]
+                            lLayerList.append(layer)
+                        except KeyError:
+                            labelLayer[gruppe] = [layer]
+                    elif art == "Punkt":
+                        try:
+                            pLayerList = punktLayer[gruppe]
+                            pLayerList.append(layer)
+                        except KeyError:
+                            punktLayer[gruppe] = [layer]
+                    elif art == "Linie":
+                        try:
+                            lLayerList = linienLayer[gruppe]
+                            lLayerList.append(layer)
+                        except KeyError:
+                            linienLayer[gruppe] = [layer]
+                    elif art == "Flaeche":
+                        flaechenschluss = query.value(3)
+                        # falls in einem Layer true und false vorkommen, ist true immer
+                        # der zweite Wert (ORDER BY flaechenschluss)
+                        # Einzelne Objekte können flaechenschluss = true sein, ohne dass
+                        # alle Objekte der  Objektart zwingend Flaechenschlussobjekte sind
+
+                        if flaechenschluss:
+                            # prüfen, ob bereits in fLayerList
+                            try:
+                                fLayerList = flaechenLayer[gruppe]
+                                bereitsInFlaechenLayer = (fLayerList.count(layer) > 0)
+                            except KeyError:
+                                bereitsInFlaechenLayer = False
+
+                            if not bereitsInFlaechenLayer:
+                                try:
+                                    fsLayerList = flaechenschlussLayer[gruppe]
+                                    fsLayerList.append(layer)
+                                except KeyError:
+                                    flaechenschlussLayer[gruppe] = [layer]
+                        else:
+                            try:
+                                fLayerList = flaechenLayer[gruppe]
+                                fLayerList.append(layer)
+                            except KeyError:
+                                flaechenLayer[gruppe] = [layer]
+
+                query.finish()
+                return [flaechenschlussLayer, flaechenLayer, linienLayer, punktLayer, labelLayer]
             else:
+                self.showQueryError(query)
+                query.finish()
                 return []
         else:
             return []
