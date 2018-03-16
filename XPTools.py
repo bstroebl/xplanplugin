@@ -202,19 +202,15 @@ class XPTools():
 
         return bereichTyp
 
-    def getBereicheFuerFeatures(self,  db,  bereichTyp,  fids):
+    def getBereicheFuerFeatures(self,  db,  gids):
         retValue = {}
-        sel = "SELECT gid, \"" + bereichTyp + "_Bereich_gid\"  \
-            FROM \"" + bereichTyp + "_Basisobjekte\".\"" + bereichTyp + "_Objekte\" "
-        whereClause = ""
 
-        for aFid in fids:
-            if whereClause == "":
-                whereClause = "WHERE \"" + bereichTyp + "_Bereich_gid\" IS NOT NULL AND (gid=" + str(aFid)
-            else:
-                whereClause += " OR gid=" + str(aFid)
+        aList = self.intListToString(gids)
 
-        sel += whereClause + ") ORDER BY gid"
+        sel = "SELECT \"XP_Objekt_gid\", \"gehoertZuBereich\"  \
+            FROM \"XP_Basisobjekte\".\"XP_Objekt_gehoertZuBereich\" \
+            WHERE \"XP_Objekt_gid\" IN (" + aList + ") \
+            ORDER BY \"XP_Objekt_gid\""
 
         query = QtSql.QSqlQuery(db)
         query.prepare(sel)
@@ -240,6 +236,19 @@ class XPTools():
             query.finish()
 
         return retValue
+
+    def getSelectedFeaturesGids(self, layer):
+        gidFld = layer.fieldNameIndex("gid")
+        gids = []
+
+        for aFeat in layer.selectedFeatures():
+            if aFeat.id() < 0:
+                self.showError("Bitte speichern Sie zuerst den Layer " + layer.name())
+                return []
+            else:
+                gids.append(aFeat[gidFld])
+
+        return gids
 
     def getFeatures(self, layer):
         '''gibt entweder die selektierten Features oder,

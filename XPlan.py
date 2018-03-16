@@ -71,8 +71,6 @@ class XPlan():
         # Liste der implementierten Fachschemata
         self.implementedSchemas = []
         self.willAktivenBereich = True # Nutzer möchte aktive Bereiche festlegen
-        self.gehoertZuLayer = None # Layer der die Zuordnung von Objekten zu Bereichen enthält
-                                                        # Bsp. BP_Objekt_gehoerhtZuBP_Bereich
 
         #importiere DataDrivenInputMask
         pluginDir = QtCore.QFileInfo(QgsApplication.qgisUserDbFilePath()).path() + "/python/plugins/"
@@ -101,6 +99,9 @@ class XPlan():
             XpError(u"Bitte installieren Sie das Plugin " + \
                 "DataDrivenInputMask aus dem QGIS Official Repository!",
                 self.iface)
+
+        # Layer der die Zuordnung von Objekten zu Bereichen enthält
+        self.gehoertZuLayer = None
 
         qs = QtCore.QSettings( "QGIS", "QGIS2" )
         svgpaths = qs.value( "svg/searchPathsForSVG", "", type=str ).split("|")
@@ -146,7 +147,7 @@ class XPlan():
         self.action3 = QtGui.QAction(u"Aktive Bereiche festlegen", self.iface.mainWindow())
         self.action3.setToolTip(u"Elemente von Layern können automatisch oder händisch den aktiven " +\
             u"Bereichen zugewiesen werden. Damit werden sie zum originären Inhalt des Planbereichs.")
-        self.action3.triggered.connect(self.aktiveBereicheFestlegen)
+        self.action3.triggered.connect(self.aktiveBereicheFestlegenSlot)
         self.action3a = QtGui.QAction(u"Aktive Bereiche entfernen", self.iface.mainWindow())
         self.action3a.setToolTip(u"")
         self.action3a.setEnabled(False)
@@ -158,10 +159,6 @@ class XPlan():
         self.action4.setToolTip(u"aktiver Layer: ausgewählte Elemente den aktiven Bereichen zuweisen. " +\
                                 u"Damit werden sie zum originären Inhalt des Planbereichs.")
         self.action4.triggered.connect(self.aktivenBereichenZuordnenSlot)
-        self.action5 = QtGui.QAction(u"Auswahl nachrichtlich übernehmen", self.iface.mainWindow())
-        self.action5.setToolTip(u"aktiver Layer: ausgewählte Elemente nachrichtlich " + \
-            "den aktiven Bereichen zuweisen.")
-        self.action5.triggered.connect(self.aktivenBereichenNachrichtlichZuordnenSlot)
         self.action6 = QtGui.QAction(u"Layer darstellen (nach PlanZV)", self.iface.mainWindow())
         self.action6.setToolTip(u"aktiver Layer: gespeicherten Stil anwenden")
         self.action6.triggered.connect(self.layerStyleSlot)
@@ -200,7 +197,7 @@ class XPlan():
         self.xpMenu.addActions([self.action20, self.action25, self.action29,
             self.action6, self.action10])
         self.bereichMenu.addActions([self.action1, self.action3, self.action3a,
-            self.action3b, self.action4, self.action5])
+            self.action3b, self.action4])
         self.bpMenu.addActions([self.action21, self.action26, self.action28])
         self.fpMenu.addActions([self.action22])
         self.lpMenu.addActions([self.action23])
@@ -842,6 +839,10 @@ class XPlan():
 
         return bereiche
 
+    def aktiveBereicheFestlegenSlot(self):
+        self.willAktivenBereich = True
+        self.aktiveBereicheFestlegen()
+
     def aktiveBereicheFestlegen(self):
         '''Auswahl der Bereiche, in die neu gezeichnete Elemente eingefügt werden sollen'''
         if self.db == None:
@@ -858,21 +859,10 @@ class XPlan():
                     self.aktiveBereiche = bereichsAuswahl
 
                 self.willAktivenBereich = True
-                for k in self.aktiveBereiche.iterkeys():
-                    bereichGid = k
-                    break
 
-                bereichTyp = self.tools.getBereichTyp(self.db,  bereichGid) #
-                # da nur Bereiche einer Art ausgewählt werden können,
-                # reicht es, den Typ des ersten Bereiches festzustellen
-                self.gehoertZuLayer = self.getAktivenBereichZuordnungsLayer(bereichTyp)
-                if self.gehoertZuLayer != None:
-                    try:
-                        self.gehoertZuLayer.layerDeleted.disconnect(self.onGehoertZuLayerDeleted)
-                    except:
-                        pass
+                if self.gehoertZuLayer == None:
+                   self.createBereichZuordnungsLayer()
 
-                    self.gehoertZuLayer.layerDeleted.connect(self.onGehoertZuLayerDeleted)
                 self.initializeAllLayers()
             else:
                 self.aktiveBereiche = bereichsAuswahl # keine Auswahl => keine aktiven Bereiche
@@ -1170,24 +1160,28 @@ class XPlan():
                     layer.reload()
 
     def aktiverBereichLayerCheck(self,  layer):
-        '''Prüfung, ob übergebener Layer und aktive Bereiche dem selben Objektbereich entsammen'''
-        layerRelation = self.tools.getPostgresRelation(layer)
+        '''
+        Prüfung, ob übergebener Layer Präsentationsobjekt oder XP_Objekt ist und ob es aktive Bereiche gibt
+        0 = kein passender Layer oder kein aktiver Bereich
+        1 = XP_Objekt und aktiver Bereich
+        2 = Päsentationsobjekt
+        '''
+
         retValue = 0
+        layerRelation = self.tools.getPostgresRelation(layer)
 
         if layerRelation != None: #  PostgreSQL-Layer
             if layerRelation[2]: # Geometrielayer
                 schema = layerRelation[0]
 
-                if schema =="XP_Praesentationsobjekte":
+                if schema == "XP_Praesentationsobjekte":
                     retValue = 2
                 else:
-                    schemaTyp = schema[:2] # z.B. FP, LP
-
                     while(True):
                         if len(self.aktiveBereiche) == 0 and self.willAktivenBereich:
                             thisChoice = QtGui.QMessageBox.question(None, "Keine aktiven Bereiche",
-                            u"Wollen Sie aktive Bereiche festlegen? ",
-                            QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+                                u"Wollen Sie aktive Bereiche festlegen? ",
+                                QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
 
                             if thisChoice == QtGui.QMessageBox.Yes:
                                 self.aktiveBereicheFestlegen()
@@ -1196,33 +1190,17 @@ class XPlan():
                                 break
 
                         if len(self.aktiveBereiche) > 0:
-                            for k in self.aktiveBereiche.iterkeys():
-                                bereichGid = k
-                                break
-
-                            bereichTyp = self.tools.getBereichTyp(self.db,  bereichGid)
-
-                            if bereichTyp == schemaTyp:
-                                retValue = 1
-                                break
-                            else:
-                                thisChoice = QtGui.QMessageBox.question(None, "Falscher Objektbereich",
-                                    u"Die momentan aktiven Bereiche und der Layer stammen aus unterschiedlichen " + \
-                                    u"Objektbereichen: aktive Bereiche = " + bereichTyp + ", " + layer.name() + " = " + \
-                                    schemaTyp + u". Wollen Sie die aktiven Bereiche ändern? ",
-                                    QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
-
-                                if thisChoice == QtGui.QMessageBox.Yes:
-                                    self.aktiveBereicheFestlegen()
-                                else:
-                                    break
+                            retValue = 1
+                            break
 
         return retValue
 
-    def getAktivenBereichZuordnungsLayer(self, bereichTyp):
-        gehoertZuSchema = bereichTyp + "_Basisobjekte"
-        gehoertZuTable = bereichTyp + "_Objekt_gehoertZu" + bereichTyp + "_Bereich"
-        return self.getLayerForTable(gehoertZuSchema, gehoertZuTable)
+    def createBereichZuordnungsLayer(self):
+        self.gehoertZuLayer = self.getLayerForTable(
+            "XP_Basisobjekte", "XP_Objekt_gehoertZuBereich")
+
+        if self.gehoertZuLayer != None:
+            self.gehoertZuLayer.layerDeleted.connect(self.onGehoertZuLayerDeleted)
 
     def aktiveBereicheFilternSlot(self):
         layer = self.iface.activeLayer()
@@ -1240,8 +1218,9 @@ class XPlan():
         layer = self.iface.activeLayer()
 
         if layer == None:
-            self.tools.noActiveLayerWarning
+            self.tools.noActiveLayerWarning()
         else:
+            self.willAktivenBereich = True
             self.aktivenBereichenZuordnen(layer)
 
     def aktivenBereichenZuordnen(self,  layer):
@@ -1251,99 +1230,86 @@ class XPlan():
             self.initialize()
 
         if self.db:
-            layerCheck = self.aktiverBereichLayerCheck(layer)
-            if layerCheck == 1:
-                for k in self.aktiveBereiche.iterkeys():
-                    bereichGid = k
-                    break
+            checkResult = self.aktiverBereichLayerCheck(layer)
 
-                bereichTyp = self.tools.getBereichTyp(self.db,  bereichGid) #
-                # da nur Bereiche einer Art ausgewählt werden können,
-                # reicht es, den Typ des ersten Bereiches festzustellen
+            if checkResult == 1:
+                if not self.tools.setEditable(self.gehoertZuLayer, True, self.iface):
+                    self.debug("no edit")
+                    return False
 
-                if self.gehoertZuLayer == None:
+                if len(layer.selectedFeaturesIds()) == 0:
+                    XpError(u"Bereichszuordnung: Der Layer " + layer.name() + u" hat keine Auswahl!",
+                        self.iface)
+                    return False
+
+                bereichFld = self.gehoertZuLayer.fieldNameIndex("gehoertZuBereich")
+                objektFld = self.gehoertZuLayer.fieldNameIndex("XP_Objekt_gid")
+
+                gids = self.tools.getSelectedFeaturesGids(layer)
+
+                if gids == []:
                     return False
                 else:
-                    if not self.tools.setEditable(self.gehoertZuLayer):
+                    bereitsZugeordnet = self.tools.getBereicheFuerFeatures(self.db,  gids)
+
+                self.gehoertZuLayer.beginEditCommand(
+                    u"Ausgewählte Features von " + layer.name() + u" den aktiven Bereichen zugeordnet.")
+                newFeat = None #ini
+                zugeordnet = 0 # Zähler
+
+                for aGid in gids:
+                    for aBereichGid in self.aktiveBereiche.iterkeys():
+                        doInsert = True
+                        #prüfen, ob dieses XP_Objekt bereits diesem XP_Bereich zugewiesen ist
+                        try:
+                            objektBereiche = bereitsZugeordnet[aGid]
+                        except KeyError:
+                            objektBereiche = []
+
+                        for objektBereich in objektBereiche:
+                            if objektBereich == aBereichGid:
+                                doInsert = False
+                                break
+
+                        if doInsert:
+                            newFeat = self.tools.createFeature(self.gehoertZuLayer)
+                            self.gehoertZuLayer.addFeature(newFeat,  False)
+                            self.gehoertZuLayer.changeAttributeValue(newFeat.id(),  bereichFld, aBereichGid)
+                            self.gehoertZuLayer.changeAttributeValue(newFeat.id(),  objektFld, aGid)
+                            zugeordnet += 1
+
+                if newFeat == None: # keine neuen Einträge
+                    self.gehoertZuLayer.destroyEditCommand()
+                    self.gehoertZuLayer.rollBack()
+
+                    if aGid < 0:
                         return False
-
-                    bereichFld = self.gehoertZuLayer.fieldNameIndex("gehoertZu" + bereichTyp + "_Bereich")
-                    objektFld = self.gehoertZuLayer.fieldNameIndex(bereichTyp + "_Objekt_gid")
-
-                    if len(layer.selectedFeaturesIds()) == 0:
-                        XpError(u"Bereichszuordnung: Der Layer " + layer.name() + u" hat keine Auswahl!",
-                            self.iface)
-                        return False
-
-                    bereitsZugeordnet = self.tools.getBereicheFuerFeatures(self.db,  bereichTyp,  layer.selectedFeaturesIds())
-                    self.gehoertZuLayer.beginEditCommand(u"Ausgewählte Features von " + layer.name() + u" den aktiven Bereichen zugeordnet.")
-                    newFeat = None #ini
-                    zugeordnet = 0 # Zähler
-
-                    for aGid in layer.selectedFeaturesIds():
-                        if aGid < 0:
-                            self.tools.showError(u"Bereichszuordnung: Bitte speichern Sie zuerst den Layer " + layer.name())
-                            break
-                        else:
-                            for aBereichGid in self.aktiveBereiche.iterkeys():
-                                doInsert = True
-                                #prüfen, ob dieses XP_Objekt bereits diesem XP_Bereich zugewiesen ist
-                                try:
-                                    objektBereiche = bereitsZugeordnet[aGid]
-                                except KeyError:
-                                    objektBereiche = []
-
-                                for objektBereich in objektBereiche:
-                                    if objektBereich == aBereichGid:
-                                        doInsert = False
-                                        break
-
-                                if doInsert:
-                                    newFeat = self.tools.createFeature(self.gehoertZuLayer)
-                                    self.gehoertZuLayer.addFeature(newFeat,  False)
-                                    self.gehoertZuLayer.changeAttributeValue(newFeat.id(),  bereichFld, aBereichGid)
-                                    self.gehoertZuLayer.changeAttributeValue(newFeat.id(),  objektFld, aGid)
-                                    zugeordnet += 1
-
-                    if newFeat == None: # keine neuen Einträge
-                        self.gehoertZuLayer.destroyEditCommand()
-                        self.gehoertZuLayer.rollBack()
-
-                        if aGid < 0:
-                            return False
-                        else:
-                            self.tools.showInfo(u"Alle Objekte waren bereits zugeordnet")
-                            return True
                     else:
-                        self.gehoertZuLayer.endEditCommand()
+                        self.tools.showInfo(u"Alle Objekte waren bereits zugeordnet")
+                        return True
+                else:
+                    self.gehoertZuLayer.endEditCommand()
 
-                        if not self.gehoertZuLayer.commitChanges():
-                            self.tools.showError(u"Konnte Änderungen an " + self.gehoertZuLayer.name() + " nicht speichern!")
-                            return False
+                    if not self.gehoertZuLayer.commitChanges():
+                        self.tools.showError(u"Konnte Änderungen an " + self.gehoertZuLayer.name() + " nicht speichern!")
+                        return False
+                    else:
+                        infoMsg = str(zugeordnet) + u" Objekte "
+
+                        if len(self.aktiveBereiche) == 1:
+                            infoMsg += u"dem Bereich " + self.aktiveBereiche[aBereichGid]
                         else:
-                            infoMsg = str(zugeordnet) + u" Objekte "
+                            infoMsg += str(len(self.aktiveBereiche)) + u" Bereichen"
 
-                            if len(self.aktiveBereiche) == 1:
-                                infoMsg += u"dem Bereich " + self.aktiveBereiche[aBereichGid]
-                            else:
-                                infoMsg += str(len(self.aktiveBereiche)) + u" Bereichen"
-
-                            infoMsg += u" zugeordnet"
-                            self.tools.showInfo(infoMsg)
-                            return True
-            elif layerCheck == 2: # Präsentationsobjekt
+                        infoMsg += u" zugeordnet"
+                        self.tools.showInfo(infoMsg)
+                        return True
+            elif checkResult == 2: # Präsentationsobjekt
                 self.apoGehoertZuBereichFuellen(layer)
             else:
                 return False
         else:
-            return False
-
-    def aktivenBereichenNachrichtlichZuordnenSlot(self):
-        layer = self.iface.activeLayer()
-        self.aktivenBereichenNachrichtlichZuordnen(layer)
-
-    def aktivenBereichenNachrichtlichZuordnen(self):
-        self.tools.showInfo("noch nicht implementiert")
+                return False
 
     def apoGehoertZuBereichFuellen(self, layer):
         '''
@@ -1361,6 +1327,7 @@ class XPlan():
         else:
             for k in self.aktiveBereiche.iterkeys():
                 bereichGid = k
+
             apoLayer = self.getLayerForTable("XP_Praesentationsobjekte",
                 "XP_AbstraktesPraesentationsobjekt")
 
@@ -1370,8 +1337,8 @@ class XPlan():
                 else:
                     fldIdx = apoLayer.fieldNameIndex("gehoertZuBereich")
 
-                    for gid in layer.selectedFeaturesIds():
-                        if not apoLayer.changeAttributeValue(gid, fldIdx, bereichGid):
+                    for fid in layer.selectedFeaturesIds():
+                        if not apoLayer.changeAttributeValue(fid, fldIdx, bereichGid):
                             self.tools.showError(u"Konnte XP_AbstraktesPraesentationsobjekt.gehoertZuBereich nicht ändern!")
                             apoLayer.rollBack()
                             return False
