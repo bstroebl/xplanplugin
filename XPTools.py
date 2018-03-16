@@ -483,34 +483,6 @@ class XPTools():
         else:
             return []
 
-    def styleLayerDeprecated(self,  layer,  xmlStyle):
-        '''wende den übergebenen Stil auf den übergebenen Layer an'''
-
-        doc = QtXml.QDomDocument()
-
-        if doc.setContent(xmlStyle.encode("utf-8"))[0]:
-            rootNode = doc.firstChildElement()
-            if layer.readSymbology(rootNode, "Fehler beim Anwenden"):
-
-                if rootNode.hasAttributes():
-                    attrs = rootNode.attributes()
-
-                    if attrs.contains("minimumScale"):
-                        minScaleAttr = attrs.namedItem("minimumScale")
-                        layer.setMinimumScale(float(minScaleAttr.nodeValue()))
-
-                    if attrs.contains("maximumScale"):
-                        maxScaleAttr = attrs.namedItem("maximumScale")
-                        layer.setMaximumScale(float(maxScaleAttr.nodeValue()))
-
-                    if attrs.contains("hasScaleBasedVisibilityFlag"):
-                        scaleBasedVisAttr = attrs.namedItem("hasScaleBasedVisibilityFlag")
-                        layer.toggleScaleBasedVisibility(scaleBasedVisAttr.nodeValue() == "1")
-                self.iface.legendInterface().refreshLayerSymbology(layer)
-                return True
-            else:
-                return False
-
     def getXmlLayerStyle(self, layer):
         '''erzeuge ein XML-Style-Dokument'''
         doc=QtXml.QDomDocument()
