@@ -66,7 +66,8 @@ class XPlan():
         self.db = None
         self.tools = XPTools(self.iface, self.standardName, self.simpleStyleName)
         self.aktiveBereiche = {}
-        self.addedGeometries = {}
+        self.xpLayers = {} # dict, key = layerId
+            # item = [layer (QgsVectorLayer), maxGid (long), featuresHaveBeenAdded (Bolean)]
         self.layerLayer = None
         # Liste der implementierten Fachschemata
         self.implementedSchemas = []
@@ -1130,9 +1131,15 @@ class XPlan():
                             except:
                                 pass
 
+                            try:
+                                layer.editingStarted.disconnect(self.onEditingStarted)
+                            except:
+                                pass
+
                             layer.committedFeaturesAdded.connect(self.onCommitedFeaturesAdded)
                             layer.editingStopped.connect(self.onEditingStopped)
-                            self.addedGeometries[layer.id()] = []
+                            layer.editingStarted.connect(self.onEditingStarted)
+                            self.xpLayers[layer.id()] = [layer, None, False]
             else:
                 if msg:
                     XpError("Der Layer " + layer.name() + " ist kein PostgreSQL-Layer!",
@@ -1294,7 +1301,12 @@ class XPlan():
                         self.tools.showError(u"Konnte Änderungen an " + self.gehoertZuLayer.name() + " nicht speichern!")
                         return False
                     else:
-                        infoMsg = str(zugeordnet) + u" Objekte "
+                        if zugeordnet == 1:
+                            infoMsg = u"Ein Objekt "
+                        else:
+                            infoMsg = str(zugeordnet) + u" Objekte "
+
+                        infoMsg += "im Layer " + layer.name() + " "
 
                         if len(self.aktiveBereiche) == 1:
                             infoMsg += u"dem Bereich " + self.aktiveBereiche[aBereichGid]
@@ -1305,7 +1317,7 @@ class XPlan():
                         self.tools.showInfo(infoMsg)
                         return True
             elif checkResult == 2: # Präsentationsobjekt
-                self.apoGehoertZuBereichFuellen(layer)
+                return self.apoGehoertZuBereichFuellen(layer)
             else:
                 return False
         else:
@@ -1433,47 +1445,58 @@ class XPlan():
                                     lIface.setLayerVisible(aLayer,  True)
             self.iface.mapCanvas().refresh() # neuzeichnen
 
+    def onEditingStarted(self):
+        if len(self.aktiveBereiche) > 0:
+            for layer in self.iface.legendInterface().layers():
+                layerId = layer.id()
+
+                try:
+                    self.xpLayers[layerId]
+                except:
+                    continue
+
+                layerRelation = self.tools.getPostgresRelation(layer)
+
+                if layerRelation != None: # PostgreSQL-Layer
+                    schema = layerRelation[0]
+                    table = layerRelation[1]
+                    maxGid = self.tools.getMaxGid(self.db, schema, table)
+                    self.xpLayers[layerId][1] = maxGid
+                    self.xpLayers[layerId][2] = False
+
     def onEditingStopped(self):
         if len(self.aktiveBereiche) > 0:
             for layer in self.iface.legendInterface().layers():
+                layerId = layer.id()
+
                 try:
-                    newGeoms = self.addedGeometries[layer.id()]
+                    hasChanges = self.xpLayers[layerId][2]
 
-                    if len(newGeoms) == 0:
-                        continue
+                    if hasChanges and not layer.isEditable():
+                        # layer.isEditable() = True für diesen Layer wurde das Editieren nicht beendet
+                        maxGid = self.xpLayers[layerId][1]
 
-                    if layer.isEditable(): # für diesen Layer wurde das Editieren nicht beendet
-                        continue
+                        if maxGid == None: # Fehler bei Ermittlung der maxGid
+                            continue
 
-                    layer.reload() # damit gids geladen werden
-                    newGids = []
+                        layer.reload() # damit neue gids geladen werden
+                        newIds = []
+                        request = QgsFeatureRequest()
+                        request.setFilterExpression("gid > " + str(maxGid))
 
-                    for aGeom in newGeoms:
-                        bbox = aGeom.boundingBox()
-                        if aGeom.type() == 0: #Punkt
-                            newMP = aGeom.asMultiPoint()
+                        for aNewFeat in layer.getFeatures(request):
+                            newIds.append(aNewFeat.id())
 
-                            if len(newMP) == 1:
-                                newP = newMP[0]
-                                bbox = QgsRectangle(newP.x() - 1, newP.y() -1, newP.x() + 1, newP.y() + 1)
+                        layer.selectByIds(newIds)
 
-                        layer.removeSelection()
-                        layer.select(bbox,  True) # 2.18: deprecated!
+                        if layer.selectedFeatureCount() > 0:
+                            if not self.aktivenBereichenZuordnen(layer):
+                                if self.gehoertZuLayer == None:
+                                    XpError("Layer XP_Objekt_gehoertZu_XP_Bereich nicht (mehr) vorhanden",
+                                        self.iface)
 
-                        for selFeature in layer.selectedFeatures():
-                            if selFeature.geometry().isGeosEqual(aGeom):
-                                newGid = selFeature["gid"]
-                                newGids.append(newGid)
-                                break
-
-                    layer.removeSelection()
-                    layer.select(newGids)
-
-                    if self.aktivenBereichenZuordnen(layer):
-                        if self.gehoertZuLayer == None:
-                            XpError("Layer XP_Objekt_gehoertZu_XP_Bereich nicht (mehr) vorhanden",
-                                self.iface)
-                except KeyError:
+                            layer.removeSelection()
+                except:
                     continue
 
         self.iface.mapCanvas().refresh() # neuzeichnen
@@ -1482,13 +1505,16 @@ class XPlan():
         self.gehoertZuLayer = None
 
     def onCommitedFeaturesAdded(self,  layerId,  featureList):
-        '''Slot der aufgerufen wird, wenn neue Features in einen XP-Layer eingefügt werden'''
-        newGeoms = []
+        '''
+        Slot der aufgerufen wird, wenn neue Features in einen XP-Layer eingefügt werden
+        wird vor editingStopped aufgerufen
+        '''
 
-        for aFeature in featureList:
-            newGeoms.append(QgsGeometry(aFeature.geometry())) # Kopie der Geometrie
-
-        self.addedGeometries[layerId] = newGeoms
+        try:
+            self.xpLayers[layerId][2] = True
+        except:
+            XpError(u"Fehler in xpLayers, layerId " + layerId + " nicht gefunden!",
+                self.iface)
 
     def showQueryError(self, query):
         self.tools.showQueryError(query)

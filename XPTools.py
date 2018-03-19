@@ -241,6 +241,28 @@ class XPTools():
 
         return retValue
 
+    def getMaxGid(self, db, schemaName, tableName):
+        retValue = -9999
+        sel = "SELECT gid FROM \"" + schemaName + "\".\"" + tableName + \
+            "\" ORDER BY gid DESC LIMIT 1;"
+
+        query = QtSql.QSqlQuery(db)
+        query.prepare(sel)
+        query.exec_()
+
+        if query.isActive():
+            if query.size() > 0:
+                while query.next():
+                    retValue = query.value(0)
+
+                query.finish()
+        else:
+            self.showQueryError(query)
+            query.finish()
+            return None
+
+        return retValue
+
     def getSelectedFeaturesGids(self, layer):
         gidFld = layer.fieldNameIndex("gid")
         gids = []
