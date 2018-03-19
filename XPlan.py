@@ -1458,7 +1458,7 @@ class XPlan():
                                 bbox = QgsRectangle(newP.x() - 1, newP.y() -1, newP.x() + 1, newP.y() + 1)
 
                         layer.removeSelection()
-                        layer.select(bbox,  True)
+                        layer.select(bbox,  True) # 2.18: deprecated!
 
                         for selFeature in layer.selectedFeatures():
                             if selFeature.geometry().isGeosEqual(aGeom):
@@ -1471,7 +1471,7 @@ class XPlan():
 
                     if self.aktivenBereichenZuordnen(layer):
                         if self.gehoertZuLayer == None:
-                            XpError("Layer Bla_Objekt_gehoertZu_BlaBereich nicht (mehr) vorhanden",
+                            XpError("Layer XP_Objekt_gehoertZu_XP_Bereich nicht (mehr) vorhanden",
                                 self.iface)
                 except KeyError:
                     continue
