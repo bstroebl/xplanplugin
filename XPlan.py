@@ -1121,17 +1121,17 @@ class XPlan():
 
                             # disconnect slots in case they are already connected
                             try:
-                                layer.committedFeaturesAdded.disconnect(self.featuresAdded)
+                                layer.committedFeaturesAdded.disconnect(self.onCommitedFeaturesAdded)
                             except:
                                 pass
 
                             try:
-                                layer.editingStopped.disconnect(self.editingHasStopped)
+                                layer.editingStopped.disconnect(self.onEditingStopped)
                             except:
                                 pass
 
-                            layer.committedFeaturesAdded.connect(self.featuresAdded)
-                            layer.editingStopped.connect(self.editingHasStopped)
+                            layer.committedFeaturesAdded.connect(self.onCommitedFeaturesAdded)
+                            layer.editingStopped.connect(self.onEditingStopped)
                             self.addedGeometries[layer.id()] = []
             else:
                 if msg:
@@ -1433,7 +1433,7 @@ class XPlan():
                                     lIface.setLayerVisible(aLayer,  True)
             self.iface.mapCanvas().refresh() # neuzeichnen
 
-    def editingHasStopped(self):
+    def onEditingStopped(self):
         if len(self.aktiveBereiche) > 0:
             for layer in self.iface.legendInterface().layers():
                 try:
@@ -1481,7 +1481,7 @@ class XPlan():
     def onGehoertZuLayerDeleted(self): # Slot
         self.gehoertZuLayer = None
 
-    def featuresAdded(self,  layerId,  featureList):
+    def onCommitedFeaturesAdded(self,  layerId,  featureList):
         '''Slot der aufgerufen wird, wenn neue Features in einen XP-Layer eingefügt werden'''
         newGeoms = []
 
