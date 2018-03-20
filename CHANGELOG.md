@@ -1,10 +1,19 @@
 # Change Log
 
-## [Unreleased](https://github.com/bstroebl/xplanplugin/compare/v1.0.0...develop)
+## [Unreleased](https://github.com/bstroebl/xplanplugin/compare/v2.0.0...develop)
+
+# 2.0.0 - 2018-03-20
+
+### Added
+- Lade Standardstil ohne Nachfrage, wenn er der einzige Stil ist
+- Implementiere XPlan 5.0 (passe an geänderte Datenbankstrukturen an)
+- Erhalte Zustand des Bereichsauswahldialogs
 
 ### Fixed
 - Nutze authcfg (falls eingestellt) zum Laden von Objektklassen
-- Ordne neue Objekte bereits geladener LAyer dem aktiven Bereich zu
+- Ordne neue Objekte bereits geladener Layer dem aktiven Bereich zu
+- Fange Relationsnamen mit Umlauten o.ä. ab
+- ordne neue Features automatische den aktiven Bereichen zu
 
 # 1.2.0 - 2017-08-11
 
