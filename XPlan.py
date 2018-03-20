@@ -1373,7 +1373,10 @@ class XPlan():
                     "FROM \"XP_Praesentationsobjekte\".\"XP_AbstraktesPraesentationsobjekt\" " + \
                     "WHERE \"gehoertZuBereich\" IN (" + sBereiche + "))"
         else:
-            filter = "gid IN (SELECT \"XP_Objekt_gid\" " + \
+            if aRelName[3:] == "Bereich":
+                filter = "gid IN (" + sBereiche + ")"
+            else:
+                filter = "gid IN (SELECT \"XP_Objekt_gid\" " + \
                     "FROM \"XP_Basisobjekte\".\"XP_Objekt_gehoertZuBereich\" " + \
                     "WHERE \"gehoertZuBereich\" IN (" + sBereiche + "))"
 
