@@ -420,6 +420,7 @@ class BereichsauswahlDialog(QtGui.QDialog):
         self.fillBereichTree()
 
     def accept(self):
+        self.selected = {}
         for item in self.ui.bereich.selectedItems():
             if item.childId:
                 self.selected[item.childId] = item.data(0,  0)
