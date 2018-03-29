@@ -1348,9 +1348,15 @@ class XPlan():
                     return False
                 else:
                     fldIdx = apoLayer.fieldNameIndex("gehoertZuBereich")
+                    gids = self.tools.intListToString(self.tools.getSelectedFeaturesGids(layer))
+                    request = QgsFeatureRequest()
+                    request.setFilterExpression("gid IN (" + gids + ")")
+                    zugeordnet = 0
 
-                    for fid in layer.selectedFeaturesIds():
-                        if not apoLayer.changeAttributeValue(fid, fldIdx, bereichGid):
+                    for aFeat in apoLayer.getFeatures(request):
+                        if apoLayer.changeAttributeValue(aFeat.id(), fldIdx, bereichGid):
+                            zugeordnet += 1
+                        else:
                             self.tools.showError(u"Konnte XP_AbstraktesPraesentationsobjekt.gehoertZuBereich nicht ändern!")
                             apoLayer.rollBack()
                             return False
@@ -1359,6 +1365,15 @@ class XPlan():
                         self.tools.showError(u"Konnte Layer XP_AbstraktesPraesentationsobjekt nicht speichern")
                         return False
                     else:
+                        if zugeordnet == 1:
+                            infoMsg = u"Ein Objekt "
+                        else:
+                            infoMsg = str(zugeordnet) + u" Objekte "
+
+                        infoMsg += "im Layer " + layer.name() + " "
+                        infoMsg += u"dem Bereich " + self.aktiveBereiche[bereichGid]
+                        infoMsg += u" zugeordnet"
+                        self.tools.showInfo(infoMsg)
                         return True
             else:
                 return False
