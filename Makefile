@@ -26,25 +26,25 @@ LICENSE = license.txt
 
 METADATA = metadata.txt
 
-UI_FILES = Ui_Bereichsauswahl.py Ui_conf.py Ui_ObjektartLaden.py Ui_Stilauswahl.py Ui_Nutzungsschablone.py
+UI_FILES = Ui_Bereichsauswahl.ui Ui_conf.ui Ui_ObjektartLaden.ui Ui_Stilauswahl.ui Ui_Nutzungsschablone.ui
 
 #RESOURCE_FILES = tools/resources_rc.py
 
-default: compile
+default: deploy
 
 #compile: $(UI_FILES) $(RESOURCE_FILES)
-compile: $(UI_FILES)
+#compile: $(UI_FILES)
 
 #%_rc.py : %.qrc
 #	pyrcc4 -o $@  $<
 
-%.py : %.ui
-	pyuic4 -o $@ $<
+#%.py : %.ui
+#	pyuic4 -o $@ $<
 
 # The deploy target only works on unix like operating system where
 # the Python plugin directory is located at:
 # $HOME/.qgis/python/plugins
-deploy: compile
+deploy:
 	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
 	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/tools
 	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/tools/icons
@@ -76,7 +76,7 @@ zip: deploy dclean
 # git repository).
 # To use, pass a valid commit or tag as follows:
 #   make package VERSION=Version_0.3.2
-package: compile
+package:
 		rm -f $(PLUGINNAME).zip
 		git archive --prefix=$(PLUGINNAME)/ -o $(PLUGINNAME).zip $(VERSION)
 		echo "Created package: $(PLUGINNAME).zip"

@@ -20,28 +20,43 @@ email                : bernhard.stroebl@jena.de
  ***************************************************************************/
 """
 # Import the PyQt and QGIS libraries
-from PyQt4 import QtCore, QtGui, QtSql
+from PyQt4 import QtCore, QtGui, QtSql,  uic
 from qgis.core import *
 from qgis.gui import *
 import qgis.gui
-from Ui_Bereichsauswahl import Ui_Bereichsauswahl
-from Ui_Stilauswahl import Ui_Stilauswahl
-from Ui_conf import Ui_conf
-from Ui_ObjektartLaden import Ui_ObjektartLaden
-from Ui_Nutzungsschablone import Ui_Nutzungsschablone
+import os
+#from Ui_Bereichsauswahl import Ui_Bereichsauswahl
+#from Ui_Stilauswahl import Ui_Stilauswahl
+#from Ui_conf import Ui_conf
+#from Ui_ObjektartLaden import Ui_ObjektartLaden
+#from Ui_Nutzungsschablone import Ui_Nutzungsschablone
 
-class XP_Chooser(QtGui.QDialog):
+CHOOSER_CLASS, _ = uic.loadUiType(os.path.join(
+    os.path.dirname(__file__), 'Ui_ObjektartLaden.ui'))
+
+CONF_CLASS, _ = uic.loadUiType(os.path.join(
+    os.path.dirname(__file__), 'Ui_conf.ui'))
+
+BEREICH_CLASS, _ = uic.loadUiType(os.path.join(
+    os.path.dirname(__file__), 'Ui_Bereichsauswahl.ui'))
+
+STIL_CLASS, _ = uic.loadUiType(os.path.join(
+    os.path.dirname(__file__), 'Ui_Stilauswahl.ui'))
+
+SCHABLONE_CLASS, _ = uic.loadUiType(os.path.join(
+    os.path.dirname(__file__), 'Ui_Nutzungsschablone.ui'))
+
+class XP_Chooser(QtGui.QDialog, CHOOSER_CLASS):
     '''Ein Dialog mit einem TreeWidget um ein Element auszuwählen, abstrakt'''
 
     def __init__(self, objektart, db, title):
         QtGui.QDialog.__init__(self)
         self.objektart = objektart
         self.db = db
-        self.ui = Ui_ObjektartLaden()
-        self.ui.setupUi(self)
-        self.ui.buttonBox.accepted.connect(self.accept)
-        self.ui.buttonBox.rejected.connect(self.reject)
-        self.okBtn = self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok)
+        self.setupUi(self)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+        self.okBtn = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)
         self.okBtn.setEnabled(False)
         self.setWindowTitle(title)
         self.initialize()
@@ -77,7 +92,7 @@ class ChoosePlan(XP_Chooser):
 
                 parentItem = QtGui.QTreeWidgetItem([parent])
                 parentItem.gid = planGid
-                self.ui.layerChooser.addTopLevelItem(parentItem)
+                self.layerChooser.addTopLevelItem(parentItem)
                 childItem = QtGui.QTreeWidgetItem([nummer])
                 childItem.parent = parent
                 childItem.gid = planGid
@@ -87,23 +102,23 @@ class ChoosePlan(XP_Chooser):
             self.showQueryError(query)
             query.finish()
 
-        self.ui.layerChooser.resizeColumnToContents(0)
+        self.layerChooser.resizeColumnToContents(0)
 
     @QtCore.pyqtSlot(QtGui.QTreeWidgetItem, int)
     def on_layerChooser_itemDoubleClicked(self, thisItem, thisColumn):
         if thisItem.gid == None:
             if thisItem.isExpanded():
-                self.ui.layerChooser.collapseItem(thisItem)
+                self.layerChooser.collapseItem(thisItem)
             else:
-                self.ui.layerChooser.expandItem(thisItem)
+                self.layerChooser.expandItem(thisItem)
         else:
             self.accept()
 
     @QtCore.pyqtSlot()
     def on_layerChooser_itemSelectionChanged(self):
-        enable = len(self.ui.layerChooser.selectedItems()) > 0
+        enable = len(self.layerChooser.selectedItems()) > 0
 
-        for item in self.ui.layerChooser.selectedItems():
+        for item in self.layerChooser.selectedItems():
             if item.gid == None:
                 enable = False
                 break
@@ -113,7 +128,7 @@ class ChoosePlan(XP_Chooser):
     def accept(self):
         self.selection = []
 
-        for item in self.ui.layerChooser.selectedItems():
+        for item in self.layerChooser.selectedItems():
             if item.gid != None:
                 # Info per ausgewähltem Layer
                 self.selection.append([item.gid])
@@ -157,7 +172,7 @@ class ChooseObjektart(XP_Chooser):
                 if parent != lastParent:
                     parentItem = QtGui.QTreeWidgetItem([parent])
                     parentItem.geomColumn = None
-                    self.ui.layerChooser.addTopLevelItem(parentItem)
+                    self.layerChooser.addTopLevelItem(parentItem)
                     lastParent = parent
 
                 childItem = QtGui.QTreeWidgetItem([child])
@@ -170,26 +185,26 @@ class ChooseObjektart(XP_Chooser):
             self.showQueryError(query)
             query.finish()
 
-        self.ui.layerChooser.resizeColumnToContents(0)
+        self.layerChooser.resizeColumnToContents(0)
 
         if len(self.bereiche) > 1:
-            self.ui.chkBereich.setLabel(u"nur Objekte der aktiven Bereiche laden")
+            self.chkBereich.setLabel(u"nur Objekte der aktiven Bereiche laden")
 
     @QtCore.pyqtSlot(QtGui.QTreeWidgetItem, int)
     def on_layerChooser_itemDoubleClicked(self, thisItem, thisColumn):
         if thisItem.geomColumn == None:
             if thisItem.isExpanded():
-                self.ui.layerChooser.collapseItem(thisItem)
+                self.layerChooser.collapseItem(thisItem)
             else:
-                self.ui.layerChooser.expandItem(thisItem)
+                self.layerChooser.expandItem(thisItem)
         else:
             self.accept()
 
     @QtCore.pyqtSlot()
     def on_layerChooser_itemSelectionChanged(self):
-        enable = len(self.ui.layerChooser.selectedItems()) > 0
+        enable = len(self.layerChooser.selectedItems()) > 0
 
-        for item in self.ui.layerChooser.selectedItems():
+        for item in self.layerChooser.selectedItems():
             if item.geomColumn == None:
                 enable = False
                 break
@@ -199,7 +214,7 @@ class ChooseObjektart(XP_Chooser):
     def accept(self):
         self.selection = []
 
-        for item in self.ui.layerChooser.selectedItems():
+        for item in self.layerChooser.selectedItems():
             if item.geomColumn != None:
                 # Info per ausgewähltem Layer
                 self.selection.append([item.parent, # Schema
@@ -207,49 +222,48 @@ class ChooseObjektart(XP_Chooser):
                     item.geomColumn, # Geometriespalte
                     item.description]) # Beschreibung
 
-        self.withDisplay = self.ui.chkDisplay.isChecked()
-        self.aktiveBereiche = self.ui.chkAktiverBereich.isChecked()
+        self.withDisplay = self.chkDisplay.isChecked()
+        self.aktiveBereiche = self.chkAktiverBereich.isChecked()
         self.done(1)
 
-class XPlanungConf(QtGui.QDialog):
+class XPlanungConf(QtGui.QDialog,  CONF_CLASS):
     def __init__(self, dbHandler, tools):
         QtGui.QDialog.__init__(self)
         self.dbHandler = dbHandler
         self.tools = tools
-        self.ui = Ui_conf()
-        self.ui.setupUi(self)
+        self.setupUi(self)
 
         s = QtCore.QSettings( "XPlanung", "XPlanung-Erweiterung" )
         self.wasService = s.value( "service", "" )
-        self.ui.leSERVICE.setText( self.wasService )
+        self.leSERVICE.setText( self.wasService )
         self.wasHost = s.value( "host", "" )
-        self.ui.leHOST.setText( self.wasHost )
-        self.ui.lePORT.setText( s.value( "port", "5432" ) )
+        self.leHOST.setText( self.wasHost )
+        self.lePORT.setText( s.value( "port", "5432" ) )
         self.wasDbName = s.value( "dbname", "" )
-        self.ui.leDBNAME.setText( self.wasDbName )
-        self.ui.leUID.setText( s.value( "uid", "" ) )
-        self.ui.lePWD.setText( s.value( "pwd", "" ) )
+        self.leDBNAME.setText( self.wasDbName )
+        self.leUID.setText( s.value( "uid", "" ) )
+        self.lePWD.setText( s.value( "pwd", "" ) )
 
         if hasattr(qgis.gui,'QgsAuthConfigSelect'):
             self.authCfgSelect = QgsAuthConfigSelect( self, "postgres" )
-            self.ui.tabWidget.insertTab( 1, self.authCfgSelect, "Konfigurationen" )
+            self.tabWidget.insertTab( 1, self.authCfgSelect, "Konfigurationen" )
             authcfg = s.value( "authcfg", "" )
 
             if authcfg:
-                self.ui.tabWidget.setCurrentIndex( 1 )
+                self.tabWidget.setCurrentIndex( 1 )
                 self.authCfgSelect.setConfigId( authcfg );
 
     def accept(self):
         s = QtCore.QSettings( "XPlanung", "XPlanung-Erweiterung" )
-        isService = self.ui.leSERVICE.text()
+        isService = self.leSERVICE.text()
         s.setValue( "service", isService )
-        isHost = self.ui.leHOST.text()
+        isHost = self.leHOST.text()
         s.setValue( "host", isHost )
-        s.setValue( "port", self.ui.lePORT.text() )
-        isDbName = self.ui.leDBNAME.text()
+        s.setValue( "port", self.lePORT.text() )
+        isDbName = self.leDBNAME.text()
         s.setValue( "dbname", isDbName )
-        s.setValue( "uid", self.ui.leUID.text() )
-        s.setValue( "pwd", self.ui.lePWD.text() )
+        s.setValue( "uid", self.leUID.text() )
+        s.setValue( "pwd", self.lePWD.text() )
 
         if hasattr(qgis.gui,'QgsAuthConfigSelect'):
             s.setValue( "authcfg", self.authCfgSelect.configId() )
@@ -265,28 +279,27 @@ class XPlanungConf(QtGui.QDialog):
                 self.tools.showWarning(u"Nach einem Wechsel der DB-Verbindung wird empfohlen, QGIS neu zu starten")
             self.done(1)
 
-class BereichsauswahlDialog(QtGui.QDialog):
+class BereichsauswahlDialog(QtGui.QDialog, BEREICH_CLASS):
     def __init__(self, iface, db,  multiSelect,  title = "Bereichsauswahl"):
         QtGui.QDialog.__init__(self)
         # Set up the user interface from Designer.
-        self.ui = Ui_Bereichsauswahl()
-        self.ui.setupUi(self)
+        self.setupUi(self)
         self.setWindowTitle(title)
-        #self.ui.bereich.currentItemChanged.connect(self.enableOk)
+        #self.bereich.currentItemChanged.connect(self.enableOk)
         self.iface = iface
         self.db = db
         self.selected = {} # dict, das id: Name der ausgewählten Bereiche enthält
-        self.okBtn = self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok)
+        self.okBtn = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)
         self.okBtn.setEnabled(False)
 
         if multiSelect:
-            self.ui.bereich.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+            self.bereich.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
 
         self.initializeValues()
 
     def initializeValues(self):
         # fülle QGroupBox Bereichsauswahl (planArt)
-        planArt = self.ui.planArt
+        planArt = self.planArt
         lyPlanArt = planArt.layout() # Layout der QGroupBox planArt
         firstItem = lyPlanArt.itemAt(0)
 
@@ -329,8 +342,8 @@ class BereichsauswahlDialog(QtGui.QDialog):
         QtGui.QMessageBox.information(None, "Debug",  msg)
 
     def fillBereichTree(self):
-        self.ui.bereich.clear()
-        planArt = self.ui.planArt
+        self.bereich.clear()
+        planArt = self.planArt
         lyPlanArt = planArt.layout() # Layout der QGroupBox planArt
 
         if lyPlanArt.count() > 0:
@@ -374,7 +387,7 @@ class BereichsauswahlDialog(QtGui.QDialog):
                             parentItem = QtGui.QTreeWidgetItem([parent])
                             parentItem.parentId = parentId
                             parentItem.childId = None
-                            self.ui.bereich.addTopLevelItem(parentItem)
+                            self.bereich.addTopLevelItem(parentItem)
                             lastParentId = parentId
 
                         childItem = QtGui.QTreeWidgetItem([child])
@@ -399,17 +412,17 @@ class BereichsauswahlDialog(QtGui.QDialog):
     def on_bereich_itemDoubleClicked(self,  thisItem,  thisColumn):
         if thisItem.childId == None:
             if thisItem.isExpanded():
-                self.ui.bereich.collapseItem(thisItem)
+                self.bereich.collapseItem(thisItem)
             else:
-                self.ui.bereich.expandItem(thisItem)
+                self.bereich.expandItem(thisItem)
         else:
             self.accept()
 
     @QtCore.pyqtSlot(   )
     def on_bereich_itemSelectionChanged(self):
-        enable = len(self.ui.bereich.selectedItems()) > 0
+        enable = len(self.bereich.selectedItems()) > 0
 
-        for item in self.ui.bereich.selectedItems():
+        for item in self.bereich.selectedItems():
             if item.parentId:
                 enable = False
                 break
@@ -421,7 +434,7 @@ class BereichsauswahlDialog(QtGui.QDialog):
 
     def accept(self):
         self.selected = {}
-        for item in self.ui.bereich.selectedItems():
+        for item in self.bereich.selectedItems():
             if item.childId:
                 self.selected[item.childId] = item.data(0,  0)
 
@@ -436,18 +449,17 @@ class BereichsauswahlDialog(QtGui.QDialog):
             %(error)s \n %(query)s" % {"error": query.lastError().text(),
             "query": query.lastQuery()}, level=QgsMessageBar.CRITICAL)
 
-class StilauswahlDialog(QtGui.QDialog):
+class StilauswahlDialog(QtGui.QDialog, STIL_CLASS):
     def __init__(self, iface, aDict, title = "Stilauswahl"):
         QtGui.QDialog.__init__(self)
         # Set up the user interface from Designer.
-        self.ui = Ui_Stilauswahl()
-        self.ui.setupUi(self)
+        self.setupUi(self)
         self.setWindowTitle(title)
-        #self.ui.bereich.currentItemChanged.connect(self.enableOk)
+        #self.bereich.currentItemChanged.connect(self.enableOk)
         self.iface = iface
         self.aDict = aDict
         self.selected = -1 # id des ausgewälten Stils
-        self.okBtn = self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok)
+        self.okBtn = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)
         self.okBtn.setEnabled(False)
 
         self.initializeValues()
@@ -459,12 +471,12 @@ class StilauswahlDialog(QtGui.QDialog):
         QtGui.QMessageBox.information(None, "Debug",  msg)
 
     def fillStilList(self):
-        self.ui.stil.clear()
+        self.stil.clear()
 
         for key, value in self.aDict.items():
             anItem = QtGui.QListWidgetItem(value)
             anItem.id = key
-            self.ui.stil.addItem(anItem)
+            self.stil.addItem(anItem)
 
     @QtCore.pyqtSlot(QtGui.QListWidgetItem)
     def on_stil_itemDoubleClicked(self, thisItem):
@@ -473,12 +485,12 @@ class StilauswahlDialog(QtGui.QDialog):
 
     @QtCore.pyqtSlot(   )
     def on_stil_itemSelectionChanged(self):
-        enable = len(self.ui.stil.selectedItems()) > 0
+        enable = len(self.stil.selectedItems()) > 0
         self.okBtn.setEnabled(enable)
 
     def accept(self):
         if self.selected == -1:
-            for item in self.ui.stil.selectedItems():
+            for item in self.stil.selectedItems():
                 self.selected = item.id
 
         self.done(self.selected)
@@ -492,7 +504,7 @@ class StilauswahlDialog(QtGui.QDialog):
             %(error)s \n %(query)s" % {"error": query.lastError().text(),
             "query": query.lastQuery()}, level=QgsMessageBar.CRITICAL)
 
-class XPNutzungsschablone(QtGui.QDialog):
+class XPNutzungsschablone(QtGui.QDialog, SCHABLONE_CLASS):
     '''Ein Dialog zur Konfiguraton der Nutzungsschablone (BPlan'''
 
     def __init__(self, nutzungsschablone):
@@ -503,11 +515,11 @@ class XPNutzungsschablone(QtGui.QDialog):
         else:
             self.nutzungsschablone = nutzungsschablone
 
-        self.ui = Ui_Nutzungsschablone()
-        self.ui.setupUi(self)
-        self.ui.buttonBox.accepted.connect(self.accept)
-        self.ui.buttonBox.rejected.connect(self.reject)
-        self.cbxList = [self.ui.z1s1, self.ui.z1s2, self.ui.z2s1,  self.ui.z2s2,  self.ui.z3s1,  self.ui.z3s2]
+
+        self.setupUi(self)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+        self.cbxList = [self.z1s1, self.z1s2, self.z2s1,  self.z2s2,  self.z3s1,  self.z3s2]
         self.initialize()
 
     def initialize(self):
