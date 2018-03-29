@@ -1,6 +1,11 @@
 # Change Log
 
 ## [Unreleased](https://github.com/bstroebl/xplanplugin/compare/v2.0.0...develop)
+### Fixed
+- Setze korrekten Filter beim Laden von Bereichen
+- Lösche Bereichsauswahl falls Dialog erneut geöffnet wird
+- Ordne Präsentationsobjekte einem Bereich zu
+- Filtere auch Präsentationsobjekte nach aktivem Bereich
 
 # 2.0.0 - 2018-03-20
 
