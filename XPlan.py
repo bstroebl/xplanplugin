@@ -67,7 +67,8 @@ class XPlan():
         self.tools = XPTools(self.iface, self.standardName, self.simpleStyleName)
         self.aktiveBereiche = {}
         self.xpLayers = {} # dict, key = layerId
-            # item = [layer (QgsVectorLayer), maxGid (long), featuresHaveBeenAdded (Bolean)]
+            # item = [layer (QgsVectorLayer), maxGid (long),
+            # featuresHaveBeenAdded (Boolean), bereichsFilterAktiv (Boolean)]
         self.layerLayer = None
         # Liste der implementierten Fachschemata
         self.implementedSchemas = []
@@ -1139,7 +1140,7 @@ class XPlan():
                             layer.committedFeaturesAdded.connect(self.onCommitedFeaturesAdded)
                             layer.editingStopped.connect(self.onEditingStopped)
                             layer.editingStarted.connect(self.onEditingStarted)
-                            self.xpLayers[layer.id()] = [layer, None, False]
+                            self.xpLayers[layer.id()] = [layer, None, False, False]
             else:
                 if msg:
                     XpError("Der Layer " + layer.name() + " ist kein PostgreSQL-Layer!",
@@ -1164,6 +1165,32 @@ class XPlan():
 
                 if layer.setSubsetString(filter):
                     layer.reload()
+                    layerId = layer.id()
+                    try:
+                        self.xpLayers[layerId][3] = True
+                    except:
+                        XpError(u"layerFilterBereich: Layer " + layer.name() + u" nicht in xpLayers",
+                            self.iface)
+
+    def layerFilterRemove(self, layer):
+        layerId = layer.id()
+
+        try:
+            hasFilter = self.xpLayers[layerId][3]
+        except:
+            XpError(u"layerFilterRemove: Layer " + layer.name() + u" nicht in xpLayers",
+                self.iface)
+            return False
+
+        if hasFilter:
+            if layer.setSubsetString(""):
+                layer.reload()
+                self.xpLayers[layerId][3] = False
+                return True
+            else:
+                return False
+        else:
+            return True
 
     def aktiverBereichLayerCheck(self,  layer):
         '''
