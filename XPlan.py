@@ -1155,7 +1155,6 @@ class XPlan():
         ''' wende einen Filter auf layer an, so dass nur Objekte in bereiche dargestellt werden'''
 
         if len(bereiche) > 0:
-            bereichTyp = self.tools.getBereichTyp(self.db, bereiche[0])
             relation = self.tools.getPostgresRelation(layer)
 
             if relation != None:
@@ -1181,24 +1180,25 @@ class XPlan():
             if layerRelation[2]: # Geometrielayer
                 schema = layerRelation[0]
 
-                if schema == "XP_Praesentationsobjekte":
-                    retValue = 2
-                else:
-                    while(True):
-                        if len(self.aktiveBereiche) == 0 and self.willAktivenBereich:
-                            thisChoice = QtGui.QMessageBox.question(None, "Keine aktiven Bereiche",
-                                u"Wollen Sie aktive Bereiche festlegen? ",
-                                QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+                while(True):
+                    if len(self.aktiveBereiche) == 0 and self.willAktivenBereich:
+                        thisChoice = QtGui.QMessageBox.question(None, "Keine aktiven Bereiche",
+                            u"Wollen Sie aktive Bereiche festlegen? ",
+                            QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
 
-                            if thisChoice == QtGui.QMessageBox.Yes:
-                                self.aktiveBereicheFestlegen()
-                            else:
-                                self.willAktivenBereich = False
-                                break
-
-                        if len(self.aktiveBereiche) > 0:
-                            retValue = 1
+                        if thisChoice == QtGui.QMessageBox.Yes:
+                            self.aktiveBereicheFestlegen()
+                        else:
+                            self.willAktivenBereich = False
                             break
+
+                    if len(self.aktiveBereiche) > 0:
+                        if schema == "XP_Praesentationsobjekte":
+                            retValue = 2
+                        else:
+                            retValue = 1
+
+                        break
 
         return retValue
 
@@ -1217,7 +1217,7 @@ class XPlan():
         else:
             layerCheck = self.aktiverBereichLayerCheck(layer)
 
-            if layerCheck == 1:
+            if layerCheck >= 1: # XP_Objekt und aktiver Bereich oder Präsentationsobjekt
                 bereiche = self.aktiveBereicheGids()
                 self.layerFilterBereich(layer, bereiche)
 
