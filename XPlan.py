@@ -1242,11 +1242,14 @@ class XPlan():
         if layer == None:
             self.tools.noActiveLayerWarning
         else:
-            layerCheck = self.aktiverBereichLayerCheck(layer)
+            self.aktiveBereicheFiltern(layer)
 
-            if layerCheck >= 1: # XP_Objekt und aktiver Bereich oder Präsentationsobjekt
-                bereiche = self.aktiveBereicheGids()
-                self.layerFilterBereich(layer, bereiche)
+    def aktiveBereicheFiltern(self, layer):
+        layerCheck = self.aktiverBereichLayerCheck(layer)
+
+        if layerCheck >= 1: # XP_Objekt und aktiver Bereich oder Präsentationsobjekt
+            bereiche = self.aktiveBereicheGids()
+            self.layerFilterBereich(layer, bereiche)
 
     def aktivenBereichenZuordnenSlot(self):
         layer = self.iface.activeLayer()
