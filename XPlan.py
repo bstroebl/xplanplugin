@@ -37,7 +37,7 @@ from HandleDb import DbHandler
 from XPTools import XPTools
 from XPlanDialog import XPlanungConf
 from XPlanDialog import ChooseObjektart
-from XPlanDialog import XPNutzungsschablone
+from XPlanDialog import XPNutzungsschablone, BereichsmanagerDialog
 
 class XpError(object):
     '''General error'''
@@ -69,6 +69,8 @@ class XPlan():
         self.xpLayers = {} # dict, key = layerId
             # item = [layer (QgsVectorLayer), maxGid (long),
             # featuresHaveBeenAdded (Boolean), bereichsFilterAktiv (Boolean)]
+        self.displayLayers = {} # dict, key = layerId
+            # item = [layer, None, None, bereichsFilterAktiv] für Ansichtslayer
         self.layerLayer = None
         # Liste der implementierten Fachschemata
         self.implementedSchemas = []
@@ -146,17 +148,9 @@ class XPlan():
         self.action2.setToolTip(u"aktiver Layer: Eingabemaske erzeugen, neue Features den aktiven " +\
             u"Bereichen zuweisen.")
         self.action2.triggered.connect(self.layerInitializeSlot)
-        self.action3 = QtGui.QAction(u"Aktive Bereiche festlegen", self.iface.mainWindow())
-        self.action3.setToolTip(u"Elemente von Layern können automatisch oder händisch den aktiven " +\
-            u"Bereichen zugewiesen werden. Damit werden sie zum originären Inhalt des Planbereichs.")
-        self.action3.triggered.connect(self.aktiveBereicheFestlegenSlot)
-        self.action3a = QtGui.QAction(u"Aktive Bereiche entfernen", self.iface.mainWindow())
-        self.action3a.setToolTip(u"")
-        self.action3a.setEnabled(False)
-        self.action3a.triggered.connect(self.aktiveBereicheLoeschen)
-        self.action3b = QtGui.QAction(u"Nur Objekte in aktiven Bereichen anzeigen", self.iface.mainWindow())
-        self.action3b.setToolTip(u"")
-        self.action3b.triggered.connect(self.aktiveBereicheFilternSlot)
+        self.action3 = QtGui.QAction(u"Bereichsmanager starten", self.iface.mainWindow())
+        self.action3.setToolTip(u"Bereichsmanager starten")
+        self.action3.triggered.connect(self.bereichsmanagerStartenSlot)
         self.action4 = QtGui.QAction(u"Auswahl den aktiven Bereichen zuordnen", self.iface.mainWindow())
         self.action4.setToolTip(u"aktiver Layer: ausgewählte Elemente den aktiven Bereichen zuweisen. " +\
                                 u"Damit werden sie zum originären Inhalt des Planbereichs.")
@@ -198,8 +192,7 @@ class XPlan():
 
         self.xpMenu.addActions([self.action20, self.action25, self.action29,
             self.action6, self.action10])
-        self.bereichMenu.addActions([self.action1, self.action3, self.action3a,
-            self.action3b, self.action4])
+        self.bereichMenu.addActions([self.action3, self.action1, self.action4])
         self.bpMenu.addActions([self.action21, self.action26, self.action28])
         self.fpMenu.addActions([self.action22])
         self.lpMenu.addActions([self.action23])
@@ -646,6 +639,23 @@ class XPlan():
                         XpError(u"Kann in Tabelle XP_Basisobjekte.XP_ExterneReferenz \
                             kein Feature einfügen!", self.iface)
 
+    def onLayerDestroyed(self, layer):
+        '''Slot, der aufgerufen wird wenn ein XP-Layer aus dem Projekt entfernt wird
+        erst in QGIS3 wird das Layerobjekt übergeben'''
+
+        return None #TODO: für QGIS3 entfernen
+
+        try:
+            self.xpLayers.pop(layer.id())
+        except:
+            pass
+
+        try:
+            self.displayLayers.pop(layer.id())
+        except:
+            pass
+
+
     def onLayerLayerDeleted(self):
         self.layerLayer = None
 
@@ -658,8 +668,28 @@ class XPlan():
             self.initialize()
 
     def initializeAllLayers(self):
+        allLayerIds = []
+
         for layer in self.iface.legendInterface().layers():
+            allLayerIds.append(layer.id())
             self.layerInitialize(layer)
+
+        # entfernte Layer aus Dicts entfernen
+        removeXp = []
+        for aLayerId, value in self.xpLayers.items():
+            if allLayerIds.count(aLayerId) == 0:
+                removeXp.append(aLayerId)
+
+        for aLayerId in removeXp:
+            self.xpLayers.pop(aLayerId)
+
+        removeDisp = []
+        for aLayerId, value in self.displayLayers.items():
+            if allLayerIds.count(aLayerId) == 0:
+                removeDisp.append(aLayerId)
+
+        for aLayerId in removeDisp:
+            self.displayLayers.pop(aLayerId)
 
     def initialize(self,  aktiveBereiche = True):
         self.db = self.dbHandler.dbConnect()
@@ -766,14 +796,15 @@ class XPlan():
                                         "[% \"gid\" %],[% $clickx %],[% $clicky %]);")
 
                             if withDisplay:
+                                displayName = tableName + " (Darst.)"
                                 displayLayer, isView = self.loadTable(schemaName, tableName + "_qv",
-                                    geomColumn)
+                                    geomColumn, displayName = displayName)
 
                                 if displayLayer == None:
                                     # lade Layer als Darstelllungsvariante
                                     # eigene Darstellungsvarianten gibt es nur, wenn nötig
                                     displayLayer, isView = self.loadTable(schemaName, tableName,
-                                        geomColumn)
+                                        geomColumn,  displayName = displayName)
 
                                 if displayLayer != None:
                                     if nurAktiveBereiche:
@@ -788,6 +819,8 @@ class XPlan():
 
                                         if stil != None:
                                             self.tools.useStyle(displayLayer, stil)
+
+                                    self.displayLayers[displayLayer.id()] = [displayLayer, None, None, nurAktiveBereiche]
 
     def loadTable(self,  schemaName, tableName, geomColumn,
             displayName = None, filter = None):
@@ -841,10 +874,6 @@ class XPlan():
 
         return bereiche
 
-    def aktiveBereicheFestlegenSlot(self):
-        self.willAktivenBereich = True
-        self.aktiveBereicheFestlegen()
-
     def aktiveBereicheFestlegen(self):
         '''Auswahl der Bereiche, in die neu gezeichnete Elemente eingefügt werden sollen'''
         if self.db == None:
@@ -869,13 +898,7 @@ class XPlan():
             else:
                 self.aktiveBereiche = bereichsAuswahl # keine Auswahl => keine aktiven Bereiche
 
-        self.action3a.setEnabled(len(self.aktiveBereiche) > 0)
         return True
-
-    def aktiveBereicheLoeschen(self):
-        self.aktiveBereiche = []
-        self.willAktivenBereich = True
-        self.action3a.setEnabled(False)
 
     def layerInitializeSlot(self):
         layer = self.iface.activeLayer()
@@ -887,7 +910,6 @@ class XPlan():
             self.app.xpManager.addAction(layer, actionName = "XP_Sachdaten",
                 ddManagerName = "xpManager")
             self.iface.mapCanvas().refresh() # neuzeichnen
-
 
     def deleteStyleSlot(self):
         layer = self.iface.activeLayer()
@@ -1105,42 +1127,64 @@ class XPlan():
                 schema = layerRelation[0]
                 table = layerRelation[1]
 
-                if table[:3] in ["XP_", "BP_", "FP_", "LP_", "RP_", "SO_"] and table[len(table) -3:] != "_qv":
-                    try:
-                        self.app.xpManager.ddLayers[layer.id()] # bereits initialisiert
-                        ddInit = True
-                    except KeyError:
-                        ddInit = self.app.xpManager.initLayer(layer,  skip = [], createAction = False,  db = self.db)
+                if table[:3] in ["XP_", "BP_", "FP_", "LP_", "RP_", "SO_"]:
+                    if layer.name().find("(editierbar)") != -1:
+                        try:
+                            return self.xpLayers[layer.id()] != None
+                        except:
+                            pass
+                    elif layer.name().find("(Darst.)") != -1:
+                        try:
+                            return self.displayLayers[layer.id()] != None
+                        except:
+                            pass
+                    else:
+                        return False
 
-                    if layerRelation[2]: # Layer hat Geometrien
-                        schemaTyp = schema[:2]
+                    if table[len(table) -3:] != "_qv":
+                        try:
+                            self.app.xpManager.ddLayers[layer.id()] # bereits initialisiert
+                            ddInit = True
+                        except KeyError:
+                            ddInit = self.app.xpManager.initLayer(layer,  skip = [], createAction = False,  db = self.db)
 
-                        if table != schemaTyp + "_Plan" and table != schemaTyp + "_Bereich":
-                            if schema != "XP_Praesentationsobjekte":
-                                if self.implementedSchemas.count(schemaTyp) > 0:
-                                    if layerCheck:
-                                        self.aktiverBereichLayerCheck(layer)
+                        if layerRelation[2]: # Layer hat Geometrien
+                            schemaTyp = schema[:2]
 
-                            # disconnect slots in case they are already connected
-                            try:
-                                layer.committedFeaturesAdded.disconnect(self.onCommitedFeaturesAdded)
-                            except:
-                                pass
+                            if table != schemaTyp + "_Plan" and table != schemaTyp + "_Bereich":
+                                if schema != "XP_Praesentationsobjekte":
+                                    if self.implementedSchemas.count(schemaTyp) > 0:
+                                        if layerCheck:
+                                            self.aktiverBereichLayerCheck(layer)
 
-                            try:
-                                layer.editingStopped.disconnect(self.onEditingStopped)
-                            except:
-                                pass
+                                # disconnect slots in case they are already connected
+                                try:
+                                    layer.committedFeaturesAdded.disconnect(self.onCommitedFeaturesAdded)
+                                except:
+                                    pass
 
-                            try:
-                                layer.editingStarted.disconnect(self.onEditingStarted)
-                            except:
-                                pass
+                                try:
+                                    layer.editingStopped.disconnect(self.onEditingStopped)
+                                except:
+                                    pass
 
-                            layer.committedFeaturesAdded.connect(self.onCommitedFeaturesAdded)
-                            layer.editingStopped.connect(self.onEditingStopped)
-                            layer.editingStarted.connect(self.onEditingStarted)
-                            self.xpLayers[layer.id()] = [layer, None, False, False]
+                                try:
+                                    layer.editingStarted.disconnect(self.onEditingStarted)
+                                except:
+                                    pass
+
+                                try:
+                                    layer.destroyed.disconnect(self.onLayerDestroyed)
+                                except:
+                                    pass
+
+                                layer.committedFeaturesAdded.connect(self.onCommitedFeaturesAdded)
+                                layer.editingStopped.connect(self.onEditingStopped)
+                                layer.editingStarted.connect(self.onEditingStarted)
+                                layer.destroyed.connect(self.onLayerDestroyed)
+                                self.xpLayers[layer.id()] = [layer, None, False, False]
+                    else:
+                        self.displayLayers[layer.id()] = [layer,  None, None, False]
             else:
                 if msg:
                     XpError("Der Layer " + layer.name() + " ist kein PostgreSQL-Layer!",
@@ -1166,31 +1210,27 @@ class XPlan():
                 if layer.setSubsetString(filter):
                     layer.reload()
                     layerId = layer.id()
+
                     try:
                         self.xpLayers[layerId][3] = True
                     except:
-                        XpError(u"layerFilterBereich: Layer " + layer.name() + u" nicht in xpLayers",
-                            self.iface)
+                        self.displayLayers[layerId][3] = True
 
     def layerFilterRemove(self, layer):
+
         layerId = layer.id()
 
-        try:
-            hasFilter = self.xpLayers[layerId][3]
-        except:
-            XpError(u"layerFilterRemove: Layer " + layer.name() + u" nicht in xpLayers",
-                self.iface)
-            return False
+        if layer.setSubsetString(""):
+            layer.reload()
 
-        if hasFilter:
-            if layer.setSubsetString(""):
-                layer.reload()
+            try:
                 self.xpLayers[layerId][3] = False
-                return True
-            else:
-                return False
-        else:
+            except:
+                self.displayLayers[layerId][3] = False
+
             return True
+        else:
+            return False
 
     def aktiverBereichLayerCheck(self,  layer):
         '''
@@ -1236,13 +1276,15 @@ class XPlan():
         if self.gehoertZuLayer != None:
             self.gehoertZuLayer.layerDeleted.connect(self.onGehoertZuLayerDeleted)
 
-    def aktiveBereicheFilternSlot(self):
-        layer = self.iface.activeLayer()
+    def bereichsmanagerStartenSlot(self):
+        if self.db == None:
+            self.initialize(False)
 
-        if layer == None:
-            self.tools.noActiveLayerWarning
-        else:
-            self.aktiveBereicheFiltern(layer)
+        self.initializeAllLayers()
+
+        dlg = BereichsmanagerDialog(self)
+        dlg.show()
+        dlg.exec_()
 
     def aktiveBereicheFiltern(self, layer):
         layerCheck = self.aktiverBereichLayerCheck(layer)
@@ -1472,13 +1514,14 @@ class XPlan():
                                 else:
                                     geomFld = "position"
 
+                                displayName = aRelName + " (" + bereichDict[bereich] + ")"
                                 aLayer, isView = self.loadTable(aKey, aRelName + "_qv",  geomFld,
-                                    displayName = aRelName, filter = filter)
+                                    displayName = displayName, filter = filter)
 
                                 if aLayer == None:
                                     # lade Tabelle
                                     aLayer, isView = self.loadTable(aKey, aRelName,  geomFld,
-                                        displayName = aRelName, filter = filter)
+                                        displayName = displayName, filter = filter)
 
                                 if aLayer != None:
                                     # Stil des Layers aus der DB holen und anwenden

@@ -46,6 +46,9 @@ STIL_CLASS, _ = uic.loadUiType(os.path.join(
 SCHABLONE_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'Ui_Nutzungsschablone.ui'))
 
+BEREICHSMANAGER_CLASS, _ = uic.loadUiType(os.path.join(
+    os.path.dirname(__file__), 'Ui_Bereichsmanager.ui'))
+
 class XP_Chooser(QtGui.QDialog, CHOOSER_CLASS):
     '''Ein Dialog mit einem TreeWidget um ein Element auszuwählen, abstrakt'''
 
@@ -581,3 +584,141 @@ class XPNutzungsschablone(QtGui.QDialog, SCHABLONE_CLASS):
             self.nutzungsschablone[i] = nutzung
 
         self.done(1)
+
+class BereichsmanagerDialog(QtGui.QDialog, BEREICHSMANAGER_CLASS):
+    def __init__(self, xplanplugin):
+        QtGui.QDialog.__init__(self)
+        # Set up the user interface from Designer.
+        self.setupUi(self)
+        self.xplanplugin = xplanplugin
+        self.initialize()
+
+    def initialize(self):
+        self.setTitle = "Bereichsmanager"
+        self.aktiverBereichChanged()
+        self.fillLayerList()
+        self.on_layerList_itemSelectionChanged()
+
+    def fillLayerList(self):
+        self.layerList.clear()
+
+        for key, value in self.xplanplugin.xpLayers.items():
+            try:
+                aLayer = value[0]
+                aLayerName = aLayer.name()
+            except:
+                continue
+
+            featuresHaveBeenAdded = value[2]
+            bereichsFilterAktiv = aLayer.subsetString() != ""
+
+            if not featuresHaveBeenAdded:
+                anItem = QtGui.QListWidgetItem(aLayerName)
+                anItem.layer = aLayer
+                anItem.bereichsFilterAktiv = bereichsFilterAktiv
+                self.layerList.addItem(anItem)
+
+        for key, value in self.xplanplugin.displayLayers.items():
+            try:
+                aLayer = value[0]
+                aLayerName = aLayer.name()
+            except:
+                continue
+
+            bereichsFilterAktiv = aLayer.subsetString() != ""
+            anItem = QtGui.QListWidgetItem(aLayerName)
+            anItem.layer = aLayer
+            anItem.bereichsFilterAktiv = bereichsFilterAktiv
+            self.layerList.addItem(anItem)
+
+        self.layerList.sortItems()
+
+    def aktiverBereichChanged(self):
+        if len(self.xplanplugin.aktiveBereiche) == 0:
+            grpTitle = "aktiver Bereich"
+            lblText = "kein aktiver Bereich"
+            lblToolTip = "z.Zt. ist kein Bereich aktiv"
+            aendernToolTip = u"Bereich aktivieren"
+            deaktToolTip = ""
+        else:
+            lblText = ""
+
+            if len(self.xplanplugin.aktiveBereiche) == 1:
+                grpTitle = "aktiver Bereich"
+                lblToolTip = "z.Zt. aktiver Bereich"
+                aendernToolTip = u"aktiven Bereich ändern"
+                deaktToolTip = "aktiven Bereich deaktivieren"
+            else: # > 1
+                grpTitle = "aktive Bereiche"
+                lblToolTip = "z.Zt. aktive Bereiche"
+                aendernToolTip = u"aktive Bereiche ändern"
+                deaktToolTip = "aktive Bereiche deaktivieren"
+
+            for key, value in self.xplanplugin.aktiveBereiche.items():
+                if lblText == "":
+                    lblText = value
+                else:
+                    lblText += ", \n" + value
+
+        self.grpAktiverBereich.setTitle(grpTitle)
+        self.lblAktiverBereich.setText(lblText)
+        self.lblAktiverBereich.setToolTip(lblToolTip)
+        self.btnAktiverBereichAendern.setToolTip(aendernToolTip)
+        self.btnAktiverBereichDeaktivieren.setEnabled(len(self.xplanplugin.aktiveBereiche) > 0)
+        self.btnAktiverBereichDeaktivieren.setToolTip(deaktToolTip)
+        self.on_layerList_itemSelectionChanged()
+
+    @QtCore.pyqtSlot( QtGui.QListWidgetItem  )
+    def on_layerList_itemDoubleClicked(self, anItem):
+        self.xplanplugin.aktiveBereicheFiltern(anItem.layer)
+        anItem.bereichsFilterAktiv = True
+        self.on_layerList_itemSelectionChanged()
+
+    @QtCore.pyqtSlot(   )
+    def on_btnAktiverBereichAendern_clicked(self):
+        if self.xplanplugin.aktiveBereicheFestlegen():
+            self.aktiverBereichChanged()
+
+    @QtCore.pyqtSlot(   )
+    def on_btnAktiverBereichDeaktivieren_clicked(self):
+        self.xplanplugin.aktiveBereiche = {}
+        self.aktiverBereichChanged()
+
+    @QtCore.pyqtSlot(   )
+    def on_btnFilter_clicked(self):
+        for anItem in self.layerList.selectedItems():
+            self.xplanplugin.aktiveBereicheFiltern(anItem.layer)
+            anItem.bereichsFilterAktiv = True
+
+        self.on_layerList_itemSelectionChanged()
+
+    @QtCore.pyqtSlot(   )
+    def on_btnFilterEntfernen_clicked(self):
+        for anItem in self.layerList.selectedItems():
+            self.xplanplugin.layerFilterRemove(anItem.layer)
+            anItem.bereichsFilterAktiv = False
+
+        self.on_layerList_itemSelectionChanged()
+
+    @QtCore.pyqtSlot(   )
+    def on_layerList_itemSelectionChanged(self):
+        enableEntfernen = False
+
+        for anItem in self.layerList.selectedItems():
+            if anItem.bereichsFilterAktiv:
+                enableEntfernen = True
+                break
+
+        self.btnFilterEntfernen.setEnabled(enableEntfernen)
+
+        if len(self.xplanplugin.aktiveBereiche) > 0:
+            self.btnFilter.setEnabled(len(self.layerList.selectedItems()) > 0)
+        else:
+            self.btnFilter.setEnabled(False)
+
+    def accept(self):
+        if self.selected == -1:
+            for item in self.stil.selectedItems():
+                self.selected = item.id
+
+        self.done(self.selected)

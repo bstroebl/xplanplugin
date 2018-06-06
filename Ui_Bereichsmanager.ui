@@ -7,16 +7,16 @@
     <x>0</x>
     <y>0</y>
     <width>353</width>
-    <height>319</height>
+    <height>298</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Bereichsmanager</string>
   </property>
   <property name="sizeGripEnabled">
    <bool>true</bool>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
+  <layout class="QVBoxLayout" name="verticalLayout_4">
    <item>
     <widget class="QGroupBox" name="grpAktiverBereich">
      <property name="title">
@@ -24,11 +24,31 @@
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
-       <widget class="QLabel" name="lblAktiverBereich">
-        <property name="text">
-         <string>kein aktiver Bereich</string>
-        </property>
-       </widget>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <widget class="QLabel" name="lblAktiverBereich">
+          <property name="toolTip">
+           <string>z.Zt. aktive(r) Bereich(e)</string>
+          </property>
+          <property name="text">
+           <string>kein aktiver Bereich</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
       </item>
       <item>
        <spacer name="horizontalSpacer">
@@ -37,18 +57,35 @@
         </property>
         <property name="sizeHint" stdset="0">
          <size>
-          <width>75</width>
-          <height>20</height>
+          <width>52</width>
+          <height>17</height>
          </size>
         </property>
        </spacer>
       </item>
       <item>
-       <widget class="QPushButton" name="btnAktiverBereich">
-        <property name="text">
-         <string>ändern...</string>
-        </property>
-       </widget>
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <item>
+         <widget class="QPushButton" name="btnAktiverBereichAendern">
+          <property name="toolTip">
+           <string>aktive(n) Bereich(e) ändern</string>
+          </property>
+          <property name="text">
+           <string>ändern...</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnAktiverBereichDeaktivieren">
+          <property name="toolTip">
+           <string>aktive(n) Bereich(e) deaktivieren</string>
+          </property>
+          <property name="text">
+           <string>deaktivieren</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>
@@ -56,14 +93,21 @@
    <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Objektarten</string>
+      <string>Objektartenfilter</string>
      </property>
     </widget>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
-      <widget class="QListWidget" name="layerList"/>
+      <widget class="QListWidget" name="layerList">
+       <property name="editTriggers">
+        <set>QAbstractItemView::NoEditTriggers</set>
+       </property>
+       <property name="selectionMode">
+        <enum>QAbstractItemView::ExtendedSelection</enum>
+       </property>
+      </widget>
      </item>
      <item>
       <layout class="QVBoxLayout" name="verticalLayout">
@@ -80,10 +124,10 @@
        <item>
         <widget class="QPushButton" name="btnFilterEntfernen">
          <property name="toolTip">
-          <string>Bereichsfilter für ausgewählte Layer entfernen</string>
+          <string>alle Objekte unabhängig vom aktiven Bereich anzeigen</string>
          </property>
          <property name="text">
-          <string>entfernen</string>
+          <string>Filter aufheben</string>
          </property>
         </widget>
        </item>
@@ -110,7 +154,7 @@
       <enum>Qt::Horizontal</enum>
      </property>
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      <set>QDialogButtonBox::Close</set>
      </property>
     </widget>
    </item>
