@@ -20,7 +20,7 @@ email                : bernhard.stroebl@jena.de
  ***************************************************************************/
 """
 # Import the PyQt and QGIS libraries
-from PyQt4 import QtGui, QtSql,  QtXml
+from PyQt4 import QtSql,  QtXml
 # Initialize Qt resources from file resources.py
 from qgis.core import *
 from qgis.gui import *
