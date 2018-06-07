@@ -1,6 +1,12 @@
 # Change Log
 
-## [Unreleased](https://github.com/bstroebl/xplanplugin/compare/v2.0.0...develop)
+## [Unreleased](https://github.com/bstroebl/xplanplugin/compare/v2.1.0...develop)
+
+# 2.1.0 - 2018-06-07
+
+### Added
+- Bereichsmanager: Dialog, mit dem der aktive Bereich verwaltet werden kann. Weiterhin können Bereichsfilter auf Layer angewendet oder entfernt werden.
+
 ### Fixed
 - Setze korrekten Filter beim Laden von Bereichen
 - Lösche Bereichsauswahl falls Dialog erneut geöffnet wird
