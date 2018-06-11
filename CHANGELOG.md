@@ -1,6 +1,8 @@
 # Change Log
 
 ## [Unreleased](https://github.com/bstroebl/xplanplugin/compare/v2.1.0...develop)
+### Fixed
+- Verbessere Bereichsmanger: verhindere Einfrieren beim Starten, wenn kein aktiver Bereich gewählt wird.
 
 # 2.1.0 - 2018-06-07
 
