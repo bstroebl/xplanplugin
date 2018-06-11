@@ -667,29 +667,33 @@ class XPlan():
         if result == 1:
             self.initialize()
 
-    def initializeAllLayers(self):
+    def initializeAllLayers(self, layerCheck = True):
         allLayerIds = []
 
         for layer in self.iface.legendInterface().layers():
             allLayerIds.append(layer.id())
-            self.layerInitialize(layer)
 
         # entfernte Layer aus Dicts entfernen
-        removeXp = []
-        for aLayerId, value in self.xpLayers.items():
-            if allLayerIds.count(aLayerId) == 0:
-                removeXp.append(aLayerId)
+        if len(self.xpLayers) > 0:
+            removeXp = []
+            for aLayerId, value in self.xpLayers.items():
+                if allLayerIds.count(aLayerId) == 0:
+                    removeXp.append(aLayerId)
 
-        for aLayerId in removeXp:
-            self.xpLayers.pop(aLayerId)
+            for aLayerId in removeXp:
+                self.xpLayers.pop(aLayerId)
 
-        removeDisp = []
-        for aLayerId, value in self.displayLayers.items():
-            if allLayerIds.count(aLayerId) == 0:
-                removeDisp.append(aLayerId)
+        if len(self.displayLayers) > 0:
+            removeDisp = []
+            for aLayerId, value in self.displayLayers.items():
+                if allLayerIds.count(aLayerId) == 0:
+                    removeDisp.append(aLayerId)
 
-        for aLayerId in removeDisp:
-            self.displayLayers.pop(aLayerId)
+            for aLayerId in removeDisp:
+                self.displayLayers.pop(aLayerId)
+
+        for layer in self.iface.legendInterface().layers():
+            self.layerInitialize(layer, layerCheck = layerCheck)
 
     def initialize(self,  aktiveBereiche = True):
         self.db = self.dbHandler.dbConnect()
@@ -1280,8 +1284,9 @@ class XPlan():
         if self.db == None:
             self.initialize(False)
 
-        self.initializeAllLayers()
-
+        self.willAktivenBereich = False
+         # Nicht unterwegs nach aktiven Bereichen fragen, sondern nur den Bereichsmanager starten
+        self.initializeAllLayers(layerCheck = False)
         dlg = BereichsmanagerDialog(self)
         dlg.show()
         dlg.exec_()
