@@ -1575,7 +1575,13 @@ class XPlan():
                         if maxGid == None: # Fehler bei Ermittlung der maxGid
                             continue
 
-                        layer.reload() # damit neue gids geladen werden
+                        layerFilter = layer.subsetString()
+
+                        if layerFilter != "":
+                            layer.setSubsetString("")
+                            # Filter ausschalten, denn sonst werden ja nicht alle Objekte geladen
+
+                        layer.reload() # damit alle Objekte und neue gids geladen werden
                         newIds = []
                         request = QgsFeatureRequest()
                         request.setFilterExpression("gid > " + str(maxGid))
@@ -1592,6 +1598,8 @@ class XPlan():
                                         self.iface)
 
                             layer.removeSelection()
+
+                        layer.setSubsetString(layerFilter) # Filter wieder aktivieren
                 except:
                     continue
 
