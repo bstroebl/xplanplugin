@@ -557,6 +557,7 @@ class XPTools():
     def createFeature(self,  layer, fid = None):
         '''Ein Feature für den übergebenen Layer erzeugen'''
         if isinstance(layer, QgsVectorLayer):
+            #TODO: Für QGIS3 newFeature = QgsVectorLayerUtils.createFeature(layer)
             if fid:
                 newFeature = QgsFeature(fid)
             else:
