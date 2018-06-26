@@ -626,18 +626,37 @@ class XPlan():
             self.initialize(False)
 
         if self.db != None:
-            extRefLayer = self.getLayerForTable("XP_Basisobjekte",
-                "XP_ExterneReferenz")
-            if extRefLayer != None:
-                newFeat = self.tools.createFeature(extRefLayer)
+            refSchema = "XP_Basisobjekte"
+            refTable = "XP_SpezExterneReferenz"
+            extRefLayer = self.getLayerForTable(refSchema, refTable)
 
-                if self.tools.setEditable(extRefLayer, True, self.iface):
-                    if extRefLayer.addFeature(newFeat):
-                        self.app.xpManager.showFeatureForm(
-                            extRefLayer, newFeat, askForSave = False)
-                    else:
-                        XpError(u"Kann in Tabelle XP_Basisobjekte.XP_ExterneReferenz \
-                            kein Feature einfügen!", self.iface)
+            if extRefLayer != None:
+                maxId = self.tools.getMaxGid(self.db, refSchema, refTable, pkFieldName = "id")
+
+                if maxId != None:
+                    newFeat = self.tools.createFeature(extRefLayer)
+
+                    if self.tools.setEditable(extRefLayer, True, self.iface):
+                        if extRefLayer.addFeature(newFeat):
+                            if extRefLayer.commitChanges():
+                                extRefLayer.reload()
+                                request = QgsFeatureRequest()
+                                request.setFilterExpression("id > " + str(maxId))
+                                newIds = []
+
+                                for aNewFeat in extRefLayer.getFeatures(request):
+                                    newIds.append(aNewFeat.id())
+
+                                extRefLayer.selectByIds(newIds)
+                                try:
+                                    thisFeat = extRefLayer.selectedFeatures()[0]
+                                    self.app.xpManager.showFeatureForm(
+                                        extRefLayer, thisFeat, askForSave = False)
+                                except:
+                                    XpError(u"Neeus Feature nicht gefunden!", self.iface)
+                        else:
+                            XpError(u"Kann in Tabelle " + refSchema + "." + refTable + \
+                                u" kein Feature einfügen!", self.iface)
 
     def onLayerDestroyed(self, layer):
         '''Slot, der aufgerufen wird wenn ein XP-Layer aus dem Projekt entfernt wird
