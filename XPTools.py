@@ -241,10 +241,10 @@ class XPTools():
 
         return retValue
 
-    def getMaxGid(self, db, schemaName, tableName):
+    def getMaxGid(self, db, schemaName, tableName, pkFieldName = "gid"):
         retValue = -9999
-        sel = "SELECT gid FROM \"" + schemaName + "\".\"" + tableName + \
-            "\" ORDER BY gid DESC LIMIT 1;"
+        sel = "SELECT " + pkFieldName + " FROM \"" + schemaName + "\".\"" + tableName + \
+            "\" ORDER BY 1 DESC LIMIT 1;"
 
         query = QtSql.QSqlQuery(db)
         query.prepare(sel)
