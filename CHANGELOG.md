@@ -1,8 +1,14 @@
 # Change Log
 
 ## [Unreleased](https://github.com/bstroebl/xplanplugin/compare/v2.1.0...develop)
+
+### Added
+- Bearbeite XP_ExterneReferenz mit eigenem Dialog
+
 ### Fixed
 - Verbessere Bereichsmanger: verhindere Einfrieren beim Starten, wenn kein aktiver Bereich gewählt wird.
+- Ermögliche automatische Bereichszuordnung auch bei aktivem Filter
+- Passe Erzeugen einer externenReferenz an XPlan 5.0 an
 
 # 2.1.0 - 2018-06-07
 
