@@ -37,7 +37,7 @@ from HandleDb import DbHandler
 from XPTools import XPTools
 from XPlanDialog import XPlanungConf
 from XPlanDialog import ChooseObjektart
-from XPlanDialog import XPNutzungsschablone, BereichsmanagerDialog
+from XPlanDialog import XPNutzungsschablone, BereichsmanagerDialog, ReferenzmanagerDialog
 
 class XpError(object):
     '''General error'''
@@ -178,8 +178,8 @@ class XPlan():
         self.action23.triggered.connect(self.loadLP)
         self.action24 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
         self.action24.triggered.connect(self.loadSO)
-        self.action25 = QtGui.QAction(u"ExterneReferenz anlegen", self.iface.mainWindow())
-        self.action25.triggered.connect(self.createExterneReferenz)
+        self.action25 = QtGui.QAction(u"ExterneReferenzen bearbeiten", self.iface.mainWindow())
+        self.action25.triggered.connect(self.referenzmanagerStarten)
         self.action26 = QtGui.QAction(u"räuml. Geltungsbereiche neu berechnen",
             self.iface.mainWindow())
         self.action26.triggered.connect(self.geltungsbereichBerechnen)
@@ -621,42 +621,25 @@ class XPlan():
                             bpPlanLayer.changeGeometry(fid, outGeom)
                         bpPlanLayer.endEditCommand()
 
-    def createExterneReferenz(self):
+    def referenzmanagerStarten(self):
         if self.db == None:
             self.initialize(False)
 
         if self.db != None:
             refSchema = "XP_Basisobjekte"
-            refTable = "XP_SpezExterneReferenz"
+            refTable = "XP_ExterneReferenz"
             extRefLayer = self.getLayerForTable(refSchema, refTable)
 
             if extRefLayer != None:
-                maxId = self.tools.getMaxGid(self.db, refSchema, refTable, pkFieldName = "id")
+                grpIdx = self.getGroupIndex(refSchema)
 
-                if maxId != None:
-                    newFeat = self.tools.createFeature(extRefLayer)
+                if grpIdx == -1:
+                    grpIdx = self.createGroup(refSchema)
 
-                    if self.tools.setEditable(extRefLayer, True, self.iface):
-                        if extRefLayer.addFeature(newFeat):
-                            if extRefLayer.commitChanges():
-                                extRefLayer.reload()
-                                request = QgsFeatureRequest()
-                                request.setFilterExpression("id > " + str(maxId))
-                                newIds = []
-
-                                for aNewFeat in extRefLayer.getFeatures(request):
-                                    newIds.append(aNewFeat.id())
-
-                                extRefLayer.selectByIds(newIds)
-                                try:
-                                    thisFeat = extRefLayer.selectedFeatures()[0]
-                                    self.app.xpManager.showFeatureForm(
-                                        extRefLayer, thisFeat, askForSave = False)
-                                except:
-                                    XpError(u"Neeus Feature nicht gefunden!", self.iface)
-                        else:
-                            XpError(u"Kann in Tabelle " + refSchema + "." + refTable + \
-                                u" kein Feature einfügen!", self.iface)
+                self.iface.legendInterface().moveLayer(extRefLayer, grpIdx)
+                dlg = ReferenzmanagerDialog(self, extRefLayer)
+                dlg.show()
+                dlg.exec_()
 
     def onLayerDestroyed(self, layer):
         '''Slot, der aufgerufen wird wenn ein XP-Layer aus dem Projekt entfernt wird

@@ -26,7 +26,7 @@ LICENSE = license.txt
 
 METADATA = metadata.txt
 
-UI_FILES = Ui_Bereichsauswahl.ui Ui_conf.ui Ui_ObjektartLaden.ui Ui_Stilauswahl.ui Ui_Nutzungsschablone.ui Ui_Bereichsmanager.ui
+UI_FILES = Ui_Bereichsauswahl.ui Ui_conf.ui Ui_ObjektartLaden.ui Ui_Stilauswahl.ui Ui_Nutzungsschablone.ui Ui_Bereichsmanager.ui Ui_Referenzmanager.ui
 
 #RESOURCE_FILES = tools/resources_rc.py
 

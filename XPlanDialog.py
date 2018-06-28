@@ -49,6 +49,9 @@ SCHABLONE_CLASS, _ = uic.loadUiType(os.path.join(
 BEREICHSMANAGER_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'Ui_Bereichsmanager.ui'))
 
+REFERENZMANAGER_CLASS, _ = uic.loadUiType(os.path.join(
+    os.path.dirname(__file__), 'Ui_Referenzmanager.ui'))
+
 class XP_Chooser(QtGui.QDialog, CHOOSER_CLASS):
     '''Ein Dialog mit einem TreeWidget um ein Element auszuwählen, abstrakt'''
 
@@ -722,3 +725,139 @@ class BereichsmanagerDialog(QtGui.QDialog, BEREICHSMANAGER_CLASS):
                 self.selected = item.id
 
         self.done(self.selected)
+
+class ReferenzmanagerDialog(QtGui.QDialog, REFERENZMANAGER_CLASS):
+    def __init__(self, xplanplugin, referenzenLayer):
+        QtGui.QDialog.__init__(self)
+        # Set up the user interface from Designer.
+        self.setupUi(self)
+        self.xplanplugin = xplanplugin
+        self.referenzenLayer = referenzenLayer
+        self.referenzen.customContextMenuRequested.connect(self.on_referenzen_customContextMenuRequested)
+        self.referenzen.contextMenu = QtGui.QMenu(self.referenzen)
+        self.editAction = QtGui.QAction("Bearbeiten", self.referenzen.contextMenu)
+        self.editAction.triggered.connect(self.editReferenz)
+        self.referenzen.contextMenu.addAction(self.editAction)
+        self.removeAction = QtGui.QAction(u"Löschen", self.referenzen.contextMenu)
+        self.removeAction.triggered.connect(self.removeReferenz)
+        self.referenzen.contextMenu.addAction(self.removeAction)
+        self.newAction = QtGui.QAction("Neue externeReferenz", self.referenzen.contextMenu)
+        self.newAction.triggered.connect(self.newReferenz)
+        self.referenzen.contextMenu.addAction(self.newAction)
+        self.buttonBox.button(QtGui.QDialogButtonBox.Reset).clicked.connect(self.initialize)
+        self.initialize()
+
+    def initialize(self):
+        self.txlFilter.setText("")
+        #self.btnFilter.setEnabled(False)
+        self.setTitle = "Referenzmanager"
+        self.fillReferenzen()
+
+    def fillReferenzen(self):
+        self.referenzen.clear()
+        filter = self.txlFilter.text()
+
+        if filter == "":
+            self.referenzenLayer.removeSelection()
+            self.referenzenLayer.invertSelection()
+        else:
+            abfrage = "\"referenzName\" like '%" + filter + "%'"
+            self.referenzenLayer.selectByExpression(abfrage)
+
+        for aFeat in self.referenzenLayer.selectedFeatures():
+            if aFeat.id() > 0:
+                anItem = QtGui.QListWidgetItem(aFeat["referenzName"])
+                anItem.feature = aFeat
+                self.referenzen.addItem(anItem)
+
+        self.referenzen.sortItems()
+
+    def editFeature(self, thisFeature):
+        self.xplanplugin.app.xpManager.showFeatureForm(self.referenzenLayer, thisFeature)
+        self.fillReferenzen()
+
+    def editReferenz(self):
+        self.editFeature(self.referenzen.currentItem().feature)
+
+    def newReferenz(self):
+        if self.xplanplugin.db == None:
+            self.showError(u"Es ist keine Datenbank verbunden")
+            self.done(0)
+        else:
+            refSchema = "XP_Basisobjekte"
+            refTable = "XP_SpezExterneReferenz"
+            extRefLayer = self.xplanplugin.getLayerForTable(refSchema, refTable)
+
+            if extRefLayer != None:
+                maxId = self.xplanplugin.tools.getMaxGid(self.xplanplugin.db, refSchema,
+                    refTable, pkFieldName = "id")
+
+                if maxId != None:
+                    newFeat = self.xplanplugin.tools.createFeature(extRefLayer)
+
+                    if self.xplanplugin.tools.setEditable(extRefLayer, True, self.xplanplugin.iface):
+                        if extRefLayer.addFeature(newFeat):
+                            if extRefLayer.commitChanges():
+                                extRefLayer.reload()
+                                self.referenzenLayer.reload()
+                                expr = "id > " + str(maxId)
+                                self.referenzenLayer.selectByExpression(expr)
+
+                                if len(self.referenzenLayer.selectedFeatures()) == 1:
+                                    thisFeat = self.referenzenLayer.selectedFeatures()[0]
+                                    self.editFeature(thisFeat)
+                                else:
+                                    self.showError(u"Neues Feature nicht gefunden! " + expr)
+                        else:
+                            self.showError(u"Kann in Tabelle " + refSchema + "." + refTable + \
+                                u" kein Feature einfügen!")
+
+    def removeReferenz(self):
+        feat2Remove = self.referenzen.currentItem().feature
+
+        if self.xplanplugin.tools.setEditable(self.referenzenLayer, True, self.xplanplugin.iface):
+            if self.referenzenLayer.deleteFeature(feat2Remove.id()):
+                if self.referenzenLayer.commitChanges():
+                    self.fillReferenzen()
+                else:
+                    self.showError(u"Konnte Änderungen nicht speichern")
+            else:
+                self.showError(u"Konnte Referenz nicht löschen")
+        else:
+            self.showError(u"Kann Layer " + self.referenzenLayer.name() + " nicht editieren")
+
+    def showError(self, msg):
+        self.xplanplugin.tools.showError(msg)
+
+    @QtCore.pyqtSlot( str )
+    def on_txlFilter_textChanged(self, currentText):
+        self.btnFilter.setEnabled(len(currentText) > 0)
+
+    @QtCore.pyqtSlot(  )
+    def on_txlFilter_returnPressed(self):
+        if len(self.txlFilter.text()) > 3:
+            self.btnFilter.click()
+
+    @QtCore.pyqtSlot(  )
+    def on_btnFilter_clicked(self):
+        self.fillReferenzen()
+
+    @QtCore.pyqtSlot( QtGui.QListWidgetItem )
+    def on_referenzen_itemDoubleClicked(self, clickedItem):
+        self.editFeature(clickedItem.feature)
+
+    @QtCore.pyqtSlot( QtCore.QPoint)
+    def on_referenzen_customContextMenuRequested(self, atPoint):
+        clickedItem = self.referenzen.itemAt(atPoint)
+        self.editAction.setVisible(clickedItem != None)
+        self.removeAction.setVisible(clickedItem != None)
+
+        if clickedItem != None:
+            self.referenzen.setCurrentItem(clickedItem)
+
+        self.referenzen.contextMenu.resize(self.referenzen.contextMenu.sizeHint())
+        self.referenzen.contextMenu.popup(self.referenzen.mapToGlobal(QtCore.QPoint(atPoint)))
+
+    @QtCore.pyqtSlot()
+    def reject(self):
+        self.done(0)
