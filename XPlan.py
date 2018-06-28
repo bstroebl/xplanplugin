@@ -1090,8 +1090,8 @@ class XPlan():
                 self.db, ddTable)
 
             if layer == None:
-                layer = self.app.xpManager.loadPostGISLayer(
-                    self.db, ddTable, geomColumn = geomColumn)
+                layer = self.loadTable(schemaName, tableName,
+                    geomColumn = geomColumn)[0]
 
                 if layer == None:
                     if showMsg:
