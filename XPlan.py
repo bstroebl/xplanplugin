@@ -35,6 +35,7 @@ BASEDIR = os.path.dirname( unicode(__file__,sys.getfilesystemencoding()) )
 
 from HandleDb import DbHandler
 from XPTools import XPTools
+from XPImport import XPImporter
 from XPlanDialog import XPlanungConf
 from XPlanDialog import ChooseObjektart
 from XPlanDialog import XPNutzungsschablone, BereichsmanagerDialog, ReferenzmanagerDialog
@@ -189,9 +190,11 @@ class XPlan():
         self.action28.triggered.connect(self.konfiguriereNutzungsschablone)
         self.action29 = QtGui.QAction(u"Stylesheetparameter konfigurieren", self.iface.mainWindow())
         self.action29.triggered.connect(self.konfiguriereStylesheet)
+        self.action30 = QtGui.QAction(u"Importieren", self.iface.mainWindow())
+        self.action30.triggered.connect(self.importData)
 
         self.xpMenu.addActions([self.action20, self.action25, self.action29,
-            self.action6, self.action10])
+            self.action6, self.action10, self.action30])
         self.bereichMenu.addActions([self.action3, self.action1, self.action4])
         self.bpMenu.addActions([self.action21, self.action26, self.action28])
         self.fpMenu.addActions([self.action22])
@@ -481,6 +484,26 @@ class XPlan():
                                     return None
 
     #Slots
+    def importData(self):
+        if self.db == None:
+            self.initialize()
+
+        importer = XPImporter(self.db, self.tools)
+        importSchema = importer.impChooseSchema()
+
+        if importSchema != None:
+            impResult = importer.importPlan(importSchema)
+
+            if impResult != None:
+                title = "XPlanung"
+                successMsg = "Import aus Schema \"" + importSchema + "\" war erfolgreich"
+                QgsMessageLog.logMessage(successMsg + "\n" + impResult, title)
+                resultBox = QtGui.QMessageBox()
+                resultBox.setWindowTitle(title)
+                resultBox.setText(successMsg)
+                resultBox.setDetailedText(impResult)
+                resultBox.exec_()
+
     def konfiguriereNutzungsschablone(self):
         dlg = XPNutzungsschablone(self.nutzungsschablone)
         dlg.show()
