@@ -335,18 +335,27 @@ class XPImporter():
         parentNspname und parentRelname ist die oberste Elterntabelle, also z.B. XP_Objekt
         '''
 
-        createGidSql = "SELECT \"QGIS\".imp_create_xp_gid(:schema,:table);"
-        createGidQuery = QtSql.QSqlQuery(self.db)
-        createGidQuery.prepare(createGidSql)
-        createGidQuery.bindValue(":schema", importSchema)
-        createGidQuery.bindValue(":table", importRelname)
-        createGidQuery.exec_()
+        findGidFieldSql = "SELECT xp_gid FROM \"" + importSchema + "\".\"" + \
+            importRelname + "\" LIMIT 1;"
+        findGidQuery = QtSql.QSqlQuery(self.db)
+        findGidQuery.prepare(findGidFieldSql)
+        findGidQuery.exec_()
 
-        if createGidQuery.isActive():
-            createGidQuery.finish()
+        if not findGidQuery.isActive():
+            createGidSql = "SELECT \"QGIS\".imp_create_xp_gid(:schema,:table);"
+            createGidQuery = QtSql.QSqlQuery(self.db)
+            createGidQuery.prepare(createGidSql)
+            createGidQuery.bindValue(":schema", importSchema)
+            createGidQuery.bindValue(":table", importRelname)
+            createGidQuery.exec_()
+
+            if createGidQuery.isActive():
+                createGidQuery.finish()
+            else:
+                self.showQueryError(createGidQuery)
+                return -1
         else:
-            self.showQueryError(createGidQuery)
-            return -1
+            findGidQuery.finish()
 
         if parentRelname == "XP_AbstraktesPraesentationsobjekt":
             seqName = "XP_APObjekt_gid_seq"
@@ -356,17 +365,7 @@ class XPImporter():
         updateGidSql = "UPDATE \"" + importSchema + "\".\"" + importRelname + \
             "\" SET xp_gid = nextval('\"" + parentNspname + "\".\"" + seqName + \
             "\"');"
-        updateGidQuery = QtSql.QSqlQuery(self.db)
-        updateGidQuery.prepare(updateGidSql)
-        updateGidQuery.exec_()
-
-        if updateGidQuery.isActive():
-            numAff = updateGidQuery.numRowsAffected()
-            updateGidQuery.finish()
-            return numAff
-        else:
-            self.showQueryError(updateGidQuery)
-            return -1
+        return self.__impExecuteSql(updateGidSql)
 
     def __impGetChildTables(self, thisOid):
         childSql = self.__impGetChildTablesSql()
