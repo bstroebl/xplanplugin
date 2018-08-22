@@ -80,6 +80,26 @@ class XPImporter():
         except subprocess.CalledProcessError, e:
             success = e.returncode
             loglines = e.output
+
+        if success == 0:
+            tableSql = self.__impGetTableSql()
+            tableQuery = QtSql.QSqlQuery(self.db)
+            tableQuery.prepare(tableSql)
+            tableQuery.bindValue(":import1", importSchema)
+            tableQuery.bindValue(":import2", importSchema)
+            tableQuery.exec_()
+
+            if tableQuery.isActive():
+                if tableQuery.size() == 0:
+                    return [1,  u"Keine Tabellen im Importschema " + importSchema + \
+                        u" gefunden!"]
+                else:
+                    while tableQuery.next(): # returns false when all records are done
+                        importRelname = tableQuery.value(5)
+                        if self.__impCreateGidField(importSchema, importRelname) == -1:
+                            return[1, u"Konnte xp_gid-Feld für " + importSchema + "." + \
+                                importRelname + " nicht anlegen"]
+
         return [success, loglines]
 
     def importPlan(self):
@@ -328,34 +348,27 @@ class XPImporter():
             self.showQueryError(schemaQuery)
             return None
 
-    def __impCreateGidField(self, importSchema, importRelname,
-        parentNspname, parentRelname, pkField = "gid"):
+    def __impCreateGidField(self, importSchema, importRelname):
         '''
         Füge der Importtabelle ein Feld xp_gid zu und fülle es mit Werten aus der passenden Sequenz
         parentNspname und parentRelname ist die oberste Elterntabelle, also z.B. XP_Objekt
         '''
+        createGidSql = "SELECT \"QGIS\".imp_create_xp_gid(:schema,:table);"
+        createGidQuery = QtSql.QSqlQuery(self.db)
+        createGidQuery.prepare(createGidSql)
+        createGidQuery.bindValue(":schema", importSchema)
+        createGidQuery.bindValue(":table", importRelname)
+        createGidQuery.exec_()
 
-        findGidFieldSql = "SELECT xp_gid FROM \"" + importSchema + "\".\"" + \
-            importRelname + "\" LIMIT 1;"
-        findGidQuery = QtSql.QSqlQuery(self.db)
-        findGidQuery.prepare(findGidFieldSql)
-        findGidQuery.exec_()
-
-        if not findGidQuery.isActive():
-            createGidSql = "SELECT \"QGIS\".imp_create_xp_gid(:schema,:table);"
-            createGidQuery = QtSql.QSqlQuery(self.db)
-            createGidQuery.prepare(createGidSql)
-            createGidQuery.bindValue(":schema", importSchema)
-            createGidQuery.bindValue(":table", importRelname)
-            createGidQuery.exec_()
-
-            if createGidQuery.isActive():
-                createGidQuery.finish()
-            else:
-                self.showQueryError(createGidQuery)
-                return -1
+        if createGidQuery.isActive():
+            createGidQuery.finish()
+            return 1
         else:
-            findGidQuery.finish()
+            self.showQueryError(createGidQuery)
+            return -1
+
+    def __impUpdateGidField(self, importSchema, importRelname,
+        parentNspname, parentRelname, pkField = "gid"):
 
         if parentRelname == "XP_AbstraktesPraesentationsobjekt":
             seqName = "XP_APObjekt_gid_seq"
@@ -760,7 +773,7 @@ class XPImporter():
             parentNspname = parentPlan[1]
             parentRelname = parentPlan[2]
 
-        if self.__impCreateGidField(importSchema, impRelname,
+        if self.__impUpdateGidField(importSchema, impRelname,
             parentNspname, parentRelname) == -1:
             return [-1, None]
 
@@ -851,7 +864,7 @@ class XPImporter():
             parentNspname = parentBereich[1]
             parentRelname = parentBereich[2]
 
-        if self.__impCreateGidField(importSchema, impRelname,
+        if self.__impUpdateGidField(importSchema, impRelname,
             parentNspname, parentRelname) == -1:
             return [-1, None]
 
@@ -939,7 +952,7 @@ class XPImporter():
                             else:
                                 pkField = pkFields[0]
 
-                        if self.__impCreateGidField(importSchema, impRelname,
+                        if self.__impUpdateGidField(importSchema, impRelname,
                             parentNspname, parentRelname, pkField = pkField) == -1:
                             return False
 
@@ -1023,7 +1036,7 @@ class XPImporter():
         modellbereich = impPlanRelname[:2].upper()
 
         if impRelname.lower() == "xp_gemeinde":
-            if self.__impCreateGidField(importSchema, impRelname,
+            if self.__impUpdateGidField(importSchema, impRelname,
                 "XP_Sonstiges", "XP_Gemeinde", pkField = "id") > 0:
                 # Gemeinde könnte schon vorhanden sein
                 update1Sql = "UPDATE  \"" + importSchema + "\".\"" + impRelname + "\" z \
