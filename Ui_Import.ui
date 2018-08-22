@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>458</width>
-    <height>440</height>
+    <height>443</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -189,11 +189,25 @@
     </widget>
    </item>
    <item>
-    <widget class="QLineEdit" name="txlSchema">
-     <property name="toolTip">
-      <string>name des neuen Schemas eingeben</string>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
+     <item>
+      <widget class="QLineEdit" name="txlSchema">
+       <property name="toolTip">
+        <string>name des neuen Schemas eingeben</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="chkUeberschreiben">
+       <property name="toolTip">
+        <string>falls ein Schema dieses Namens bereits existiert soll es überschreiben werden</string>
+       </property>
+       <property name="text">
+        <string>Überschreiben</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
     <widget class="QCheckBox" name="chkSchritt2">

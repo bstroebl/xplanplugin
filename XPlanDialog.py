@@ -877,11 +877,14 @@ class ImportDialog(QtGui.QDialog, IMPORT_CLASS):
         self.xplanplugin = xplanplugin
         self.neuString = "neues Schema"
         self.cbxSchema.setToolTip("\"" + self.neuString + "\" legt " + \
-            u"ein neues Schema an (ein eventuell vorhandenes gleichnamiges " + \
-            u"Schema wird dann gelöscht) und importiert die GML-Datei in dieses Schema. " + \
-            u"Wird ein vorhandenes Schema ausgewählt, so wird angenommen, " + \
-            u"dass die GML-Datei bereits dorthin importiert wurde, die Übernahme in " + \
-            u"die Zieltabellen in der Datenbank aber nicht funktioniert hat.")
+            u"ein neues Schema an\n" + \
+            u"und importiert die GML-Datei in dieses Schema.\n" + \
+            u"Ist \"Überschreiben\" angehakt, wird ein " +\
+            u"eventuell vorhandenes \ngleichnamiges " + \
+            u"Schema gelöscht. \n" + \
+            u"Wird ein vorhandenes Schema ausgewählt, so wird angenommen,\n" + \
+            u"dass die GML-Datei bereits dorthin importiert wurde,\ndie Übernahme in " + \
+            u"die Zieltabellen in der Datenbank \naber nicht funktioniert hat.")
         self.versions = {}
         self.initialize()
         self.txlDatei.textChanged.connect(self.enableOk)
@@ -930,6 +933,7 @@ class ImportDialog(QtGui.QDialog, IMPORT_CLASS):
         neuesSchema =  ( s.value( "neuesSchema", "" ) )
         schritt1 =  ( bool(int(s.value( "schritt1", "1" ) )))
         schritt2 =  ( bool(int(s.value( "schritt2", "1" ) )))
+        ueberschreiben =  ( bool(int(s.value( "ueberschreiben", "1" ) )))
         s.endGroup()
 
         self.txlDatei.setText(datei)
@@ -938,6 +942,7 @@ class ImportDialog(QtGui.QDialog, IMPORT_CLASS):
         self.chkSchritt1.setChecked(schritt1)
         self.frmSchritt1.setEnabled(schritt1)
         self.chkSchritt2.setChecked(schritt2)
+        self.chkUeberschreiben.setChecked(ueberschreiben)
 
         xsdPath = os.path.abspath(os.path.dirname(__file__) + '/schema')
         versions = glob.glob(xsdPath + "/*")
@@ -979,10 +984,12 @@ class ImportDialog(QtGui.QDialog, IMPORT_CLASS):
     def enableTxlSchema(self):
         if self.cbxSchema.currentText() == self.neuString:
             self.txlSchema.setEnabled(True)
+            self.chkUeberschreiben.setEnabled(True)
             self.txlSchema.setFocus()
             self.txlSchema.setCursorPosition(0)
         else:
             self.txlSchema.setEnabled(False)
+            self.chkUeberschreiben.setEnabled(False)
 
     def enableOk(self):
         okBtn = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)
@@ -1073,8 +1080,9 @@ class ImportDialog(QtGui.QDialog, IMPORT_CLASS):
         else:
             neuesSchema = "0"
 
-        schritt1 = int(self.chkSchritt1.isChecked())
-        schritt2 = int(self.chkSchritt2.isChecked())
+        schritt1 = self.chkSchritt1.isChecked()
+        schritt2 = self.chkSchritt2.isChecked()
+        ueberschreiben = self.chkUeberschreiben.isChecked()
 
         s = QtCore.QSettings( "XPlanung", "XPlanung-Erweiterung" )
         s.beginGroup("import")
@@ -1084,8 +1092,9 @@ class ImportDialog(QtGui.QDialog, IMPORT_CLASS):
         s.setValue( "xsd", version )
         s.setValue( "importSchema", schema )
         s.setValue( "neuesSchema", neuesSchema )
-        s.setValue( "schritt1", str(schritt1) )
-        s.setValue( "schritt2", str(schritt2) )
+        s.setValue( "schritt1", str(int(schritt1) ))
+        s.setValue( "schritt2", str(int(schritt2) ))
+        s.setValue( "ueberschreiben", str(int(ueberschreiben) ))
         s.endGroup()
 
         self.params = {}
@@ -1097,6 +1106,7 @@ class ImportDialog(QtGui.QDialog, IMPORT_CLASS):
         self.params["neuesSchema"] = neuesSchema
         self.params["schritt1"] = schritt1
         self.params["schritt2"] = schritt2
+        self.params["ueberschreiben"] = ueberschreiben
         self.done(1)
 
     @QtCore.pyqtSlot()

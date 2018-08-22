@@ -39,9 +39,11 @@ class XPImporter():
         '''
         importSchema = self.params["importSchema"]
         neuesSchema = self.params["neuesSchema"]
+        ueberschreiben = self.params["ueberschreiben"]
 
         if neuesSchema == "1":
-            if self.__impExecuteSql("SELECT \"QGIS\".imp_create_schema('" + importSchema + "');") == -1:
+            if self.__impExecuteSql("SELECT \"QGIS\".imp_create_schema('" + \
+                importSchema + "'," + str(int(ueberschreiben)) + ");") == -1:
                 return [1, "Schema " + importSchema + " konnte nicht angelegt werden"]
 
         dbSettings = self.__impReadSettings()
