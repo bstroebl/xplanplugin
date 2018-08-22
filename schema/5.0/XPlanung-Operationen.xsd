@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<!--Erzeugt mit KIT (www.kit.edu) UmlToXmlTransformation-Software, Erstellungsdatum: 18.06.2013 13:36:03-->
+<schema xmlns="http://www.w3.org/2001/XMLSchema" xmlns:xplan="http://www.xplanung.de/xplangml/5/0" 
+  targetNamespace="http://www.xplanung.de/xplangml/5/0"
+  xmlns:kit="http://www.kit.edu" xmlns:wfs="http://www.opengis.net/wfs/2.0" xmlns:gml="http://www.opengis.net/gml/3.2" elementFormDefault="qualified" version="5.0">
+  <include schemaLocation="XPlanGML.xsd" />
+  <import namespace="http://www.opengis.net/wfs/2.0" schemaLocation="http://schemas.opengis.net/wfs/2.0/wfs.xsd" />
+  <import namespace="http://www.opengis.net/gml/3.2" schemaLocation="gmlProfile/gmlProfilexplan.xsd" />
+  <!--=========================================================================================-->
+  <!--XPlanAuszug-->
+  <!--=========================================================================================-->
+  <element name="XPlanAuszug" type="xplan:XPlanAuszugType" substitutionGroup="gml:AbstractFeatureCollection" />
+  <complexType name="XPlanAuszugType">
+    <annotation>
+      <documentation>Container für XPlanGML-Objekte
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="gml:AbstractFeatureCollectionType" />
+    </complexContent>
+  </complexType>
+  <complexType name="XPlanAuszugPropertyType">
+    <sequence>
+      <element ref="xplan:XPlanAuszug" minOccurs="0" />
+    </sequence>
+    <attributeGroup ref="gml:AssociationAttributeGroup" />
+  </complexType>
+</schema>

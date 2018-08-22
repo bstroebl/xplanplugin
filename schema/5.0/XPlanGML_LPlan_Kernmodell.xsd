@@ -1,0 +1,1227 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<!--Erzeugt mit KIT (www.kit.edu) UmlToXmlTransformation-Software, Erstellungsdatum: 19.01.2018 10:24:55-->
+<schema xmlns="http://www.w3.org/2001/XMLSchema" xmlns:xplan="http://www.xplanung.de/xplangml/5/0" targetNamespace="http://www.xplanung.de/xplangml/5/0" xmlns:kit="http://www.kit.edu" xmlns:gml="http://www.opengis.net/gml/3.2" elementFormDefault="qualified" version="5.0">
+  <import namespace="http://www.opengis.net/gml/3.2" schemaLocation="gmlProfile/gmlProfilexplan.xsd" />
+  <include schemaLocation="XPlanGML_Basisschema.xsd" />
+  <!--=========================================================================================-->
+  <!--LP_Bereich-->
+  <!--=========================================================================================-->
+  <element name="LP_Bereich" type="xplan:LP_BereichType" substitutionGroup="xplan:XP_Bereich" />
+  <complexType name="LP_BereichType">
+    <annotation>
+      <documentation>Ein Bereich eines Landschaftsplans.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_BereichType">
+        <sequence>
+          <element name="gehoertZuPlan" type="gml:ReferenceType">
+            <annotation>
+              <appinfo>
+                <gml:targetElement>xplan:LP_Plan</gml:targetElement>
+                <gml:reversePropertyName>xplan:bereich</gml:reversePropertyName>
+              </appinfo>
+            </annotation>
+          </element>
+          <element ref="xplan:_GenericApplicationPropertyOfLP_Bereich" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_Bereich" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_Flaechenobjekt-->
+  <!--=========================================================================================-->
+  <element abstract="true" name="LP_Flaechenobjekt" type="xplan:LP_FlaechenobjektType" substitutionGroup="xplan:LP_Objekt" />
+  <complexType abstract="true" name="LP_FlaechenobjektType">
+    <annotation>
+      <documentation>Basisklasse für alle Objekte eines Landschaftsplans mit flächenhaftem Raumbezug (eine Einzelfläche oder eine Menge von Flächen, die sich nicht überlappen dürfen).</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_ObjektType">
+        <sequence>
+          <element name="position" type="gml:GeometryPropertyType" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_Flaechenobjekt" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_Flaechenobjekt" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_Geometrieobjekt-->
+  <!--=========================================================================================-->
+  <element abstract="true" name="LP_Geometrieobjekt" type="xplan:LP_GeometrieobjektType" substitutionGroup="xplan:LP_Objekt" />
+  <complexType abstract="true" name="LP_GeometrieobjektType">
+    <annotation>
+      <documentation>Basisklasse für alle Objekte eines Landschaftsplans mit variablem Raumbezug. Ein konkretes Objekt muss entweder punktförmigen, linienförmigen oder flächenhaften Raumbezug haben, gemischte Geometrie ist nicht zugelassen.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_ObjektType">
+        <sequence>
+          <element name="position" type="gml:GeometryPropertyType" />
+          <element name="flussrichtung" minOccurs="0" type="boolean" />
+          <element name="nordwinkel" minOccurs="0" type="gml:AngleType" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_Geometrieobjekt" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_Geometrieobjekt" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_Linienobjekt-->
+  <!--=========================================================================================-->
+  <element abstract="true" name="LP_Linienobjekt" type="xplan:LP_LinienobjektType" substitutionGroup="xplan:LP_Objekt" />
+  <complexType abstract="true" name="LP_LinienobjektType">
+    <annotation>
+      <documentation>Basisklasse für alle Objekte eines Landschaftsplans mit linienförmigem Raumbezug (eine einzelne zusammenhängende Kurve, die aus Linienstücken und Kreisbögen zusammengesetzt sein kann, oder eine Menge derartiger Kurven).</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_ObjektType">
+        <sequence>
+          <element name="position" type="gml:GeometryPropertyType" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_Linienobjekt" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_Linienobjekt" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_Objekt-->
+  <!--=========================================================================================-->
+  <element abstract="true" name="LP_Objekt" type="xplan:LP_ObjektType" substitutionGroup="xplan:XP_Objekt" />
+  <complexType abstract="true" name="LP_ObjektType">
+    <annotation>
+      <documentation>Basisklasse für alle spezifischen Inhalte eines Landschaftsplans.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_ObjektType">
+        <sequence>
+          <element name="rechtscharakter" type="xplan:LP_Rechtscharakter" />
+          <element name="konkretisierung" minOccurs="0" type="string" />
+          <element name="refTextInhalt" minOccurs="0" maxOccurs="unbounded" type="gml:ReferenceType">
+            <annotation>
+              <appinfo>
+                <gml:targetElement>xplan:LP_TextAbschnitt</gml:targetElement>
+              </appinfo>
+            </annotation>
+          </element>
+          <element ref="xplan:_GenericApplicationPropertyOfLP_Objekt" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_Objekt" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_Plan-->
+  <!--=========================================================================================-->
+  <element name="LP_Plan" type="xplan:LP_PlanType" substitutionGroup="xplan:XP_Plan" />
+  <complexType name="LP_PlanType">
+    <annotation>
+      <documentation>Die Klasse modelliert ein Planwerk mit landschaftsplanerischen Festlegungen, Darstellungen bzw. Festsetzungen.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_PlanType">
+        <sequence>
+          <element name="bundesland" type="xplan:XP_Bundeslaender" />
+          <element name="rechtlicheAussenwirkung" type="boolean" />
+          <element name="planArt" maxOccurs="unbounded" type="xplan:LP_PlanArt" />
+          <element name="sonstPlanArt" minOccurs="0" type="gml:CodeType" />
+          <element name="planungstraegerGKZ" type="string" />
+          <element name="planungstraeger" minOccurs="0" type="string" />
+          <element name="rechtsstand" minOccurs="0" type="xplan:LP_Rechtsstand" />
+          <element name="aufstellungsbeschlussDatum" minOccurs="0" type="date" />
+          <element name="auslegungsDatum" minOccurs="0" maxOccurs="unbounded" type="date" />
+          <element name="tOeBbeteiligungsDatum" minOccurs="0" maxOccurs="unbounded" type="date" />
+          <element name="oeffentlichkeitsbeteiligungDatum" minOccurs="0" maxOccurs="unbounded" type="date" />
+          <element name="aenderungenBisDatum" minOccurs="0" type="date" />
+          <element name="entwurfsbeschlussDatum" minOccurs="0" type="date" />
+          <element name="planbeschlussDatum" minOccurs="0" type="date" />
+          <element name="inkrafttretenDatum" minOccurs="0" type="date" />
+          <element name="sonstVerfahrensDatum" minOccurs="0" type="date" />
+          <element name="bereich" minOccurs="0" maxOccurs="unbounded" type="gml:ReferenceType">
+            <annotation>
+              <appinfo>
+                <gml:targetElement>xplan:LP_Bereich</gml:targetElement>
+                <gml:reversePropertyName>xplan:gehoertZuPlan</gml:reversePropertyName>
+              </appinfo>
+            </annotation>
+          </element>
+          <element ref="xplan:_GenericApplicationPropertyOfLP_Plan" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_Plan" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_PlanArt-->
+  <!--=========================================================================================-->
+  <simpleType name="LP_PlanArt">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Landschaftsprogramm-->
+        <annotation>
+          <documentation>Die überörtlichen konkretisierten Ziele, Erfordernisse und Maßnahmen des Naturschutzes und der Landschaftspflege werden für den Bereich eines Landes im Landschaftsprogramm dargestellt (§ 10, Abs .1 BNatSchG)
+Landschaftspflege werden für den Bereich eines Landes im Landschaftsprogramm o</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Landschaftsrahmenplan-->
+        <annotation>
+          <documentation>Die überörtlichen konkretisierten Ziele, Erfordernisse und Maßnahmen des Naturschutzes und der Landschaftspflege werden für Teile des Landes in Landschaftsrahmenplänen dargestellt (§ 10, Abs .1 BNatSchG)</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--Landschaftsplan-->
+        <annotation>
+          <documentation>Die für die örtliche Ebene konkretisierten Ziele, Erfordernisse und Maßnahmen des Naturschutzes und der Landschaftspflege werden auf der Grundlage der Landschaftsrahmenpläne für die Gebiete der Gemeinden in Landschaftsplänen  dargestellt. (§ 11, Abs .1 BNatSchG)</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="4000">
+        <!--Gruenordnungsplan-->
+        <annotation>
+          <documentation>Die für die örtliche Ebene konkretisierten Ziele, Erfordernisse und Maßnahmen des Naturschutzes und der Landschaftspflege werden für Teile eines Gemeindegebiets in Grünordnungsplänen dargestellt. (§ 11, Abs .1  BNatSchG)</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstige Planart</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--LP_Punktobjekt-->
+  <!--=========================================================================================-->
+  <element abstract="true" name="LP_Punktobjekt" type="xplan:LP_PunktobjektType" substitutionGroup="xplan:LP_Objekt" />
+  <complexType abstract="true" name="LP_PunktobjektType">
+    <annotation>
+      <documentation>Basisklasse für alle Objekte eines Landschaftsplans mit punktförmigem Raumbezug (Einzelpunkt oder Punktmenge).</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_ObjektType">
+        <sequence>
+          <element name="position" type="gml:GeometryPropertyType" />
+          <element name="nordwinkel" minOccurs="0" type="gml:AngleType" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_Punktobjekt" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_Punktobjekt" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_Rechtscharakter-->
+  <!--=========================================================================================-->
+  <simpleType name="LP_Rechtscharakter">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Festsetzung-->
+        <annotation>
+          <documentation>Festsetzung im Landschaftsplan</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Geplant-->
+        <annotation>
+          <documentation>Geplante Festsetzung im Landschaftsplan</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--NachrichtlicheUebernahme-->
+        <annotation>
+          <documentation>Nachrichtliche Übernahmen im Landschaftsplan</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="4000">
+        <!--DarstellungKennzeichnung-->
+        <annotation>
+          <documentation>Darstellungen und Kennzeichnungen im Landschaftsplan.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="5000">
+        <!--FestsetzungInBPlan-->
+        <annotation>
+          <documentation>Planinhalt aus dem Bereich Naturschutzrecht, der in einem BPlan festgesetzt wird.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9998">
+        <!--Unbekannt-->
+        <annotation>
+          <documentation>Der Rechtscharakter des LPlan-Inhalts ist unbekannt.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--SonstigerStatus-->
+        <annotation>
+          <documentation>Sonstiger Rechtscharakter</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--LP_Rechtsstand-->
+  <!--=========================================================================================-->
+  <simpleType name="LP_Rechtsstand">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Aufstellungsbeschluss-->
+        <annotation>
+          <documentation>Der Aufstellungsbeschluss wurde getroffen.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Entwurf-->
+        <annotation>
+          <documentation>Ein Planentwurf liegt vor</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--Plan-->
+        <annotation>
+          <documentation>Der Plan ist technisch erstellt, aber noch nicht rechtwirksam</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="4000">
+        <!--Wirksamkeit-->
+        <annotation>
+          <documentation>Der Plan ist rechtswirksam.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="5000">
+        <!--Untergegangen-->
+        <annotation>
+          <documentation>Der Plan ist nicht mehr rechtswirksam.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--LP_TextAbschnitt-->
+  <!--=========================================================================================-->
+  <element name="LP_TextAbschnitt" type="xplan:LP_TextAbschnittType" substitutionGroup="xplan:XP_TextAbschnitt" />
+  <complexType name="LP_TextAbschnittType">
+    <annotation>
+      <documentation>Texlich formulierter Inhalt eines Landschaftsplans, der einen anderen Rechtscharakter als das zugrunde liegende Fachobjekt hat (Attribut &lt;i&gt;status &lt;/i&gt;des Fachobjektes), oder dem Plan als Ganzes zugeordnet ist.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_TextAbschnittType">
+        <sequence>
+          <element name="rechtscharakter" type="xplan:LP_Rechtscharakter" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_TextAbschnitt" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_TextAbschnitt" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_AllgGruenflaeche-->
+  <!--=========================================================================================-->
+  <element name="LP_AllgGruenflaeche" type="xplan:LP_AllgGruenflaecheType" substitutionGroup="xplan:LP_Flaechenobjekt" />
+  <complexType name="LP_AllgGruenflaecheType">
+    <annotation>
+      <documentation>Allgemeine Grünflächen.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_FlaechenobjektType">
+        <sequence>
+          <element ref="xplan:_GenericApplicationPropertyOfLP_AllgGruenflaeche" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_AllgGruenflaeche" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_ErholungFreizeit-->
+  <!--=========================================================================================-->
+  <element name="LP_ErholungFreizeit" type="xplan:LP_ErholungFreizeitType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_ErholungFreizeitType">
+    <annotation>
+      <documentation>Sonstige Gebiete, Objekte, Zweckbestimmungen oder Maßnahmen mit besonderen Funktionen für die landschaftsgebundene Erholung und Freizeit.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="funktion" minOccurs="0" maxOccurs="unbounded" type="xplan:LP_ErholungFreizeitFunktionen" />
+          <element name="detaillierteFunktion" minOccurs="0" maxOccurs="unbounded" type="gml:CodeType" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_ErholungFreizeit" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_ErholungFreizeit" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_ErholungFreizeitFunktionen-->
+  <!--=========================================================================================-->
+  <simpleType name="LP_ErholungFreizeitFunktionen">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Parkanlage-->
+        <annotation>
+          <documentation>Parkanlage</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1030">
+        <!--Dauerkleingaerten-->
+        <annotation>
+          <documentation>Dauerkleingarten</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1050">
+        <!--Sportplatz-->
+        <annotation>
+          <documentation>Sportplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1100">
+        <!--Spielplatz-->
+        <annotation>
+          <documentation>Spielplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1200">
+        <!--Zeltplatz-->
+        <annotation>
+          <documentation>Zeltplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1300">
+        <!--BadeplatzFreibad-->
+        <annotation>
+          <documentation>Badeplatz, Freibad</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1400">
+        <!--Schutzhuette-->
+        <annotation>
+          <documentation>Schutzhütte</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1500">
+        <!--Rastplatz-->
+        <annotation>
+          <documentation>Rastplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1600">
+        <!--Informationstafel-->
+        <annotation>
+          <documentation>Informationstafel</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1700">
+        <!--FeuerstelleGrillplatz-->
+        <annotation>
+          <documentation>Feuerstelle, Grillplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1800">
+        <!--Liegewiese-->
+        <annotation>
+          <documentation>Liegewiese</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1900">
+        <!--Aussichtsturm-->
+        <annotation>
+          <documentation>Aussichtsturm</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Aussichtspunkt-->
+        <annotation>
+          <documentation>Aussichtspunkt</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2100">
+        <!--Angelteich-->
+        <annotation>
+          <documentation>Angelteich</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2200">
+        <!--Modellflugplatz-->
+        <annotation>
+          <documentation>Modellflugplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2300">
+        <!--WildgehegeSchaugatter-->
+        <annotation>
+          <documentation>Wildgehege, Schaugatter</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2400">
+        <!--JugendzeltplatzEinzelcamp-->
+        <annotation>
+          <documentation>Jugendzeltplatz, Jugendcamp</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2500">
+        <!--Gleitschirmplatz-->
+        <annotation>
+          <documentation>Gleitschirmplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2600">
+        <!--Wandern-->
+        <annotation>
+          <documentation>Wandern allgemein</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2700">
+        <!--Wanderweg-->
+        <annotation>
+          <documentation>Wanderweg</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2800">
+        <!--Lehrpfad-->
+        <annotation>
+          <documentation>Lehrpfad</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2900">
+        <!--Reitweg-->
+        <annotation>
+          <documentation>Reitweg</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--Radweg-->
+        <annotation>
+          <documentation>Radweg</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3100">
+        <!--Wintersport-->
+        <annotation>
+          <documentation>Wintersport allgemein</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3200">
+        <!--Skiabfahrt-->
+        <annotation>
+          <documentation>Skiabfahrt</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3300">
+        <!--Skilanglaufloipe-->
+        <annotation>
+          <documentation>Langlaufloipe</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3400">
+        <!--RodelbahnBobbahn-->
+        <annotation>
+          <documentation>Rodelbahn, Bobbahn</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3500">
+        <!--Wassersport-->
+        <annotation>
+          <documentation>Wassersport allgemein</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3600">
+        <!--Wasserwanderweg-->
+        <annotation>
+          <documentation>Wasserwanderweg</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3700">
+        <!--Schifffahrtsroute-->
+        <annotation>
+          <documentation>Schifffahrtsroute</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3800">
+        <!--AnlegestelleMitMotorbooten-->
+        <annotation>
+          <documentation>Schiffsanlegestelle mit Motorbooten</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3900">
+        <!--AnlegestelleOhneMotorboote-->
+        <annotation>
+          <documentation>Schiffsanlegestelle ohne Motorboote</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="4000">
+        <!--SesselliftSchlepplift-->
+        <annotation>
+          <documentation>Sessellift, Schlepplift</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="4100">
+        <!--Kabinenseilbahn-->
+        <annotation>
+          <documentation>Kabinenseilbahn</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="5000">
+        <!--Parkplatz-->
+        <annotation>
+          <documentation>Parkplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstiges</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--LP_AnpflanzungBindungErhaltung-->
+  <!--=========================================================================================-->
+  <element name="LP_AnpflanzungBindungErhaltung" type="xplan:LP_AnpflanzungBindungErhaltungType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_AnpflanzungBindungErhaltungType">
+    <annotation>
+      <documentation>Festsetzungen zum Erhalten und Anpflanzen von Bäumen, Sträuchern und sonstigen Bepflanzungen in einem Planwerk mit landschaftsplanerischen Festsetzungen. Die Festsetzungen können durch eine Spezifizierung eines Kronendurchmessers (z.B. für Baumpflanzungen), die Pflanztiefe und Mindesthöhe von Anpflanzungen (z.B. bei der Anpflanzung von Hecken) oder durch botanische Spezifizierung differenziert werden.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="massnahme" minOccurs="0" type="xplan:XP_ABEMassnahmenTypen" />
+          <element name="gegenstand" minOccurs="0" maxOccurs="unbounded" type="xplan:XP_AnpflanzungBindungErhaltungsGegenstand" />
+          <element name="kronendurchmesser" minOccurs="0" type="gml:LengthType" />
+          <element name="pflanztiefe" minOccurs="0" type="gml:LengthType" />
+          <element name="istAusgleich" minOccurs="0" default="false" type="boolean" />
+          <element name="pflanzart" minOccurs="0" maxOccurs="unbounded" type="gml:CodeType" />
+          <element name="mindesthoehe" minOccurs="0" type="gml:LengthType" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_AnpflanzungBindungErhaltung" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_AnpflanzungBindungErhaltung" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_Ausgleich-->
+  <!--=========================================================================================-->
+  <element name="LP_Ausgleich" type="xplan:LP_AusgleichType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_AusgleichType">
+    <annotation>
+      <documentation>Flächen und Maßnahmen zum Ausgleich von Eingriffen im Sinne des § 8 und 8a BNatSchG (in Verbindung mit § 1a BauGB, Ausgleichs- und Ersatzmaßnahmen).</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="ziel" minOccurs="0" type="xplan:XP_SPEZiele" />
+          <element name="massnahme" minOccurs="0" type="string" />
+          <element name="massnahmeKuerzel" minOccurs="0" type="string" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_Ausgleich" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_Ausgleich" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_NutzungserfordernisRegelung-->
+  <!--=========================================================================================-->
+  <element name="LP_NutzungserfordernisRegelung" type="xplan:LP_NutzungserfordernisRegelungType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_NutzungserfordernisRegelungType">
+    <annotation>
+      <documentation>Flächen mit Nutzungserfordernissen und Nutzungsregelungen zum Schutz, zur Pflege und zur Entwicklung von Natur und Landschaft.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="ziel" minOccurs="0" type="xplan:XP_SPEZiele" />
+          <element name="regelung" minOccurs="0" type="xplan:LP_Regelungen" />
+          <element name="erfordernisRegelung" minOccurs="0" type="string" />
+          <element name="erfordernisRegelungKuerzel" minOccurs="0" type="string" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_NutzungserfordernisRegelung" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_NutzungserfordernisRegelung" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_Regelungen-->
+  <!--=========================================================================================-->
+  <simpleType name="LP_Regelungen">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Gruenlandumbruchverbot-->
+        <annotation>
+          <documentation>Grünland-Umbruchverbot</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstige Regelung</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--LP_SchutzPflegeEntwicklung-->
+  <!--=========================================================================================-->
+  <element name="LP_SchutzPflegeEntwicklung" type="xplan:LP_SchutzPflegeEntwicklungType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_SchutzPflegeEntwicklungType">
+    <annotation>
+      <documentation>Sonstige Flächen und Maßnahmen zum Schutz, zur Pflege und zur Entwicklung von Natur und Landschaft, soweit sie nicht durch die Klasse &lt;i&gt;LP_NutzungserfordernisRegelung &lt;/i&gt;modelliert werden.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="ziel" minOccurs="0" type="xplan:XP_SPEZiele" />
+          <element name="massnahme" minOccurs="0" type="xplan:XP_SPEMassnahmenTypen" />
+          <element name="massnahmeText" minOccurs="0" type="string" />
+          <element name="massnahmeKuerzel" minOccurs="0" type="string" />
+          <element name="istAusgleich" minOccurs="0" default="false" type="boolean" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_SchutzPflegeEntwicklung" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_SchutzPflegeEntwicklung" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_Zwischennutzung-->
+  <!--=========================================================================================-->
+  <element name="LP_Zwischennutzung" type="xplan:LP_ZwischennutzungType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_ZwischennutzungType">
+    <annotation>
+      <documentation>Flächen und Maßnahmen mit zeitlich befristeten Bindungen zum Schutz, zur Pflege und zur Entwicklung von Natur und Landschaft ("Zwischennutzungsvorgaben").</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="ziel" minOccurs="0" type="xplan:XP_SPEZiele" />
+          <element name="bindung" minOccurs="0" type="string" />
+          <element name="bindungKuerzel" minOccurs="0" type="string" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_Zwischennutzung" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_Zwischennutzung" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_Biotopverbundflaeche-->
+  <!--=========================================================================================-->
+  <element name="LP_Biotopverbundflaeche" type="xplan:LP_BiotopverbundflaecheType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_BiotopverbundflaecheType">
+    <annotation>
+      <documentation>Biotop-Verbundfläche
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element ref="xplan:_GenericApplicationPropertyOfLP_Biotopverbundflaeche" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_Biotopverbundflaeche" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_Bodenschutzrecht-->
+  <!--=========================================================================================-->
+  <element name="LP_Bodenschutzrecht" type="xplan:LP_BodenschutzrechtType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_BodenschutzrechtType">
+    <annotation>
+      <documentation>Gebiete und Gebietsteile mit rechtlichen Bindungen nach anderen Fachgesetzen (soweit sie für den Schutz, die Pflege und die Entwicklung von Natur und Landschaft bedeutsam sind). Hier: Flächen mit schädlichen Bodenveränderungen nach dem Bodenschutzgesetz.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="typ" minOccurs="0" type="xplan:LP_BodenschutzrechtTypen" />
+          <element name="detailTyp" minOccurs="0" type="gml:CodeType" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_Bodenschutzrecht" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_Bodenschutzrecht" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_BodenschutzrechtTypen-->
+  <!--=========================================================================================-->
+  <simpleType name="LP_BodenschutzrechtTypen">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Altlastenflaeche-->
+        <annotation>
+          <documentation>Altlastenfläche</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstiger Typ.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--LP_Forstrecht-->
+  <!--=========================================================================================-->
+  <element name="LP_Forstrecht" type="xplan:LP_ForstrechtType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_ForstrechtType">
+    <annotation>
+      <documentation>Gebiete und Gebietsteile mit rechtlichen Bindungen nach anderen Fachgesetzen (soweit sie für den Schutz, die Pflege und die Entwicklung von Natur und Landschaft bedeutsam sind). Hier: Schutzgebiete und sonstige Flächen nach dem Bundeswaldgesetz.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="typ" minOccurs="0" type="xplan:LP_ForstrechtTypen" />
+          <element name="detailTyp" minOccurs="0" type="gml:CodeType" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_Forstrecht" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_Forstrecht" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_ForstrechtTypen-->
+  <!--=========================================================================================-->
+  <simpleType name="LP_ForstrechtTypen">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Naturwaldreservat-->
+        <annotation>
+          <documentation>Naturwaldreservat</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--SchutzwaldAllgemein-->
+        <annotation>
+          <documentation>Allgemeiner Schutzwald</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2100">
+        <!--Lawinenschutzwald-->
+        <annotation>
+          <documentation>Lawinenschutzwald</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2200">
+        <!--Bodenschutzwald-->
+        <annotation>
+          <documentation>Bodenschutzwald</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2300">
+        <!--Klimaschutzwald-->
+        <annotation>
+          <documentation>Klimaschutzwald</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2400">
+        <!--Immissionsschutzwald-->
+        <annotation>
+          <documentation>Immissionsschutzwald</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2500">
+        <!--Biotopschutzwald-->
+        <annotation>
+          <documentation>Biotopschutzwald</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--ErholungswaldAllgemein-->
+        <annotation>
+          <documentation>Allgemeiner Erholungswald</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3100">
+        <!--ErholungswaldHeilbaeder-->
+        <annotation>
+          <documentation>Erholungswald in Heilbädern</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3200">
+        <!--ErholungswaldBallungsraeume-->
+        <annotation>
+          <documentation>Erholungswald in Ballungsräumen</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstiger Typ.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--LP_InternatSchutzobjektTypen-->
+  <!--=========================================================================================-->
+  <simpleType name="LP_InternatSchutzobjektTypen">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Feuchtgebiet-->
+        <annotation>
+          <documentation>Feuchtgebiet</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--VogelschutzgebietInternat-->
+        <annotation>
+          <documentation>Internationales Vogelschutzgebiet</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstiges internationales Schutzobjekt</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--LP_SchutzobjektInternatRecht-->
+  <!--=========================================================================================-->
+  <element name="LP_SchutzobjektInternatRecht" type="xplan:LP_SchutzobjektInternatRechtType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_SchutzobjektInternatRechtType">
+    <annotation>
+      <documentation>Sonstige Schutzgebiete und Schutzobjekte nach internationalem Recht.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="typ" minOccurs="0" type="xplan:LP_InternatSchutzobjektTypen" />
+          <element name="sonstTyp" minOccurs="0" type="gml:CodeType" />
+          <element name="eigenname" minOccurs="0" type="string" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_SchutzobjektInternatRecht" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_SchutzobjektInternatRecht" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_SchutzobjektLandesrecht-->
+  <!--=========================================================================================-->
+  <element abstract="true" name="LP_SchutzobjektLandesrecht" type="xplan:LP_SchutzobjektLandesrechtType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType abstract="true" name="LP_SchutzobjektLandesrechtType">
+    <annotation>
+      <documentation>Sonstige Schutzgebiete und Schutzobjekte nach Landesrecht.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="detailTyp" minOccurs="0" type="gml:CodeType" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_SchutzobjektLandesrecht" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_SchutzobjektLandesrecht" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_SonstigesRecht-->
+  <!--=========================================================================================-->
+  <element name="LP_SonstigesRecht" type="xplan:LP_SonstigesRechtType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_SonstigesRechtType">
+    <annotation>
+      <documentation>Gebiete und Gebietsteile mit rechtlichen Bindungen nach anderen Fachgesetzen (soweit sie für den Schutz, die Pflege und die Entwicklung von Natur und Landschaft bedeutsam sind). Hier: Sonstige Flächen und Gebiete (z.B. nach Jagdrecht).
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="typ" minOccurs="0" type="xplan:LP_SonstRechtTypen" />
+          <element name="detailTyp" minOccurs="0" type="gml:CodeType" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_SonstigesRecht" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_SonstigesRecht" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_SonstRechtTypen-->
+  <!--=========================================================================================-->
+  <simpleType name="LP_SonstRechtTypen">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Jagdgesetz-->
+        <annotation>
+          <documentation>Jagdgesetz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Fischereigesetz-->
+        <annotation>
+          <documentation>Fischereigesetz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstiges Recht</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--LP_WasserrechtGemeingebrEinschraenkungNaturschutz-->
+  <!--=========================================================================================-->
+  <element name="LP_WasserrechtGemeingebrEinschraenkungNaturschutz" type="xplan:LP_WasserrechtGemeingebrEinschraenkungNaturschutzType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_WasserrechtGemeingebrEinschraenkungNaturschutzType">
+    <annotation>
+      <documentation>Gebiete und Gebietsteile mit rechtlichen Bindungen nach anderen Fachgesetzen (soweit sie für den Schutz, die Pflege und die Entwicklung von Natur und Landschaft bedeutsam sind). Hier: Flächen mit Einschränkungen des wasserrechtlichen Gemeingebrauchs aus Gründen des Naturschutzes.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="detailTyp" minOccurs="0" type="gml:CodeType" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_WasserrechtGemeingebrEinschraenkungNaturschutz" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_WasserrechtGemeingebrEinschraenkungNaturschutz" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_WasserrechtSchutzgebiet-->
+  <!--=========================================================================================-->
+  <element name="LP_WasserrechtSchutzgebiet" type="xplan:LP_WasserrechtSchutzgebietType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_WasserrechtSchutzgebietType">
+    <annotation>
+      <documentation>Wasserrechtliches Schutzgebiet</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="typ" minOccurs="0" type="xplan:LP_WasserrechtSchutzgebietTypen" />
+          <element name="detailTyp" minOccurs="0" type="gml:CodeType" />
+          <element name="eigenname" minOccurs="0" type="string" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_WasserrechtSchutzgebiet" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_WasserrechtSchutzgebiet" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_WasserrechtSchutzgebietTypen-->
+  <!--=========================================================================================-->
+  <simpleType name="LP_WasserrechtSchutzgebietTypen">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--GrundQuellwasser-->
+        <annotation>
+          <documentation>Grund- oder Quellwasser</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Oberflaechengewaesser-->
+        <annotation>
+          <documentation>Oberflächenwasser</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--Heilquellen-->
+        <annotation>
+          <documentation>Heilquelle</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstiger Typ</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--LP_WasserrechtSonstige-->
+  <!--=========================================================================================-->
+  <element name="LP_WasserrechtSonstige" type="xplan:LP_WasserrechtSonstigeType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_WasserrechtSonstigeType">
+    <annotation>
+      <documentation>Gebiete und Gebietsteile mit rechtlichen Bindungen nach anderen Fachgesetzen (soweit sie für den Schutz, die Pflege und die Entwicklung von Natur und Landschaft bedeutsam sind). Hier: Sonstige wasserrechtliche Flächen.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="typ" minOccurs="0" type="gml:CodeType" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_WasserrechtSonstige" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_WasserrechtSonstige" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_WasserrechtWirtschaftAbflussHochwSchutz-->
+  <!--=========================================================================================-->
+  <element name="LP_WasserrechtWirtschaftAbflussHochwSchutz" type="xplan:LP_WasserrechtWirtschaftAbflussHochwSchutzType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_WasserrechtWirtschaftAbflussHochwSchutzType">
+    <annotation>
+      <documentation>Gebiete und Gebietsteile mit rechtlichen Bindungen nach anderen Fachgesetzen (soweit sie für den Schutz, die Pflege und die Entwicklung von Natur und Landschaft bedeutsam sind). Hier: Flächen für die Wasserwirtschaft, den Hochwasserschutz und die Regelung des Wasserabflusses nach dem Wasserhaushaltsgesetz.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="typ" minOccurs="0" type="xplan:LP_WasserrechtWirtschaftAbflussHochwSchutzTypen" />
+          <element name="detailTyp" minOccurs="0" type="gml:CodeType" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_WasserrechtWirtschaftAbflussHochwSchutz" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_WasserrechtWirtschaftAbflussHochwSchutz" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_WasserrechtWirtschaftAbflussHochwSchutzTypen-->
+  <!--=========================================================================================-->
+  <simpleType name="LP_WasserrechtWirtschaftAbflussHochwSchutzTypen">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Hochwasserrueckhaltebecken-->
+        <annotation>
+          <documentation>Hochwasser-Rückhaltebecken</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--UeberschwemmGebiet-->
+        <annotation>
+          <documentation>Überschwemmungsgebiet</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstiger Typ.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--LP_Abgrenzung-->
+  <!--=========================================================================================-->
+  <element name="LP_Abgrenzung" type="xplan:LP_AbgrenzungType" substitutionGroup="xplan:LP_Linienobjekt" />
+  <complexType name="LP_AbgrenzungType">
+    <annotation>
+      <documentation>Abgrenzungen unterschiedlicher Ziel- und Zweckbestimmungen und Nutzungsarten, Abgrenzungen unterschiedlicher Biotoptypen.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_LinienobjektType">
+        <sequence>
+          <element ref="xplan:_GenericApplicationPropertyOfLP_Abgrenzung" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_Abgrenzung" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_GenerischesObjekt-->
+  <!--=========================================================================================-->
+  <element name="LP_GenerischesObjekt" type="xplan:LP_GenerischesObjektType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_GenerischesObjektType">
+    <annotation>
+      <documentation>Klasse zur Modellierung aller Inhalte des Landschaftsplans, die durch keine spezifische XPlanung-Klasse repräsentiert werden können.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="zweckbestimmung" minOccurs="0" type="gml:CodeType" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_GenerischesObjekt" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_GenerischesObjekt" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_Landschaftsbild-->
+  <!--=========================================================================================-->
+  <element name="LP_Landschaftsbild" type="xplan:LP_LandschaftsbildType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_LandschaftsbildType">
+    <annotation>
+      <documentation>Festlegung, Darstellung bzw. Festsetzung zum Landschaftsbild in einem  landschaftsplanerischen Planwerk.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="massnahme" minOccurs="0" type="gml:CodeType" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_Landschaftsbild" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_Landschaftsbild" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_NutzungsAusschluss-->
+  <!--=========================================================================================-->
+  <element name="LP_NutzungsAusschluss" type="xplan:LP_NutzungsAusschlussType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_NutzungsAusschlussType">
+    <annotation>
+      <documentation>Flächen und Objekte die bestimmte geplante oder absehbare Nutzungsänderungen nicht erfahren sollen.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="auszuschliessendeNutzungen" minOccurs="0" type="string" />
+          <element name="auszuschliessendeNutzungenKuerzel" minOccurs="0" type="string" />
+          <element name="begruendung" minOccurs="0" type="string" />
+          <element name="begruendungKuerzel" minOccurs="0" type="string" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_NutzungsAusschluss" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_NutzungsAusschluss" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_PlanerischeVertiefung-->
+  <!--=========================================================================================-->
+  <element name="LP_PlanerischeVertiefung" type="xplan:LP_PlanerischeVertiefungType" substitutionGroup="xplan:LP_Geometrieobjekt" />
+  <complexType name="LP_PlanerischeVertiefungType">
+    <annotation>
+      <documentation>Bereiche, die einer planerischen Vertiefung bedürfen.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_GeometrieobjektType">
+        <sequence>
+          <element name="vertiefung" minOccurs="0" type="string" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_PlanerischeVertiefung" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_PlanerischeVertiefung" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_TextlicheFestsetzungsFlaeche-->
+  <!--=========================================================================================-->
+  <element name="LP_TextlicheFestsetzungsFlaeche" type="xplan:LP_TextlicheFestsetzungsFlaecheType" substitutionGroup="xplan:LP_Flaechenobjekt" />
+  <complexType name="LP_TextlicheFestsetzungsFlaecheType">
+    <annotation>
+      <documentation>Bereich, in dem bestimmte textliche Festsetzungen gültig sind, die über die Relation "&lt;i&gt;refTextInhalt&lt;/i&gt;" (Basisklasse &lt;i&gt;LP_Objekt&lt;/i&gt;) spezifiziert werden.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_FlaechenobjektType">
+        <sequence>
+          <element ref="xplan:_GenericApplicationPropertyOfLP_TextlicheFestsetzungsFlaeche" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_TextlicheFestsetzungsFlaeche" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--LP_ZuBegruenendeGrundstueckflaeche-->
+  <!--=========================================================================================-->
+  <element name="LP_ZuBegruenendeGrundstueckflaeche" type="xplan:LP_ZuBegruenendeGrundstueckflaecheType" substitutionGroup="xplan:LP_Flaechenobjekt" />
+  <complexType name="LP_ZuBegruenendeGrundstueckflaecheType">
+    <annotation>
+      <documentation>Zu begrünende Grundstücksfläche
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:LP_FlaechenobjektType">
+        <sequence>
+          <element name="gruenflaechenFaktor" minOccurs="0" type="double" />
+          <element name="gaertnerischanzulegen" minOccurs="0" type="boolean" />
+          <element ref="xplan:_GenericApplicationPropertyOfLP_ZuBegruenendeGrundstueckflaeche" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfLP_ZuBegruenendeGrundstueckflaeche" type="anyType" abstract="true" />
+</schema>

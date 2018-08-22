@@ -38,7 +38,7 @@ from XPTools import XPTools
 from XPImport import XPImporter
 from XPlanDialog import XPlanungConf
 from XPlanDialog import ChooseObjektart
-from XPlanDialog import XPNutzungsschablone, BereichsmanagerDialog, ReferenzmanagerDialog
+from XPlanDialog import XPNutzungsschablone, BereichsmanagerDialog, ReferenzmanagerDialog, ImportDialog
 
 class XpError(object):
     '''General error'''
@@ -238,7 +238,7 @@ class XPlan():
             pass
 
     def debug(self, msg):
-        QgsMessageLog.logMessage("Debug" + "\n" + msg)
+        self.tools.log("Debug" + "\n" + msg)
 
     def loadLayerLayer(self):
         self.layerLayer = self.getLayerForTable("QGIS", "layer")
@@ -488,21 +488,45 @@ class XPlan():
         if self.db == None:
             self.initialize()
 
-        importer = XPImporter(self.db, self.tools)
-        importSchema = importer.impChooseSchema()
+        dlg = ImportDialog(self)
+        dlg.show()
+        result = dlg.exec_()
 
-        if importSchema != None:
-            impResult = importer.importPlan(importSchema)
+        if result == 1:
+            schritt1 = dlg.params["schritt1"]
+            schritt2 = dlg.params["schritt2"]
+            importer = XPImporter(self.db, self.tools, dlg.params)
+            importSchema = dlg.params["importSchema"]
 
-            if impResult != None:
-                title = "XPlanung"
-                successMsg = "Import aus Schema \"" + importSchema + "\" war erfolgreich"
-                QgsMessageLog.logMessage(successMsg + "\n" + impResult, title)
-                resultBox = QtGui.QMessageBox()
-                resultBox.setWindowTitle(title)
-                resultBox.setText(successMsg)
-                resultBox.setDetailedText(impResult)
-                resultBox.exec_()
+            if schritt1:
+                proc, loglines = importer.importGml()
+
+                if proc == 0:
+                    ogrSuccess = "Import mit ogr2ogr (GMLAS) nach Schema \"" +  \
+                            importSchema + "\" erfolgreich"
+                    self.tools.showInfo(ogrSuccess)
+                    self.tools.log(ogrSuccess)
+                else:
+                    self.tools.showError("Import mit ogr2ogr fehlgeschlagen, Details im Protokoll")
+                    self.tools.log(loglines, "error")
+                    return None
+            else:
+                proc = 0
+
+            if proc == 0 and schritt2:
+                impResult = importer.importPlan()
+
+                if impResult != None:
+                    successMsg = "Import war erfolgreich"
+                    self.tools.showInfo(successMsg + ", Details im Protokoll")
+                    self.tools.log(successMsg + "\n" + impResult)
+                else:
+                    self.tools.showError("Import fehlgeschlagen")
+
+                # db-Anmeldung ernneuern
+                self.dbHandler.dbDisconnect(self.db)
+                self.db = None
+                self.db = self.dbHandler.dbConnect()
 
     def konfiguriereNutzungsschablone(self):
         dlg = XPNutzungsschablone(self.nutzungsschablone)
@@ -1343,7 +1367,6 @@ class XPlan():
 
             if checkResult == 1:
                 if not self.tools.setEditable(self.gehoertZuLayer, True, self.iface):
-                    self.debug("no edit")
                     return False
 
                 if len(layer.selectedFeaturesIds()) == 0:

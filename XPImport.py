@@ -21,20 +21,79 @@ email                : bernhard.stroebl@jena.de
 """
 # Import the PyQt and QGIS libraries
 from PyQt4 import QtSql, QtGui
-from qgis.core import *
+import qgis.core
 from qgis.gui import *
+from processing.tools.system import isWindows
+import subprocess
+import os
 
 class XPImporter():
-    def __init__(self, db, tools):
+    def __init__(self, db, tools, params):
         self.db = db
         self.tools = tools
+        self.params = params
 
-    def importPlan(self, importSchema):
+    def importGml(self):
+        '''
+        Importiere GML-Dtei mit ogr2ogr in die DB
+        '''
+        importSchema = self.params["importSchema"]
+        neuesSchema = self.params["neuesSchema"]
+
+        if neuesSchema == "1":
+            if self.__impExecuteSql("SELECT \"QGIS\".imp_create_schema('" + importSchema + "');") == -1:
+                return [1, "Schema " + importSchema + " konnte nicht angelegt werden"]
+
+        dbSettings = self.__impReadSettings()
+        arguments = ['-f PostgreSQL',
+            'PG:"host=' + dbSettings["host"] + ' dbname=' + dbSettings["database"] + ' user=' + dbSettings["username"] + ' password=' + dbSettings["passwd"] + '"',
+                '-s_srs ' + self.params["s_srs"],
+                '-t_srs ' + self.params["t_srs"],
+                '-lco SCHEMA=' + importSchema,
+                '-lco LAUNDER=NO',
+                #'-nlt PROMOTE_TO_MULTI', funktionierte beim Test auf Win nicht
+                '-nlt CONVERT_TO_LINEAR',
+                '-oo XSD=' + self.params["xsd"],
+                '-oo REMOVE_UNUSED_LAYERS=YES',
+                'GMLAS:' + self.params["datei"]]
+        loglines = []
+        loglines.append('XPlan-Importer')
+
+        if isWindows():
+            commands = ['cmd.exe', '/C ', 'ogr2ogr.exe'] + arguments
+        else:
+            commands = ['ogr2ogr'] + arguments
+
+        fused_command = ' '.join([unicode(c) for c in commands])
+
+        try:
+            proc = subprocess.check_output(
+                fused_command,
+                shell=True,
+                stdin=open(os.devnull),
+                stderr=subprocess.STDOUT
+            )
+            for line in proc:
+                loglines.append(line)
+            loglines = ' '.join([unicode(c) for c in loglines])
+            success = 0
+        except subprocess.CalledProcessError, e:
+            success = e.returncode
+            loglines = e.output
+        return [success, loglines]
+
+    def importPlan(self):
+        if not self.db.transaction():
+            self.tools.showError("Konnte keine Transaktion auf der DB starten")
+            return None
+        importSchema = self.params["importSchema"]
         planResult = self.__impPlan(importSchema)
         numPlaene = planResult[0]
         impPlanRelname = planResult[1]
 
         if numPlaene <= 0:
+            if not self.db.rollback():
+                self.tools.showWarning(u"Konnte Transaktion micht zurückrollen")
             return None
 
         bereichResult = self.__impBereich(importSchema, impPlanRelname)
@@ -42,15 +101,49 @@ class XPImporter():
         impBereichRelname = bereichResult[1]
 
         if numBereiche <= 0:
+            if not self.db.rollback():
+                self.tools.showWarning(u"Konnte Transaktion micht zurückrollen")
             return None
 
         if self.__impObjekte(importSchema, impPlanRelname, impBereichRelname):
-            return self.importMsg
+            if not self.db.commit():
+                self.tools.showWarning(u"Konnte Transaktion micht committen")
+                return None
+            else:
+                return self.importMsg
         else:
+            if not self.db.rollback():
+                self.tools.showWarning(u"Konnte Transaktion micht zurückrollen")
             return None
 
     def debug(self, msg):
-        QgsMessageLog.logMessage("Debug" + "\n" + msg)
+        qgis.core.QgsMessageLog.logMessage("Debug" + "\n" + msg,  "XPlanung")
+
+    def __impReadSettings(self):
+        s = QtCore.QSettings( "XPlanung", "XPlanung-Erweiterung" )
+        #service = ( s.value( "service", "" ) )
+        host = ( s.value( "host", "" ) )
+        port = ( s.value( "port", "5432" ) )
+        database = ( s.value( "dbname", "" ) )
+        username = ( s.value( "uid", "" ) )
+        passwd = ( s.value( "pwd", "" ) )
+        authcfg = s.value( "authcfg", "" )
+
+        if authcfg != "" and hasattr(qgis.core,'QgsAuthManager'):
+            amc = qgis.core.QgsAuthMethodConfig()
+            qgis.core.QgsAuthManager.instance().loadAuthenticationConfig( authcfg, amc, True)
+            username = amc.config( "username", username )
+            passwd = amc.config( "password", passwd )
+        else:
+            authcfg = None
+
+        retValue = {}
+        retValue["host"] = host
+        retValue["port"] = port
+        retValue["database"] = database
+        retValue["username"] = username
+        retValue["passwd"] = passwd
+        return retValue
 
     def __impGetAllAttributesSql(self):
         '''
@@ -337,10 +430,45 @@ class XPImporter():
         return retValue
 
     def __impSkipTheseFields(self):
-        return ["gehoertZuPlan", "gehoertZuBereich", "id"] + self.__impSkipCodeLists()
+        '''
+        Diese Felder bleiben in _impPerformUpdateXP unberücksichtigt
+        '''
+        return ["gehoertZuPlan", "gehoertZuBereich", "id"] + self.__impSkipCodeListFields()
 
-    def __impSkipCodeLists(self):
+    def __impSkipCodeListFields(self):
         return ["gesetzlicheGrundlage"]
+
+    def __impUseCodeListFields(self):
+        return ["stylesheetId"]
+
+    def __impAppendCodeList(self, codeListField, impField, importSchema, impRelname):
+        '''
+        Eine CodeList mit neuen Werten ergänzen
+        Eien CodeList ist eine Relation mit den Feldern Code und Bezeichner
+        '''
+        codeList = self.__impGetCodeList(codeListField)
+
+        if codeList != "":
+            codeListSql = "INSERT INTO " + codeList + " \
+            (\"Bezeichner\") \
+            SELECT DISTINCT \"" + impField + "\" \
+            FROM \"" + importSchema + "\".\"" + impRelname + "\" imp \
+            LEFT JOIN " + codeList + " cl ON \
+            imp.\"" + impField + "\" = cl.\"Bezeichner\" \
+            WHERE cl.\"Bezeichner\" IS NULL \
+            AND imp.\"" + impField + "\" IS NOT NULL;"
+            return self.__impExecuteSql(codeListSql)
+        else:
+            return -1
+
+    def __impGetCodeList(self, codeListField):
+        '''
+        Gibt die CodeList-Relation für ein übergebenes CodeListFeld zurück
+        '''
+        if codeListField == "stylesheetId":
+            return "\"XP_Praesentationsobjekte\".\"XP_StylesheetListe\""
+        else:
+            return ""
 
     def __impUpdateGmlId(self, importSchema, impRelname,
         xpNspname, xpRelname, pkField = "gid"):
@@ -354,7 +482,7 @@ class XPImporter():
         xpOid, xpNspname, xpRelname, arrayFields, pkField = "gid"):
         '''
         Füge ein neues Objekt in eine XP-Tabelle ein
-        return: Anzahl eingefügter Datensätze oder None (= Fehler)
+        return: Anzahl eingefügter Datensätze oder -1 (= Fehler)
         '''
 
         numInserted = self.__impPerformInsertInXP(impOid, importSchema, impRelname,
@@ -399,7 +527,9 @@ class XPImporter():
                 insertSql += ", \"" + xpField + "\""
 
                 if xpField in ["raeumlicherGeltungsbereich","geltungsbereich","position"]:
-                    valueSql += ", ST_Multi(\"" + impField + "\")::" + xpType
+                    valueSql += ", CASE WHEN geometrytype(\"" + impField + "\") LIKE 'MULTI%' \
+                        THEN \"" + impField + "\"::" + xpType + " ELSE \
+                        ST_Multi(\"" + impField + "\")::" + xpType + " END"
                 else:
                     if xpField == "uuid":
                         valueSql += ", COALESCE(id,\"" + impField + "\")::" + xpType
@@ -472,10 +602,14 @@ class XPImporter():
 
                 if xpField in self.__impSkipTheseFields():
                     continue
+                elif xpField in self.__impUseCodeListFields():
+                    if self.__impAppendCodeList(xpField, impField, importSchema, impRelname) == -1:
+                        return -1
 
                 if updateSql == "":
                     updateSql = "UPDATE \"" + xpNspname + "\".\"" + xpRelname + "\" ziel SET ("
                     valuesSql = "(SELECT "
+                    joinSql = ""
                 else:
                     updateSql += ","
                     valuesSql += ","
@@ -484,6 +618,11 @@ class XPImporter():
 
                 if xpField == "uuid":
                     valuesSql += " COALESCE(\"" + impField + "\",id)::" + xpType
+                elif xpField in self.__impUseCodeListFields():
+                    valuesSql += " " + xpField + ".\"Code\""
+                                    # xpField dient hier als alias für die angejointe CodeList--Tabelle
+                    joinSql += " JOIN " + self.__impGetCodeList(xpField) + " as " + xpField + \
+                        " ON quelle.\"" + impField + "\" = " + xpField + ".\"Bezeichner\"" # alias setzen
                 else:
                     valuesSql += "\"" + impField + "\"::" + xpType
             xpAttrQuery.finish()
@@ -493,21 +632,12 @@ class XPImporter():
 
         updateSql += ") = "
         valuesSql += " FROM \"" + importSchema + "\".\"" + impRelname + \
-                    "\" quelle WHERE quelle.xp_gid = ziel." + pkField +\
+                    "\" quelle " + joinSql + \
+                    " WHERE quelle.xp_gid = ziel." + pkField +\
                     ") WHERE " + pkField + " IN (SELECT xp_gid FROM \"" + \
                     importSchema + "\".\"" + impRelname + "\");"
         updateSql += valuesSql
-        updateQuery = QtSql.QSqlQuery(self.db)
-        updateQuery.prepare(updateSql)
-        updateQuery.exec_()
-
-        if updateQuery.isActive():
-            numUpdate = updateQuery.numRowsAffected()
-            updateQuery.finish()
-            return numUpdate
-        else:
-            self.showQueryError(updateQuery)
-            return -1
+        return self.__impExecuteSql(updateSql)
 
     def __impGetAllFields(self, nspName, relName):
         retValue = []
@@ -606,6 +736,10 @@ class XPImporter():
             return None
 
     def __impPlan(self, importSchema):
+        '''
+        Importiere das Planobjekt
+        '''
+
         planInfo = self.__impFindPlan(importSchema)
 
         if planInfo == None:
@@ -678,6 +812,10 @@ class XPImporter():
             return -1
 
     def __impBereich(self, importSchema, impPlanRelname):
+        '''
+        Importiere den Bereich/die Bereiche
+        '''
+
         tableSql = self.__impGetTableSql()
         bereichSql = tableSql + " WHERE c2.relname ILIKE '%_bereich' and c2.relkind = 'r'"
         bereichQuery = QtSql.QSqlQuery(self.db)
@@ -752,6 +890,9 @@ class XPImporter():
         return [numUpdated, impRelname]
 
     def __impObjekte(self, importSchema, impPlanRelname, impBereichRelname):
+        '''
+        Objekte importieren
+        '''
         tableSql = self.__impGetTableSql()
         objektSql = tableSql + " WHERE (c2.relname not ILIKE '%_bereich' \
         AND c2.relname not ILIKE '%_plan') OR c2.relname IS NULL \
@@ -780,7 +921,7 @@ class XPImporter():
 
                     if parents == None:
                         return False
-                    elif parents == []:
+                    elif parents == []: # keine Kindklassen, sondern eigenständige
                         spezialfaelle.append([impOid, impRelname])
                         continue
                     else:
@@ -955,7 +1096,6 @@ class XPImporter():
                 JOIN \"" + importSchema + "\".\"" + impRelname + "\" i \
                     ON b.gml_id = i.parent_id WHERE i.href = '#' || z.gml_id) \
             WHERE '#' || z.gml_id IN (SELECT href FROM \"" + importSchema + "\".\"" + impRelname + "\");"
-            self.debug(updateSql)
             return self.__impExecuteSql(updateSql)
         elif impRelname.lower() == impPlanRelname.lower() + "_bereich": # zB bp_plan_bereich
             #Bereich dem Plan zuweisen

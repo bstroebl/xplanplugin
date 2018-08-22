@@ -625,17 +625,29 @@ class XPTools():
     def showInfo(self, msg, title = "XPlanung"):
         self.iface.messageBar().pushMessage(
             title, msg, duration = 10)
+        #self.log(msg, "info")
 
     def showWarning(self, msg, title = "XPlanung"):
         self.iface.messageBar().pushMessage(title, msg,
             level=QgsMessageBar.WARNING, duration = 10)
+        #self.log(msg, "warn")
 
     def showError(self, msg, title = "XPlanung"):
         self.iface.messageBar().pushMessage(title,
             msg, level=QgsMessageBar.CRITICAL, duration = 10)
+        self.log(msg, "error")
 
     def noStyleWarning(self, layer):
         self.showWarning(u"Für den Layer " + layer.name() + u" sind keine Stile gespeichert")
 
     def debug(self,  msg):
-        QgsMessageLog.logMessage("Debug" + "\n" + msg)
+        self.log("Debug" + "\n" + msg)
+
+    def log(self, msg, type = 'info'):
+        if type == 'info':
+            msgType = QgsMessageLog.INFO
+        if type == 'warn':
+            msgType = QgsMessageLog.WARNING
+        if type == 'error':
+            msgType = QgsMessageLog.CRITICAL
+        QgsMessageLog.logMessage(msg, "XPlanung", msgType)

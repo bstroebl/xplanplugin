@@ -25,6 +25,7 @@ from qgis.core import *
 from qgis.gui import *
 import qgis.gui
 import os
+import glob
 #from Ui_Bereichsauswahl import Ui_Bereichsauswahl
 #from Ui_Stilauswahl import Ui_Stilauswahl
 #from Ui_conf import Ui_conf
@@ -51,6 +52,9 @@ BEREICHSMANAGER_CLASS, _ = uic.loadUiType(os.path.join(
 
 REFERENZMANAGER_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'Ui_Referenzmanager.ui'))
+
+IMPORT_CLASS, _ = uic.loadUiType(os.path.join(
+    os.path.dirname(__file__), 'Ui_Import.ui'))
 
 class XP_Chooser(QtGui.QDialog, CHOOSER_CLASS):
     '''Ein Dialog mit einem TreeWidget um ein Element auszuwählen, abstrakt'''
@@ -307,25 +311,24 @@ class BereichsauswahlDialog(QtGui.QDialog, BEREICH_CLASS):
         # fülle QGroupBox Bereichsauswahl (planArt)
         planArt = self.planArt
         lyPlanArt = planArt.layout() # Layout der QGroupBox planArt
-        firstItem = lyPlanArt.itemAt(0)
+        planArten = []
 
-        loadPlanArt = True #(not bool(firstItem))
+        for i in range(lyPlanArt.count()):
+            planArten.append(lyPlanArt.itemAt(i).widget().text())
 
-        if not loadPlanArt:
-            loadPlanArt = ('planart1' == firstItem.objectName())
-            lyPlanArt.removeItem(firstItem)
+        query = QtSql.QSqlQuery(self.db)
+        query.prepare("SELECT DISTINCT \"planart\"  \
+                    FROM \"QGIS\".\"XP_Bereiche\" \
+                    ORDER BY \"planart\";")
+        query.exec_()
 
-        if loadPlanArt:
-            query = QtSql.QSqlQuery(self.db)
-            query.prepare("SELECT DISTINCT \"planart\"  \
-                        FROM \"QGIS\".\"XP_Bereiche\" \
-                        ORDER BY \"planart\";")
-            query.exec_()
+        if query.isActive():
+            firstRecord = True
 
-            if query.isActive():
-                firstRecord = True
-                while query.next():
-                    aPlanArt = query.value(0)
+            while query.next():
+                aPlanArt = query.value(0)
+
+                if aPlanArt not in planArten:
                     radPlanArt = QtGui.QRadioButton(aPlanArt,  planArt)
                     radPlanArt.setObjectName(aPlanArt)
 
@@ -336,11 +339,11 @@ class BereichsauswahlDialog(QtGui.QDialog, BEREICH_CLASS):
                     radPlanArt.toggled.connect(self.on_anyRadioButton_toggled)
                     lyPlanArt.addWidget(radPlanArt)
 
-                query.finish()
+            query.finish()
 
-            else:
-                self.showQueryError(query)
-                query.finish()
+        else:
+            self.showQueryError(query)
+            query.finish()
 
         self.fillBereichTree()
 
@@ -434,6 +437,10 @@ class BereichsauswahlDialog(QtGui.QDialog, BEREICH_CLASS):
                 break
 
         self.okBtn.setEnabled(enable)
+
+    @QtCore.pyqtSlot(   )
+    def on_btnRefresh_clicked(self):
+        self.initializeValues()
 
     def on_anyRadioButton_toggled(self,  isChecked):
         self.fillBereichTree()
@@ -857,6 +864,240 @@ class ReferenzmanagerDialog(QtGui.QDialog, REFERENZMANAGER_CLASS):
 
         self.referenzen.contextMenu.resize(self.referenzen.contextMenu.sizeHint())
         self.referenzen.contextMenu.popup(self.referenzen.mapToGlobal(QtCore.QPoint(atPoint)))
+
+    @QtCore.pyqtSlot()
+    def reject(self):
+        self.done(0)
+
+class ImportDialog(QtGui.QDialog, IMPORT_CLASS):
+    def __init__(self, xplanplugin):
+        QtGui.QDialog.__init__(self)
+        # Set up the user interface from Designer.
+        self.setupUi(self)
+        self.xplanplugin = xplanplugin
+        self.neuString = "neues Schema"
+        self.cbxSchema.setToolTip("\"" + self.neuString + "\" legt " + \
+            u"ein neues Schema an (ein eventuell vorhandenes gleichnamiges " + \
+            u"Schema wird dann gelöscht) und importiert die GML-Datei in dieses Schema. " + \
+            u"Wird ein vorhandenes Schema ausgewählt, so wird angenommen, " + \
+            u"dass die GML-Datei bereits dorthin importiert wurde, die Übernahme in " + \
+            u"die Zieltabellen in der Datenbank aber nicht funktioniert hat.")
+        self.versions = {}
+        self.initialize()
+        self.txlDatei.textChanged.connect(self.enableOk)
+        self.txlS_SRS.textChanged.connect(self.enableOk)
+        self.enableOk()
+        #self.cbxVersion.currentIndexChanged.connect(self.enableOk)
+        #self.cbxSchema.currentIndexChanged.connect(self.enableOk)
+
+    def __getSchemas(self):
+        '''
+        SQL, das alle nicht-Xplanungs-Schemas in der DB liefert
+        '''
+        schemaSql = "SELECT nspname from pg_namespace \
+            WHERE nspowner != 10 \
+            AND nspname not like 'BP_%' \
+            AND nspname not like 'FP_%' \
+            AND nspname not like 'LP_%' \
+            AND nspname not like 'RP_%'\
+            AND nspname not like 'SO_%' \
+            AND nspname not like 'XP_%' \
+            AND nspname != 'QGIS' \
+            AND nspname != 'public' \
+            ORDER BY 1;"
+        schemaQuery = QtSql.QSqlQuery(self.xplanplugin.db)
+        schemaQuery.prepare(schemaSql)
+        schemaQuery.exec_()
+        schemas = []
+
+        if schemaQuery.isActive():
+            while schemaQuery.next():
+                schemas.append(schemaQuery.value(0))
+            schemaQuery.finish()
+            return schemas
+        else:
+            self.xplanplugin.tools.showQueryError(schemaQuery)
+            self.reject()
+
+    def initialize(self):
+        s = QtCore.QSettings( "XPlanung", "XPlanung-Erweiterung" )
+        s.beginGroup("import")
+        datei = ( s.value( "datei", "" ) )
+        s_srs = ( s.value( "s_srs", "" ) )
+        t_srs = ( s.value( "t_srs", "" ) )
+        xsd = ( s.value( "xsd", "" ) )
+        importSchema = ( s.value( "importSchema", "" ) )
+        neuesSchema =  ( s.value( "neuesSchema", "" ) )
+        schritt1 =  ( bool(int(s.value( "schritt1", "1" ) )))
+        schritt2 =  ( bool(int(s.value( "schritt2", "1" ) )))
+        s.endGroup()
+
+        self.txlDatei.setText(datei)
+        self.txlS_SRS.setText(s_srs)
+        self.txlT_SRS.setText(t_srs)
+        self.chkSchritt1.setChecked(schritt1)
+        self.frmSchritt1.setEnabled(schritt1)
+        self.chkSchritt2.setChecked(schritt2)
+
+        xsdPath = os.path.abspath(os.path.dirname(__file__) + '/schema')
+        versions = glob.glob(xsdPath + "/*")
+        showIndex = 0
+
+        for i in range(len(versions)):
+            v = versions[i]
+            versionNumber = v[(len(v) - 3):]
+            self.versions[versionNumber] = v
+            self.cbxVersion.addItem(versionNumber)
+
+            if xsd.find(v) != -1:
+                showIndex = i
+
+        self.cbxVersion.setCurrentIndex(showIndex)
+
+        schemas = self.__getSchemas()
+        schemas = [self.neuString] + schemas
+        self.cbxSchema.addItems(schemas)
+        foundIndex = self.cbxSchema.findText(importSchema)
+
+        if foundIndex == -1:
+            foundIndex = 0
+
+        self.cbxSchema.setCurrentIndex(foundIndex)
+
+        if self.cbxSchema.currentText == self.neuString:
+            self.txlSchema.setText(neuesSchema)
+
+    def chooseEPSG(self):
+        sel = QgsGenericProjectionSelector()
+        result = sel.exec_()
+
+        if result == 0:
+            return None
+        else:
+            return sel.selectedAuthId()
+
+    def enableTxlSchema(self):
+        if self.cbxSchema.currentText() == self.neuString:
+            self.txlSchema.setEnabled(True)
+            self.txlSchema.setFocus()
+            self.txlSchema.setCursorPosition(0)
+        else:
+            self.txlSchema.setEnabled(False)
+
+    def enableOk(self):
+        okBtn = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)
+        schritt1 = self.chkSchritt1.isChecked()
+        schritt2 = self.chkSchritt2.isChecked()
+        neuesSchema = (self.cbxSchema.currentText() == self.neuString)
+
+        schemaOk = ((neuesSchema and self.txlSchema.text().strip() not in ["", "public"]) or\
+            not neuesSchema)
+
+        doEnable = False #ini
+
+        if schritt1:
+            doEnable = (schemaOk and self.txlDatei.text().strip() != "" and \
+                self.txlS_SRS.text().strip() != "")
+        else:
+            if schritt2:
+                doEnable = (not neuesSchema)
+
+        okBtn.setEnabled(doEnable)
+
+    @QtCore.pyqtSlot(int)
+    def on_cbxSchema_currentIndexChanged(self, index):
+        if self.cbxSchema.currentText == self.neuString:
+            self.txlSchema.setText("")
+
+        self.enableTxlSchema()
+        self.enableOk()
+
+    @QtCore.pyqtSlot(int)
+    def on_chkSchritt1_stateChanged(self, newState):
+        schritt1 = self.chkSchritt1.isChecked()
+        self.frmSchritt1.setEnabled(schritt1)
+        self.enableOk()
+
+    @QtCore.pyqtSlot(int)
+    def on_chkSchritt2_stateChanged(self, newState):
+        self.enableOk()
+
+    @QtCore.pyqtSlot()
+    def on_btnDatei_clicked(self):
+        wasFileName = self.txlDatei.text()
+
+        if  wasFileName != "":
+            usePath = os.path.abspath(os.path.dirname(wasFileName))
+        else:
+            usePath = os.path.abspath(os.path.dirname("$HOME"))
+
+        fileName = QtGui.QFileDialog.getOpenFileName(caption = u"XPlanGML-Datei wählen",
+            directory = usePath, filter = "GML-Dateien (*.gml)")
+
+        if fileName != "":
+            self.txlDatei.setText(fileName)
+
+    @QtCore.pyqtSlot()
+    def on_btnS_SRS_clicked(self):
+        epsg = self.chooseEPSG()
+
+        if epsg != None:
+            self.txlS_SRS.setText(epsg)
+
+    @QtCore.pyqtSlot()
+    def on_btnT_SRS_clicked(self):
+        epsg = self.chooseEPSG()
+
+        if epsg != None:
+            self.txlT_SRS.setText(epsg)
+
+    @QtCore.pyqtSlot(str)
+    def on_txlSchema_textChanged(self, newText):
+        self.enableOk()
+
+    @QtCore.pyqtSlot()
+    def accept(self):
+        datei = self.txlDatei.text()
+        s_srs = self.txlS_SRS.text()
+        version = self.versions[self.cbxVersion.currentText()] + "/XPlanGML.xsd"
+        t_srs = self.txlT_SRS.text()
+
+        if t_srs == "":
+            t_srs = s_srs
+
+        schema = self.cbxSchema.currentText()
+
+        if schema == self.neuString:
+            neuesSchema = "1"
+            schema = self.txlSchema.text()
+        else:
+            neuesSchema = "0"
+
+        schritt1 = int(self.chkSchritt1.isChecked())
+        schritt2 = int(self.chkSchritt2.isChecked())
+
+        s = QtCore.QSettings( "XPlanung", "XPlanung-Erweiterung" )
+        s.beginGroup("import")
+        s.setValue( "datei", datei )
+        s.setValue( "s_srs", s_srs )
+        s.setValue( "t_srs", t_srs )
+        s.setValue( "xsd", version )
+        s.setValue( "importSchema", schema )
+        s.setValue( "neuesSchema", neuesSchema )
+        s.setValue( "schritt1", str(schritt1) )
+        s.setValue( "schritt2", str(schritt2) )
+        s.endGroup()
+
+        self.params = {}
+        self.params["datei"] = datei
+        self.params["s_srs"] = s_srs
+        self.params["t_srs"] = t_srs
+        self.params["xsd"] = version
+        self.params["importSchema"] = schema
+        self.params["neuesSchema"] = neuesSchema
+        self.params["schritt1"] = schritt1
+        self.params["schritt2"] = schritt2
+        self.done(1)
 
     @QtCore.pyqtSlot()
     def reject(self):

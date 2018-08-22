@@ -18,15 +18,17 @@
 
 PLUGINNAME = xplanung
 
-PY_FILES = XPlan.py XPlanDialog.py __init__.py HandleDb.py XPTools.py
+PY_FILES = XPlan.py XPlanDialog.py __init__.py HandleDb.py XPTools.py XPImport.py
 
 EXTRAS = tools/icons/logo_xplanung.png
+
+SCHEMAS = schema
 
 LICENSE = license.txt
 
 METADATA = metadata.txt
 
-UI_FILES = Ui_Bereichsauswahl.ui Ui_conf.ui Ui_ObjektartLaden.ui Ui_Stilauswahl.ui Ui_Nutzungsschablone.ui Ui_Bereichsmanager.ui Ui_Referenzmanager.ui
+UI_FILES = Ui_Bereichsauswahl.ui Ui_conf.ui Ui_ObjektartLaden.ui Ui_Stilauswahl.ui Ui_Nutzungsschablone.ui Ui_Bereichsmanager.ui Ui_Referenzmanager.ui Ui_Import.ui
 
 #RESOURCE_FILES = tools/resources_rc.py
 
@@ -46,6 +48,7 @@ default: deploy
 # $HOME/.qgis/python/plugins
 deploy:
 	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
+	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/schema
 	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/tools
 	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/tools/icons
 	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/svg/XPlanung_qgis
@@ -56,6 +59,7 @@ deploy:
 	#cp -vf $(RESOURCE_FILES) $(HOME)/.qgis/python/plugins/$(PLUGINNAME)/tools
 	cp -vf $(EXTRAS) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/tools/icons
 	cp -vf svg/XPlanung_qgis/*.svg $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/svg/XPlanung_qgis
+	cp -vfr $(SCHEMAS) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
 
 # The derase deletes deployed plugin
 derase:

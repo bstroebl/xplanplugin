@@ -1,0 +1,3225 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<!--Erzeugt mit KIT (www.kit.edu) UmlToXmlTransformation-Software, Erstellungsdatum: 19.01.2018 10:23:56-->
+<schema xmlns="http://www.w3.org/2001/XMLSchema" xmlns:xplan="http://www.xplanung.de/xplangml/5/0" targetNamespace="http://www.xplanung.de/xplangml/5/0" xmlns:kit="http://www.kit.edu" xmlns:gml="http://www.opengis.net/gml/3.2" elementFormDefault="qualified" version="5.0">
+  <import namespace="http://www.opengis.net/gml/3.2" schemaLocation="gmlProfile/gmlProfilexplan.xsd" />
+  <!--=========================================================================================-->
+  <!--XP_ArtHoehenbezug-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_ArtHoehenbezug">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--absolutNHN-->
+        <annotation>
+          <documentation>Absolute Höhenangabe</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--relativGelaendeoberkante-->
+        <annotation>
+          <documentation>Höhenangabe relativ zur Geländeoberkante an der Position des Planinhalts.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2500">
+        <!--relativGehwegOberkante-->
+        <annotation>
+          <documentation>Höhenangabe relativ zur Gehweg-Oberkante an der Position des Planinhalts.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--relativBezugshoehe-->
+        <annotation>
+          <documentation>Höhenangabe relativ zu der auf Planebene festgelegten absoluten Bezugshöhe (Attribut &lt;i&gt;bezugshoehe &lt;/i&gt;von &lt;i&gt;XP_Plan&lt;/i&gt;).
+</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_ArtHoehenbezugspunkt-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_ArtHoehenbezugspunkt">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--TH-->
+        <annotation>
+          <documentation>Traufhöhe als Höhenbezugspunkt</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--FH-->
+        <annotation>
+          <documentation>Firsthöhe als Höhenbezugspunkt.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--OK-->
+        <annotation>
+          <documentation>Oberkante als Höhenbezugspunkt.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3500">
+        <!--LH-->
+        <annotation>
+          <documentation>Lichte Höhe</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="4000">
+        <!--SH-->
+        <annotation>
+          <documentation>Sockelhöhe</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="4500">
+        <!--EFH-->
+        <annotation>
+          <documentation>Erdgeschoss Fußbodenhöhe</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="5000">
+        <!--HBA-->
+        <annotation>
+          <documentation>Höhe Baulicher Anlagen</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="5500">
+        <!--UK-->
+        <annotation>
+          <documentation>Unterkante</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="6000">
+        <!--GBH-->
+        <annotation>
+          <documentation>Gebäudehöhe</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_BedeutungenBereich-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_BedeutungenBereich">
+    <annotation>
+      <documentation>Aufzählung möglicher Bedeutungen eines Planbereichs.</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="1600">
+        <!--Teilbereich-->
+        <annotation>
+          <documentation>Räumliche oder sachliche Aufteilung der Planinhalte.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1800">
+        <!--Kompensationsbereich-->
+        <annotation>
+          <documentation>Aggregation von Objekten außerhalb des Geltungsbereiches gemäß Eingriffsregelung.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Bereich, für den keine der aufgeführten Bedeutungen zutreffend ist. In dem Fall kann die Bedeutung über das Textattribut "&lt;i&gt;detaillierteBedeutung"&lt;/i&gt; angegeben werden.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_BegruendungAbschnitt-->
+  <!--=========================================================================================-->
+  <element name="XP_BegruendungAbschnitt" type="xplan:XP_BegruendungAbschnittType" substitutionGroup="gml:AbstractFeature" />
+  <complexType name="XP_BegruendungAbschnittType">
+    <annotation>
+      <documentation>Ein Abschnitt der Begründung des Plans.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="gml:AbstractFeatureType">
+        <sequence>
+          <element name="schluessel" minOccurs="0" type="string" />
+          <element name="text" minOccurs="0" type="string" />
+          <element name="refText" minOccurs="0" type="xplan:XP_ExterneReferenzPropertyType" />
+          <element ref="xplan:_GenericApplicationPropertyOfXP_BegruendungAbschnitt" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_BegruendungAbschnitt" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--XP_Bereich-->
+  <!--=========================================================================================-->
+  <element abstract="true" name="XP_Bereich" type="xplan:XP_BereichType" substitutionGroup="gml:AbstractFeature" />
+  <complexType abstract="true" name="XP_BereichType">
+    <annotation>
+      <documentation>Abstrakte Oberklasse für die Modellierung von Bereichen. Ein Bereich fasst die Inhalte eines Plans nach bestimmten Kriterien zusammen.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="gml:AbstractFeatureType">
+        <sequence>
+          <element name="nummer" default="0" type="int" />
+          <element name="name" minOccurs="0" type="string" />
+          <element name="bedeutung" minOccurs="0" type="xplan:XP_BedeutungenBereich" />
+          <element name="detaillierteBedeutung" minOccurs="0" type="string" />
+          <element name="erstellungsMassstab" minOccurs="0" type="int" />
+          <element name="geltungsbereich" minOccurs="0" type="gml:GeometryPropertyType" />
+          <element name="rasterBasis" minOccurs="0" type="gml:ReferenceType">
+            <annotation>
+              <appinfo>
+                <gml:targetElement>xplan:XP_Rasterdarstellung</gml:targetElement>
+              </appinfo>
+            </annotation>
+          </element>
+          <element name="planinhalt" minOccurs="0" maxOccurs="unbounded" type="gml:ReferenceType">
+            <annotation>
+              <appinfo>
+                <gml:targetElement>xplan:XP_Objekt</gml:targetElement>
+                <gml:reversePropertyName>xplan:gehoertZuBereich</gml:reversePropertyName>
+              </appinfo>
+            </annotation>
+          </element>
+          <element name="praesentationsobjekt" minOccurs="0" maxOccurs="unbounded" type="gml:ReferenceType">
+            <annotation>
+              <appinfo>
+                <gml:targetElement>xplan:XP_AbstraktesPraesentationsobjekt</gml:targetElement>
+                <gml:reversePropertyName>xplan:gehoertZuBereich</gml:reversePropertyName>
+              </appinfo>
+            </annotation>
+          </element>
+          <element ref="xplan:_GenericApplicationPropertyOfXP_Bereich" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_Bereich" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--XP_DatumAttribut-->
+  <!--=========================================================================================-->
+  <element name="XP_DatumAttribut" type="xplan:XP_DatumAttributType" substitutionGroup="xplan:XP_GenerAttribut" />
+  <complexType name="XP_DatumAttributType">
+    <annotation>
+      <documentation>Generische Attribute vom Datentyp "Datum"
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_GenerAttributType">
+        <sequence>
+          <element name="wert" type="date" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <complexType name="XP_DatumAttributPropertyType">
+    <sequence>
+      <element ref="xplan:XP_DatumAttribut" minOccurs="0" />
+    </sequence>
+  </complexType>
+  <!--=========================================================================================-->
+  <!--XP_DoubleAttribut-->
+  <!--=========================================================================================-->
+  <element name="XP_DoubleAttribut" type="xplan:XP_DoubleAttributType" substitutionGroup="xplan:XP_GenerAttribut" />
+  <complexType name="XP_DoubleAttributType">
+    <annotation>
+      <documentation>Generisches Attribut vom Datentyp "Double".
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_GenerAttributType">
+        <sequence>
+          <element name="wert" type="double" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <complexType name="XP_DoubleAttributPropertyType">
+    <sequence>
+      <element ref="xplan:XP_DoubleAttribut" minOccurs="0" />
+    </sequence>
+  </complexType>
+  <!--=========================================================================================-->
+  <!--XP_ExterneReferenz-->
+  <!--=========================================================================================-->
+  <element name="XP_ExterneReferenz" type="xplan:XP_ExterneReferenzType" />
+  <complexType name="XP_ExterneReferenzType">
+    <annotation>
+      <documentation>Verweis auf ein extern gespeichertes Dokument, einen extern gespeicherten, georeferenzierten Plan oder einen Datenbank-Eintrag. Einer der beiden Attribute "&lt;i&gt;referenzName&lt;/i&gt;" bzw. "&lt;i&gt;referenzURL&lt;/i&gt;" muss belegt sein.</documentation>
+    </annotation>
+    <sequence>
+      <element name="georefURL" minOccurs="0" type="anyURI" />
+      <element name="georefMimeType" minOccurs="0" type="gml:CodeType" />
+      <element name="art" minOccurs="0" type="xplan:XP_ExterneReferenzArt" />
+      <element name="informationssystemURL" minOccurs="0" type="anyURI" />
+      <element name="referenzName" minOccurs="0" type="string" />
+      <element name="referenzURL" minOccurs="0" type="anyURI" />
+      <element name="referenzMimeType" minOccurs="0" type="gml:CodeType" />
+      <element name="beschreibung" minOccurs="0" type="string" />
+      <element name="datum" minOccurs="0" type="date" />
+      <element ref="xplan:_GenericApplicationPropertyOfXP_ExterneReferenz" minOccurs="0" maxOccurs="unbounded" />
+    </sequence>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_ExterneReferenz" type="anyType" abstract="true" />
+  <complexType name="XP_ExterneReferenzPropertyType">
+    <sequence>
+      <element ref="xplan:XP_ExterneReferenz" minOccurs="0" />
+    </sequence>
+  </complexType>
+  <!--=========================================================================================-->
+  <!--XP_ExterneReferenzArt-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_ExterneReferenzArt">
+    <annotation>
+      <documentation>Typisierung von referierten Dokumenten.</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="Dokument">
+        <annotation>
+          <documentation>Referenz auf ein Dokument.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="PlanMitGeoreferenz">
+        <annotation>
+          <documentation>Referenz auf einen georeferenzierten Plan.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_Gemeinde-->
+  <!--=========================================================================================-->
+  <element name="XP_Gemeinde" type="xplan:XP_GemeindeType" />
+  <complexType name="XP_GemeindeType">
+    <annotation>
+      <documentation>Spezifikation einer für die Aufstellung des Plans zuständigen Gemeinde.</documentation>
+    </annotation>
+    <sequence>
+      <element name="ags" minOccurs="0" type="string" />
+      <element name="rs" minOccurs="0" type="string" />
+      <element name="gemeindeName" minOccurs="0" type="string" />
+      <element name="ortsteilName" minOccurs="0" type="string" />
+      <element ref="xplan:_GenericApplicationPropertyOfXP_Gemeinde" minOccurs="0" maxOccurs="unbounded" />
+    </sequence>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_Gemeinde" type="anyType" abstract="true" />
+  <complexType name="XP_GemeindePropertyType">
+    <sequence>
+      <element ref="xplan:XP_Gemeinde" minOccurs="0" />
+    </sequence>
+  </complexType>
+  <!--=========================================================================================-->
+  <!--XP_GenerAttribut-->
+  <!--=========================================================================================-->
+  <element abstract="true" name="XP_GenerAttribut" type="xplan:XP_GenerAttributType" />
+  <complexType abstract="true" name="XP_GenerAttributType">
+    <annotation>
+      <documentation>Abstrakte Basisklasse für Generische Attribute.
+</documentation>
+    </annotation>
+    <sequence>
+      <element name="name" type="string" />
+    </sequence>
+  </complexType>
+  <complexType name="XP_GenerAttributPropertyType">
+    <sequence>
+      <element ref="xplan:XP_GenerAttribut" minOccurs="0" />
+    </sequence>
+  </complexType>
+  <!--=========================================================================================-->
+  <!--XP_Hoehenangabe-->
+  <!--=========================================================================================-->
+  <element name="XP_Hoehenangabe" type="xplan:XP_HoehenangabeType" />
+  <complexType name="XP_HoehenangabeType">
+    <annotation>
+      <documentation>Spezifikation einer Angabe zur vertikalen Höhe oder zu einem Bereich vertikaler Höhen. Es ist möglich, spezifische Höhenangaben (z.B. die First- oder Traufhöhe eines Gebäudes) vorzugeben oder einzuschränken, oder den Gültigkeitsbereich eines Planinhalts auf eine bestimmte Höhe (&lt;i&gt;hZwingend&lt;/i&gt;) bzw. einen Höhenbereich (&lt;i&gt;hMin &lt;/i&gt;- &lt;i&gt;hMax&lt;/i&gt;) zu beschränken, was vor allem bei der höhenabhängigen Festsetzung einer überbaubaren Grundstücksfläche (&lt;i&gt;BP_UeberbaubareGrundstuecksflaeche&lt;/i&gt;), einer Baulinie (&lt;i&gt;BP_Baulinie&lt;/i&gt;) oder einer Baugrenze (&lt;i&gt;BP_Baugrenze&lt;/i&gt;) relevant ist. In diesem Fall bleiben die Attribute &lt;i&gt;bezugspunkt und abweichenderBezugspunkt &lt;/i&gt;unbelegt.</documentation>
+    </annotation>
+    <sequence>
+      <element name="abweichenderHoehenbezug" minOccurs="0" type="string" />
+      <element name="hoehenbezug" minOccurs="0" type="xplan:XP_ArtHoehenbezug" />
+      <element name="abweichenderBezugspunkt" minOccurs="0" type="string" />
+      <element name="bezugspunkt" minOccurs="0" type="xplan:XP_ArtHoehenbezugspunkt" />
+      <element name="hMin" minOccurs="0" type="gml:LengthType" />
+      <element name="hMax" minOccurs="0" type="gml:LengthType" />
+      <element name="hZwingend" minOccurs="0" type="gml:LengthType" />
+      <element name="h" minOccurs="0" type="gml:LengthType" />
+      <element ref="xplan:_GenericApplicationPropertyOfXP_Hoehenangabe" minOccurs="0" maxOccurs="unbounded" />
+    </sequence>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_Hoehenangabe" type="anyType" abstract="true" />
+  <complexType name="XP_HoehenangabePropertyType">
+    <sequence>
+      <element ref="xplan:XP_Hoehenangabe" minOccurs="0" />
+    </sequence>
+  </complexType>
+  <!--=========================================================================================-->
+  <!--XP_IntegerAttribut-->
+  <!--=========================================================================================-->
+  <element name="XP_IntegerAttribut" type="xplan:XP_IntegerAttributType" substitutionGroup="xplan:XP_GenerAttribut" />
+  <complexType name="XP_IntegerAttributType">
+    <annotation>
+      <documentation>Generische Attribute vom Datentyp "Integer".
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_GenerAttributType">
+        <sequence>
+          <element name="wert" type="int" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <complexType name="XP_IntegerAttributPropertyType">
+    <sequence>
+      <element ref="xplan:XP_IntegerAttribut" minOccurs="0" />
+    </sequence>
+  </complexType>
+  <!--=========================================================================================-->
+  <!--XP_Objekt-->
+  <!--=========================================================================================-->
+  <element abstract="true" name="XP_Objekt" type="xplan:XP_ObjektType" substitutionGroup="gml:AbstractFeature" />
+  <complexType abstract="true" name="XP_ObjektType">
+    <annotation>
+      <documentation>Abstrakte Oberklasse für alle XPlanung-Fachobjekte. Die Attribute dieser Klasse werden über den Vererbungs-Mechanismus an alle Fachobjekte weitergegeben.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="gml:AbstractFeatureType">
+        <sequence>
+          <element name="uuid" minOccurs="0" type="string" />
+          <element name="text" minOccurs="0" type="string" />
+          <element name="rechtsstand" minOccurs="0" type="xplan:XP_Rechtsstand" />
+          <element name="gesetzlicheGrundlage" minOccurs="0" type="gml:CodeType" />
+          <element name="gliederung1" minOccurs="0" type="string" />
+          <element name="gliederung2" minOccurs="0" type="string" />
+          <element name="ebene" minOccurs="0" default="0" type="int" />
+          <element name="hatGenerAttribut" minOccurs="0" maxOccurs="unbounded" type="xplan:XP_GenerAttributPropertyType" />
+          <element name="hoehenangabe" minOccurs="0" maxOccurs="unbounded" type="xplan:XP_HoehenangabePropertyType" />
+          <element name="externeReferenz" minOccurs="0" maxOccurs="unbounded" type="xplan:XP_SpezExterneReferenzPropertyType" />
+          <element name="gehoertZuBereich" minOccurs="0" type="gml:ReferenceType">
+            <annotation>
+              <appinfo>
+                <gml:targetElement>xplan:XP_Bereich</gml:targetElement>
+                <gml:reversePropertyName>xplan:planinhalt</gml:reversePropertyName>
+              </appinfo>
+            </annotation>
+          </element>
+          <element name="wirdDargestelltDurch" minOccurs="0" maxOccurs="unbounded" type="gml:ReferenceType">
+            <annotation>
+              <appinfo>
+                <gml:targetElement>xplan:XP_AbstraktesPraesentationsobjekt</gml:targetElement>
+                <gml:reversePropertyName>xplan:dientZurDarstellungVon</gml:reversePropertyName>
+              </appinfo>
+            </annotation>
+          </element>
+          <element name="refBegruendungInhalt" minOccurs="0" maxOccurs="unbounded" type="gml:ReferenceType">
+            <annotation>
+              <appinfo>
+                <gml:targetElement>xplan:XP_BegruendungAbschnitt</gml:targetElement>
+              </appinfo>
+            </annotation>
+          </element>
+          <element name="startBedingung" minOccurs="0" type="xplan:XP_WirksamkeitBedingungPropertyType">
+            <annotation>
+              <appinfo>
+                <gml:targetElement>xplan:XP_WirksamkeitBedingung</gml:targetElement>
+              </appinfo>
+            </annotation>
+          </element>
+          <element name="endeBedingung" minOccurs="0" type="xplan:XP_WirksamkeitBedingungPropertyType">
+            <annotation>
+              <appinfo>
+                <gml:targetElement>xplan:XP_WirksamkeitBedingung</gml:targetElement>
+              </appinfo>
+            </annotation>
+          </element>
+          <element ref="xplan:_GenericApplicationPropertyOfXP_Objekt" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_Objekt" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--XP_Plan-->
+  <!--=========================================================================================-->
+  <element abstract="true" name="XP_Plan" type="xplan:XP_PlanType" substitutionGroup="gml:AbstractFeature" />
+  <complexType abstract="true" name="XP_PlanType">
+    <annotation>
+      <documentation>Abstrakte Oberklasse für alle Klassen raumbezogener Pläne.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="gml:AbstractFeatureType">
+        <sequence>
+          <element name="name" type="string" />
+          <element name="nummer" minOccurs="0" type="string" />
+          <element name="internalId" minOccurs="0" type="string" />
+          <element name="beschreibung" minOccurs="0" type="string" />
+          <element name="kommentar" minOccurs="0" type="string" />
+          <element name="technHerstellDatum" minOccurs="0" type="date" />
+          <element name="genehmigungsDatum" minOccurs="0" type="date" />
+          <element name="untergangsDatum" minOccurs="0" type="date" />
+          <element name="aendert" minOccurs="0" maxOccurs="unbounded" type="xplan:XP_VerbundenerPlanPropertyType" />
+          <element name="wurdeGeaendertVon" minOccurs="0" maxOccurs="unbounded" type="xplan:XP_VerbundenerPlanPropertyType" />
+          <element name="erstellungsMassstab" minOccurs="0" type="int" />
+          <element name="bezugshoehe" minOccurs="0" type="gml:LengthType" />
+          <element name="raeumlicherGeltungsbereich" type="gml:GeometryPropertyType" />
+          <element name="verfahrensMerkmale" minOccurs="0" maxOccurs="unbounded" type="xplan:XP_VerfahrensMerkmalPropertyType" />
+          <element name="hatGenerAttribut" minOccurs="0" maxOccurs="unbounded" type="xplan:XP_GenerAttributPropertyType" />
+          <element name="externeReferenz" minOccurs="0" maxOccurs="unbounded" type="xplan:XP_SpezExterneReferenzPropertyType" />
+          <element name="texte" minOccurs="0" maxOccurs="unbounded" type="gml:ReferenceType">
+            <annotation>
+              <appinfo>
+                <gml:targetElement>xplan:XP_TextAbschnitt</gml:targetElement>
+              </appinfo>
+            </annotation>
+          </element>
+          <element name="begruendungsTexte" minOccurs="0" maxOccurs="unbounded" type="gml:ReferenceType">
+            <annotation>
+              <appinfo>
+                <gml:targetElement>xplan:XP_BegruendungAbschnitt</gml:targetElement>
+              </appinfo>
+            </annotation>
+          </element>
+          <element ref="xplan:_GenericApplicationPropertyOfXP_Plan" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_Plan" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--XP_Plangeber-->
+  <!--=========================================================================================-->
+  <element name="XP_Plangeber" type="xplan:XP_PlangeberType" />
+  <complexType name="XP_PlangeberType">
+    <annotation>
+      <documentation>Spezifikation der Institution, die für den Plan verantwortlich ist.</documentation>
+    </annotation>
+    <sequence>
+      <element name="name" type="string" />
+      <element name="kennziffer" minOccurs="0" type="string" />
+      <element ref="xplan:_GenericApplicationPropertyOfXP_Plangeber" minOccurs="0" maxOccurs="unbounded" />
+    </sequence>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_Plangeber" type="anyType" abstract="true" />
+  <complexType name="XP_PlangeberPropertyType">
+    <sequence>
+      <element ref="xplan:XP_Plangeber" minOccurs="0" />
+    </sequence>
+  </complexType>
+  <!--=========================================================================================-->
+  <!--XP_RechtscharakterPlanaenderung-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_RechtscharakterPlanaenderung">
+    <annotation>
+      <documentation>Rechtscharakter einer Planänderung</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Aenderung-->
+        <annotation>
+          <documentation>&lt;b&gt;Änderung &lt;/b&gt;eines Planes: Der Geltungsbereich des neueren Plans überdeckt nicht den gesamten Geltungsbereich des Ausgangsplans. Im Überlappungsbereich gilt das neuere Planrecht.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1100">
+        <!--Ergaenzung-->
+        <annotation>
+          <documentation>&lt;b&gt;Ergänzung &lt;/b&gt;eines Plans: Die Inhalte des neuen Plans ergänzen die alten Inhalte, z.B. durch zusätzliche textliche Planinhalte oder Überlagerungsobjekte. Die Inhalte des älteren Plans bleiben aber gültig.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Aufhebung-->
+        <annotation>
+          <documentation>&lt;b&gt;Aufhebung &lt;/b&gt;des Plans: Der Geltungsbereich des neuen Plans überdeckt den alten Plan, und die Inhalte des neuen Plans ersetzen die alten Inhalte  vollständig.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_Rechtsstand-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_Rechtsstand">
+    <annotation>
+      <documentation>Aufzählung der Planungszustände eines Planinhalts.
+</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Geplant-->
+        <annotation>
+          <documentation>Der Planinhalt bezieht sich auf eine Planung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Bestehend-->
+        <annotation>
+          <documentation>Der Planinhalt stellt den aktuellen Zustand dar.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--Fortfallend-->
+        <annotation>
+          <documentation>Der Planinhalt beschreibt einen zukünftig fortfallenden Zustand.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_SPEMassnahmenDaten-->
+  <!--=========================================================================================-->
+  <element name="XP_SPEMassnahmenDaten" type="xplan:XP_SPEMassnahmenDatenType" />
+  <complexType name="XP_SPEMassnahmenDatenType">
+    <annotation>
+      <documentation>Spezifikation der Attribute für einer Schutz-, Pflege- oder Entwicklungsmaßnahme.
+</documentation>
+    </annotation>
+    <sequence>
+      <element name="klassifizMassnahme" minOccurs="0" type="xplan:XP_SPEMassnahmenTypen" />
+      <element name="massnahmeText" minOccurs="0" type="string" />
+      <element name="massnahmeKuerzel" minOccurs="0" type="string" />
+      <element ref="xplan:_GenericApplicationPropertyOfXP_SPEMassnahmenDaten" minOccurs="0" maxOccurs="unbounded" />
+    </sequence>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_SPEMassnahmenDaten" type="anyType" abstract="true" />
+  <complexType name="XP_SPEMassnahmenDatenPropertyType">
+    <sequence>
+      <element ref="xplan:XP_SPEMassnahmenDaten" minOccurs="0" />
+    </sequence>
+  </complexType>
+  <!--=========================================================================================-->
+  <!--XP_SPEMassnahmenTypen-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_SPEMassnahmenTypen">
+    <annotation>
+      <documentation>Aufzählung der Typen von Ausgleichs- und Ersatzmaßnahmen.
+</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--ArtentreicherGehoelzbestand-->
+        <annotation>
+          <documentation>Artenreicher Gehölzbestand ist aus unterschiedlichen, standortgerechten Gehölzarten aufgebaut und weist einen Strauchanteil auf.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1100">
+        <!--NaturnaherWald-->
+        <annotation>
+          <documentation>Naturnahe Wälder zeichnen sich durch eine standortgemäße Gehölzzusammensetzung unterschiedlicher Altersstufen, durch eine Schichtung der Gehölze (z.B. Strauchschicht, sich überlagernder erster Baumschicht in 10-15 m Höhe und zweiter Baumschicht in 20-25 m Höhe) sowie durch eine in der Regeln artenreiche Krautschicht aus. Kennzeichnend sind zudem das gleichzeitige Nebeneinander von aufwachsenden Gehölzen, Altbäumen und Lichtungen in kleinräumigen Wechsel sowie ein gewisser Totholzanteil.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1200">
+        <!--ExtensivesGruenland-->
+        <annotation>
+          <documentation>Gegenüber einer intensiven Nutzung sind bei extensiver Grünlandnutzung sowohl Beweidungsintensitäten als auch der Düngereinsatz deutlich geringer. Als Folge finden eine Reihe von eher konkurrenzschwachen, oft auch trittempflindlichen Pflanzenarten Möglichkeiten, sich neben den in der Regel sehr robusten, wuchskräftigen, jedoch sehr nährstoffbedürftigen Pflanzen intensiver Wirtschaftsflächen zu behaupten.  Dadurch kommt es zur Ausprägung von standortbedingt unterschiedlichen Grünlandgesellschaften mit deutlichen höheren Artenzahlen (größere Vielfalt).</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1300">
+        <!--Feuchtgruenland-->
+        <annotation>
+          <documentation>Artenreiches Feuchtgrünland entwickelt sich bei extensiver Bewirtschaftung auf feuchten bis wechselnassen Standorten. Die geringe Tragfähigkeit des vielfach anstehenden Niedermoorbodens erschwert den Einsatz von Maschinen, so dass die Flächen vorwiegend beweidet bzw. erst spät im Jahr gemäht werden.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1400">
+        <!--Obstwiese-->
+        <annotation>
+          <documentation>Obstwiesen umfassen mittel- oder hochstämmige, großkronige Obstbäume auf beweidetem (Obstweide) oder gemähtem (obstwiese) Grünland. Im Optimalfall setzt sich der aufgelockerte Baumbestand aus verschiedenen, möglichst alten, regional-typischen Kultursorten zusammen.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1500">
+        <!--NaturnaherUferbereich-->
+        <annotation>
+          <documentation>Naturahne Uferbereiche umfassen unterschiedlich zusammengesetzte Röhrichte und Hochstaudenrieder oder Seggen-Gesellschaften sowie Ufergehölze, die sich vorwiegend aus strauch- oder baumförmigen Weiden, Erlen oder Eschen zusammensetzen.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1600">
+        <!--Roehrichtzone-->
+        <annotation>
+          <documentation>Im flachen Wasser oder auf nassen Böden bilden sich hochwüchsige, oft artenarme Bestände aus überwiegend windblütigen Röhrichtarten aus. Naturliche Bestände finden sich im Uferbereich von Still- und Fließgewässern.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1700">
+        <!--Ackerrandstreifen-->
+        <annotation>
+          <documentation>Ackerrandstreifen sind breite Streifen im Randbereich eines konventionell oder ökologisch genutzten Ackerschlages.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1800">
+        <!--Ackerbrache-->
+        <annotation>
+          <documentation>Als Ackerbrachflächen werden solche Biotope angesprochen, die seit kurzer Zeit aus der Nutzung herausgenommen worden sind. Sie entstehen, indem Ackerflächen mindestens eine Vegetationsperiode nicht mehr bewirtschaftet werden.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1900">
+        <!--Gruenlandbrache-->
+        <annotation>
+          <documentation>Als Grünlandbrachen werden solche Biotope angesprochen, die seit kurzer Zeit aus der Nutzung herausgenommen worden sind. Sie entstehen, indem Grünland mindestens eine Vegetationsperiode nicht mehr bewirtschaftet wird.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Sukzessionsflaeche-->
+        <annotation>
+          <documentation>Sukzessionsflächen umfassen dauerhaft ungenutzte, der natürlichen Entwicklung überlassene Vegetationsbestände auf trockenen bis feuchten Standorten.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2100">
+        <!--Hochstaudenflur-->
+        <annotation>
+          <documentation>Hochwüchsige, zumeist artenreiche Staudenfluren feuchter bis nasser Standorte entwickeln sich in der Regel auf Feuchtgrünland-Brachen, an gehölzfreien Uferstreifen oder an anderen zeitweilig gestörten Standorten mit hohen Grundwasserständen.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2200">
+        <!--Trockenrasen-->
+        <annotation>
+          <documentation>Trockenrasen sind durch zumindest zeitweilige extreme Trockenheit (Regelwasser versickert rasch) sowie durch Nährstoffarmut charakterisiert, die nur Arten mit speziell angepassten Lebensstrategien Entwicklungsmöglichkeiten bieten.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2300">
+        <!--Heide-->
+        <annotation>
+          <documentation>Heiden sind Zwergstrauchgesellschaften auf nährstoffarmen, sauren, trockenen (Calluna-Heide) oder feuchten (Erica-Heide) Standorten. Im Binnenland haben sie in der Regel nach Entwaldung (Abholzung) und langer Übernutzung (Beweidung) primär nährstoffarmer Standorte entwickelt.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstiges</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_SpezExterneReferenz-->
+  <!--=========================================================================================-->
+  <element name="XP_SpezExterneReferenz" type="xplan:XP_SpezExterneReferenzType" substitutionGroup="xplan:XP_ExterneReferenz" />
+  <complexType name="XP_SpezExterneReferenzType">
+    <annotation>
+      <documentation>Ergänzung des Datentyps XP_ExterneReferenz um ein Attribut zur semantischen Beschreibung des referierten Dokuments.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_ExterneReferenzType">
+        <sequence>
+          <element name="typ" type="xplan:XP_ExterneReferenzTyp" />
+          <element ref="xplan:_GenericApplicationPropertyOfXP_SpezExterneReferenz" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_SpezExterneReferenz" type="anyType" abstract="true" />
+  <complexType name="XP_SpezExterneReferenzPropertyType">
+    <sequence>
+      <element ref="xplan:XP_SpezExterneReferenz" minOccurs="0" />
+    </sequence>
+  </complexType>
+  <!--=========================================================================================-->
+  <!--XP_StringAttribut-->
+  <!--=========================================================================================-->
+  <element name="XP_StringAttribut" type="xplan:XP_StringAttributType" substitutionGroup="xplan:XP_GenerAttribut" />
+  <complexType name="XP_StringAttributType">
+    <annotation>
+      <documentation>Generisches Attribut vom Datentyp "CharacterString"
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_GenerAttributType">
+        <sequence>
+          <element name="wert" type="string" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <complexType name="XP_StringAttributPropertyType">
+    <sequence>
+      <element ref="xplan:XP_StringAttribut" minOccurs="0" />
+    </sequence>
+  </complexType>
+  <!--=========================================================================================-->
+  <!--XP_TextAbschnitt-->
+  <!--=========================================================================================-->
+  <element abstract="true" name="XP_TextAbschnitt" type="xplan:XP_TextAbschnittType" substitutionGroup="gml:AbstractFeature" />
+  <complexType abstract="true" name="XP_TextAbschnittType">
+    <annotation>
+      <documentation>Ein Abschnitt der textlich formulierten Inhalte  des Plans.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="gml:AbstractFeatureType">
+        <sequence>
+          <element name="schluessel" minOccurs="0" type="string" />
+          <element name="gesetzlicheGrundlage" minOccurs="0" type="string" />
+          <element name="text" minOccurs="0" type="string" />
+          <element name="refText" minOccurs="0" type="xplan:XP_ExterneReferenzPropertyType" />
+          <element ref="xplan:_GenericApplicationPropertyOfXP_TextAbschnitt" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_TextAbschnitt" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--XP_URLAttribut-->
+  <!--=========================================================================================-->
+  <element name="XP_URLAttribut" type="xplan:XP_URLAttributType" substitutionGroup="xplan:XP_GenerAttribut" />
+  <complexType name="XP_URLAttributType">
+    <annotation>
+      <documentation>Generische Attribute vom Datentyp "URL"
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_GenerAttributType">
+        <sequence>
+          <element name="wert" type="anyURI" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <complexType name="XP_URLAttributPropertyType">
+    <sequence>
+      <element ref="xplan:XP_URLAttribut" minOccurs="0" />
+    </sequence>
+  </complexType>
+  <!--=========================================================================================-->
+  <!--XP_VerbundenerPlan-->
+  <!--=========================================================================================-->
+  <element name="XP_VerbundenerPlan" type="xplan:XP_VerbundenerPlanType" />
+  <complexType name="XP_VerbundenerPlanType">
+    <annotation>
+      <documentation>Spezifikation eines anderen Plans, der mit dem Ausgangsplan verbunden ist und diesen ändert bzw. von ihm geändert wird.
+</documentation>
+    </annotation>
+    <sequence>
+      <element name="planName" minOccurs="0" type="string" />
+      <element name="rechtscharakter" type="xplan:XP_RechtscharakterPlanaenderung" />
+      <element name="nummer" minOccurs="0" type="string" />
+      <element name="verbundenerPlan" minOccurs="0" type="gml:ReferenceType">
+        <annotation>
+          <appinfo>
+            <gml:targetElement>xplan:XP_Plan</gml:targetElement>
+          </appinfo>
+        </annotation>
+      </element>
+      <element ref="xplan:_GenericApplicationPropertyOfXP_VerbundenerPlan" minOccurs="0" maxOccurs="unbounded" />
+    </sequence>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_VerbundenerPlan" type="anyType" abstract="true" />
+  <complexType name="XP_VerbundenerPlanPropertyType">
+    <sequence>
+      <element ref="xplan:XP_VerbundenerPlan" minOccurs="0" />
+    </sequence>
+  </complexType>
+  <!--=========================================================================================-->
+  <!--XP_VerfahrensMerkmal-->
+  <!--=========================================================================================-->
+  <element name="XP_VerfahrensMerkmal" type="xplan:XP_VerfahrensMerkmalType" />
+  <complexType name="XP_VerfahrensMerkmalType">
+    <annotation>
+      <documentation>Vermerk eines am Planungsverfahrens beteiligten Akteurs.
+</documentation>
+    </annotation>
+    <sequence>
+      <element name="vermerk" type="string" />
+      <element name="datum" type="date" />
+      <element name="signatur" type="string" />
+      <element name="signiert" type="boolean" />
+      <element ref="xplan:_GenericApplicationPropertyOfXP_VerfahrensMerkmal" minOccurs="0" maxOccurs="unbounded" />
+    </sequence>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_VerfahrensMerkmal" type="anyType" abstract="true" />
+  <complexType name="XP_VerfahrensMerkmalPropertyType">
+    <sequence>
+      <element ref="xplan:XP_VerfahrensMerkmal" minOccurs="0" />
+    </sequence>
+  </complexType>
+  <!--=========================================================================================-->
+  <!--XP_WirksamkeitBedingung-->
+  <!--=========================================================================================-->
+  <element name="XP_WirksamkeitBedingung" type="xplan:XP_WirksamkeitBedingungType" />
+  <complexType name="XP_WirksamkeitBedingungType">
+    <annotation>
+      <documentation>Spezifikation von Bedingungen für die Wirksamkeit oder Unwirksamkeit einer Festsetzung.</documentation>
+    </annotation>
+    <sequence>
+      <element name="bedingung" minOccurs="0" type="string" />
+      <element name="datumAbsolut" minOccurs="0" type="date" />
+      <element name="datumRelativ" minOccurs="0" type="duration" />
+      <element ref="xplan:_GenericApplicationPropertyOfXP_WirksamkeitBedingung" minOccurs="0" maxOccurs="unbounded" />
+    </sequence>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_WirksamkeitBedingung" type="anyType" abstract="true" />
+  <complexType name="XP_WirksamkeitBedingungPropertyType">
+    <sequence>
+      <element ref="xplan:XP_WirksamkeitBedingung" minOccurs="0" />
+    </sequence>
+  </complexType>
+  <!--=========================================================================================-->
+  <!--XP_ExterneReferenzTyp-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_ExterneReferenzTyp">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Beschreibung-->
+        <annotation>
+          <documentation>Beschreibung eines Plans</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1010">
+        <!--Begruendung-->
+        <annotation>
+          <documentation>Begründung eines Plans</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1020">
+        <!--Legende-->
+        <annotation>
+          <documentation>Plan-Legende</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1030">
+        <!--Rechtsplan-->
+        <annotation>
+          <documentation>Elektronische Version des rechtsverbindlichen Plans</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1040">
+        <!--Plangrundlage-->
+        <annotation>
+          <documentation>Elektronische Version der Plangrundlage, z.B. ein katasterplan</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1050">
+        <!--Umweltbericht-->
+        <annotation>
+          <documentation>Umweltbericht - Ergebnis der Umweltprügung bzgl. der Umweltbelange</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1060">
+        <!--Satzung-->
+        <annotation>
+          <documentation>Satzung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1070">
+        <!--Karte-->
+        <annotation>
+          <documentation>Referenz auf eine Karte, die in Bezug zum Plan steht</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1080">
+        <!--Erlaeuterung-->
+        <annotation>
+          <documentation>Erläuterungsbericht</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1090">
+        <!--ZusammenfassendeErklaerung-->
+        <annotation>
+          <documentation>Zusammenfassende Erklärung der in dem Verfahren berücksichtigten Umweltbelange gemäß §10 Absatz 4 BauGB.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Koordinatenliste-->
+        <annotation>
+          <documentation>Koordinaten-Liste</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2100">
+        <!--Grundstuecksverzeichnis-->
+        <annotation>
+          <documentation>Grundstücksverzeichnis</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2200">
+        <!--Pflanzliste-->
+        <annotation>
+          <documentation>Pflanzliste</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2300">
+        <!--Gruenordnungsplan-->
+        <annotation>
+          <documentation>Grünordnungsplan</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2400">
+        <!--Erschliessungsvertrag-->
+        <annotation>
+          <documentation>Erschließungsvertrag</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2500">
+        <!--Durchfuehrungsvertrag-->
+        <annotation>
+          <documentation>Durchführungsvertrag</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9998">
+        <!--Rechtsverbindlich-->
+        <annotation>
+          <documentation>Sonstiges rechtsverbindliches Dokument</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Informell-->
+        <annotation>
+          <documentation>Sonstiges nicht-rechtsverbindliches Dokument</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_ABEMassnahmenTypen-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_ABEMassnahmenTypen">
+    <annotation>
+      <documentation>Liste der nach §9, Abs.1, Nr. 25 möglichen Maßnahmen
+</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--BindungErhaltung-->
+        <annotation>
+          <documentation>Bindung und Erhaltung von Bäumen, Sträuchern und sonstigen Bepflanzungen, sowie von Gewässern.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Anpflanzung-->
+        <annotation>
+          <documentation>Anpflanzung von Bäumen, Sträuchern oder sonstigen Bepflanzungen.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--AnpflanzungBindungErhaltung-->
+        <annotation>
+          <documentation>Bindung und Erhaltung von Bäumen, Sträuchern und sonstigen Bepflanzungen.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_AbweichungBauNVOTypen-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_AbweichungBauNVOTypen">
+    <annotation>
+      <documentation>Aufzählung verschiedener Möglichkeiten, von den nach BauNVO standardmäßig festgelegten baulichen Nutzungen abzuweichen.
+</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--EinschraenkungNutzung-->
+        <annotation>
+          <documentation>Einschränkung einer generell erlaubten Nutzung.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--AusschlussNutzung-->
+        <annotation>
+          <documentation>Ausschluss einer generell erlaubten Nutzung.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--AusweitungNutzung-->
+        <annotation>
+          <documentation>Eine nur ausnahmsweise zulässige Nutzung wird generell zulässig.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--SonstAbweichung-->
+        <annotation>
+          <documentation>Sonstige Abweichung.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_AllgArtDerBaulNutzung-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_AllgArtDerBaulNutzung">
+    <annotation>
+      <documentation>Aufzählung der möglichen" Allgemeinen Arten der baulichen Nutztung".
+</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--WohnBauflaeche-->
+        <annotation>
+          <documentation>Wohnbaufläche nach §1 Abs. (1) BauNVO</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--GemischteBauflaeche-->
+        <annotation>
+          <documentation>Gemischte Baufläche nach §1 Abs. (1) BauNVO.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--GewerblicheBauflaeche-->
+        <annotation>
+          <documentation>Gewerbliche Baufläche nach §1 Abs. (1) BauNVO.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="4000">
+        <!--SonderBauflaeche-->
+        <annotation>
+          <documentation>Sonderbaufläche nach §1 Abs. (1) BauNVO.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--SonstigeBauflaeche-->
+        <annotation>
+          <documentation>Sonstige Baufläche</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_AnpflanzungBindungErhaltungsGegenstand-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_AnpflanzungBindungErhaltungsGegenstand">
+    <annotation>
+      <documentation>Gegenstand der nach §9, Abs. 1, Nr. 25 festgesetzten Maßnahme</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Baeume-->
+        <annotation>
+          <documentation>Bäume</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1100">
+        <!--Kopfbaeume-->
+        <annotation>
+          <documentation>Kopfbäume</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1200">
+        <!--Baumreihe-->
+        <annotation>
+          <documentation>Baumreihe</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Straeucher-->
+        <annotation>
+          <documentation>Sträucher</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2050">
+        <!--BaeumeUndStraeucher-->
+        <annotation>
+          <documentation>Bäume und Sträucher</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2100">
+        <!--Hecke-->
+        <annotation>
+          <documentation>Hecke</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2200">
+        <!--Knick-->
+        <annotation>
+          <documentation>Knick</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--SonstBepflanzung-->
+        <annotation>
+          <documentation>Sonstige Bepflanzung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="4000">
+        <!--Gewaesser-->
+        <annotation>
+          <documentation>Gewässer (nur Erhaltung)</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="5000">
+        <!--Fassadenbegruenung-->
+        <annotation>
+          <documentation>Fassadenbegrünung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="6000">
+        <!--Dachbegruenung-->
+        <annotation>
+          <documentation>Dachbegrünung</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_BesondereArtDerBaulNutzung-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_BesondereArtDerBaulNutzung">
+    <annotation>
+      <documentation>Aufzählung der verschiedenen Typen der "Art der Baulichen Nutzung" laut BauGB.</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Kleinsiedlungsgebiet-->
+        <annotation>
+          <documentation>Kleinsiedlungsgebiet nach § 2 BauNVO.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1100">
+        <!--ReinesWohngebiet-->
+        <annotation>
+          <documentation>Reines Wohngebiet nach § 3 BauNVO.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1200">
+        <!--AllgWohngebiet-->
+        <annotation>
+          <documentation>Allgemeines Wohngebiet nach § 4 BauNVO.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1300">
+        <!--BesonderesWohngebiet-->
+        <annotation>
+          <documentation>Gebiet zur Erhaltung und Entwicklung der Wohnnutzung (Besonderes Wohngebiet) nach § 4a BauNVO.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1400">
+        <!--Dorfgebiet-->
+        <annotation>
+          <documentation>Dorfgebiet nach $ 5 BauNVO.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1500">
+        <!--Mischgebiet-->
+        <annotation>
+          <documentation>Mischgebiet nach $ 6 BauNVO.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1550">
+        <!--UrbanesGebiet-->
+        <annotation>
+          <documentation>Urbanes Gebiet nach § 6a BauNVO</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1600">
+        <!--Kerngebiet-->
+        <annotation>
+          <documentation>Kerngebiet nach § 7 BauNVO.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1700">
+        <!--Gewerbegebiet-->
+        <annotation>
+          <documentation>Gewerbegebiet nach § 8 BauNVO.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1800">
+        <!--Industriegebiet-->
+        <annotation>
+          <documentation>Industriegebiet nach § 9 BauNVO.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--SondergebietErholung-->
+        <annotation>
+          <documentation>Sondergebiet, das der Erholung dient nach § 10 BauNVO von 1977 und 1990.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2100">
+        <!--SondergebietSonst-->
+        <annotation>
+          <documentation>Sonstiges Sondergebiet nach§ 11 BauNVO 1977 und 1990; z.B. Klinikgebiet</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--Wochenendhausgebiet-->
+        <annotation>
+          <documentation>Wochenendhausgebiet nach §10 der BauNVO von 1962 und 1968</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="4000">
+        <!--Sondergebiet-->
+        <annotation>
+          <documentation>Sondergebiet nach §11der BauNVO von 1962 und 1968</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--SonstigesGebiet-->
+        <annotation>
+          <documentation>Sonstiges Gebiet</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_Bundeslaender-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_Bundeslaender">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--BB-->
+        <annotation>
+          <documentation>Brandenburg</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1100">
+        <!--BE-->
+        <annotation>
+          <documentation>Berlin</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1200">
+        <!--BW-->
+        <annotation>
+          <documentation>Baden-Württemberg</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1300">
+        <!--BY-->
+        <annotation>
+          <documentation>Bayern</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1400">
+        <!--HB-->
+        <annotation>
+          <documentation>Bremen</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1500">
+        <!--HE-->
+        <annotation>
+          <documentation>Hessen</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1600">
+        <!--HH-->
+        <annotation>
+          <documentation>Hamburg</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1700">
+        <!--MV-->
+        <annotation>
+          <documentation>Mecklenburg-Vorpommern</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1800">
+        <!--NI-->
+        <annotation>
+          <documentation>Niedersachsen</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1900">
+        <!--NW-->
+        <annotation>
+          <documentation>Nordrhein-Westfalen</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--RP-->
+        <annotation>
+          <documentation>Rheinland-Pfalz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2100">
+        <!--SH-->
+        <annotation>
+          <documentation>Schleswig-Holstein</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2200">
+        <!--SL-->
+        <annotation>
+          <documentation>Saarland</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2300">
+        <!--SN-->
+        <annotation>
+          <documentation>Sachsen</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2400">
+        <!--ST-->
+        <annotation>
+          <documentation>Sachsen-Anhalt</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2500">
+        <!--TH-->
+        <annotation>
+          <documentation>Thüringen</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--Bund-->
+        <annotation>
+          <documentation>Der Bund.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_GrenzeTypen-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_GrenzeTypen">
+    <annotation>
+      <documentation>Aufzählung der verschiedenen Typen von Grenzen.</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Bundesgrenze-->
+        <annotation>
+          <documentation>Bundesgrenze</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1100">
+        <!--Landesgrenze-->
+        <annotation>
+          <documentation>Grenze eines Bundeslandes</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1200">
+        <!--Regierungsbezirksgrenze-->
+        <annotation>
+          <documentation>Grenze eines Regierungsbezirks</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1250">
+        <!--Bezirksgrenze-->
+        <annotation>
+          <documentation>Grenze eines Bezirks.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1300">
+        <!--Kreisgrenze-->
+        <annotation>
+          <documentation>Grenze eines Kreises.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1400">
+        <!--Gemeindegrenze-->
+        <annotation>
+          <documentation>Grenze einer Gemeinde.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1450">
+        <!--Verbandsgemeindegrenze-->
+        <annotation>
+          <documentation>Grenze einer Verbandsgemeinde</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1500">
+        <!--Samtgemeindegrenze-->
+        <annotation>
+          <documentation>Grenze einer Samtgemeinde</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1510">
+        <!--Mitgliedsgemeindegrenze-->
+        <annotation>
+          <documentation>Mitgliedsgemeindegrenze</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1550">
+        <!--Amtsgrenze-->
+        <annotation>
+          <documentation>Amtsgrenze</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1600">
+        <!--Stadtteilgrenze-->
+        <annotation>
+          <documentation>Stadtteilgrenze</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--VorgeschlageneGrundstuecksgrenze-->
+        <annotation>
+          <documentation>Hinweis auf eine vorgeschlagene Grundstücksgrenze im BPlan.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2100">
+        <!--GrenzeBestehenderBebauungsplan-->
+        <annotation>
+          <documentation>Hinweis auf den Geltungsbereich eines bestehenden BPlan.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--SonstGrenze-->
+        <annotation>
+          <documentation>Sonstige Grenze</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_KlassifizSchutzgebietNaturschutzrecht-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_KlassifizSchutzgebietNaturschutzrecht">
+    <annotation>
+      <documentation>Klassifikation von Schutzgebieten nach Naturschutzrecht.</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Naturschutzgebiet-->
+        <annotation>
+          <documentation>Naturschutzgebiet gemäß &lt;font color="#00000a"&gt;§23 BNatSchG.&lt;/font&gt;</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1100">
+        <!--Nationalpark-->
+        <annotation>
+          <documentation>Nationalpark &lt;font color="#00000a"&gt;gemäß §24 BNatSchG&lt;/font&gt;</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1200">
+        <!--Biosphaerenreservat-->
+        <annotation>
+          <documentation>Biosphärenreservat &lt;font color="#00000a"&gt;gemäß §25 BNatSchG.&lt;/font&gt;</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1300">
+        <!--Landschaftsschutzgebiet-->
+        <annotation>
+          <documentation>Landschaftsschutzgebiet &lt;font color="#00000a"&gt;gemäß §65 BNatSchG.&lt;/font&gt;</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1400">
+        <!--Naturpark-->
+        <annotation>
+          <documentation>Naturpark &lt;font color="#00000a"&gt;gemäß §27 BNatSchG.&lt;/font&gt;</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1500">
+        <!--Naturdenkmal-->
+        <annotation>
+          <documentation>Naturdenkmal &lt;font color="#00000a"&gt;gemäß §28 BNatSchG.&lt;/font&gt;</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1600">
+        <!--GeschuetzterLandschaftsBestandteil-->
+        <annotation>
+          <documentation>Geschützter Bestandteil der Landschaft &lt;font color="#00000a"&gt;gemäß §29 BNatSchG.&lt;/font&gt;</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1700">
+        <!--GesetzlichGeschuetztesBiotop-->
+        <annotation>
+          <documentation>Gesetzlich geschützte Biotope &lt;font color="#00000a"&gt;gemäß §30 BNatSchG.&lt;/font&gt;</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1800">
+        <!--Natura2000-->
+        <annotation>
+          <documentation>Schutzgebiet nach Europäischem Recht. Dies umfasst das "Gebiet Gemeinschaftlicher Bedeutung" (FFH-Gebiet) und das "Europäische Vogelschutzgebiet"</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="18000">
+        <!--GebietGemeinschaftlicherBedeutung-->
+        <annotation>
+          <documentation>Gebiete von gemeinschaftlicher Bedeutung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="18001">
+        <!--EuropaeischesVogelschutzgebiet-->
+        <annotation>
+          <documentation>Europäische Vogelschutzgebiete</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--NationalesNaturmonument-->
+        <annotation>
+          <documentation>Nationales Naturmonument &lt;font color="#00000a"&gt;gemäß §24 Abs. (4)  BNatSchG.&lt;/font&gt;</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstiges Naturschutzgebiet</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_Nutzungsform-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_Nutzungsform">
+    <annotation>
+      <documentation>Aufzählung möglicher Nutzungsformen einer Fläche
+</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Privat-->
+        <annotation>
+          <documentation>Private Nutzung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Oeffentlich-->
+        <annotation>
+          <documentation>Öffentliche Nutzung</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_Sondernutzungen-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_Sondernutzungen">
+    <annotation>
+      <documentation>Aufzählung möglicher Sondernutzungen einer Sonderbaufläche nach §§ 10 und 11 BauNVO.
+</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Wochenendhausgebiet-->
+        <annotation>
+          <documentation>Wochenendhausgebiet</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1100">
+        <!--Ferienhausgebiet-->
+        <annotation>
+          <documentation>Ferienhausgebiet</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1200">
+        <!--Campingplatzgebiet-->
+        <annotation>
+          <documentation>Campingplatzgebiet</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1300">
+        <!--Kurgebiet-->
+        <annotation>
+          <documentation>Kurgebiet</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1400">
+        <!--SonstSondergebietErholung-->
+        <annotation>
+          <documentation>Sonstiges Sondergebiet für Erholung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1500">
+        <!--Einzelhandelsgebiet-->
+        <annotation>
+          <documentation>Einzelhandelsgebiet</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1600">
+        <!--GrossflaechigerEinzelhandel-->
+        <annotation>
+          <documentation>Gebiet für großflächigen Einzelhandel</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="16000">
+        <!--Ladengebiet-->
+        <annotation>
+          <documentation>Ladengebiet</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="16001">
+        <!--Einkaufszentrum-->
+        <annotation>
+          <documentation>Einkaufszentrum</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="16002">
+        <!--SonstGrossflEinzelhandel-->
+        <annotation>
+          <documentation>Sonstiges Gebiet für großflächigen Einzelhandel</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1700">
+        <!--Verkehrsuebungsplatz-->
+        <annotation>
+          <documentation>Verkehrsübungsplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1800">
+        <!--Hafengebiet-->
+        <annotation>
+          <documentation>Hafengebiet</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1900">
+        <!--SondergebietErneuerbareEnergie-->
+        <annotation>
+          <documentation>Sondergebiet für Erneuerbare Energien</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--SondergebietMilitaer-->
+        <annotation>
+          <documentation>Militärisches Sondergebiet</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2100">
+        <!--SondergebietLandwirtschaft-->
+        <annotation>
+          <documentation>Sondergebiet Landwirtschaft</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2200">
+        <!--SondergebietSport-->
+        <annotation>
+          <documentation>Sondergebiet Sport</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2300">
+        <!--SondergebietGesundheitSoziales-->
+        <annotation>
+          <documentation>Sondergebiet für Gesundheit und Soziales</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2400">
+        <!--Golfplatz-->
+        <annotation>
+          <documentation>Golfplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2500">
+        <!--SondergebietKultur-->
+        <annotation>
+          <documentation>Sondergebiet für Kultur</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2600">
+        <!--SondergebietTourismus-->
+        <annotation>
+          <documentation>Sondergebiet Tourismus</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2700">
+        <!--SondergebietBueroUndVerwaltung-->
+        <annotation>
+          <documentation>Sondergebiet für Büros und Verwaltung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2800">
+        <!--SondergebietHochschuleEinrichtungen-->
+        <annotation>
+          <documentation>Sondergebiet Hochschule</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2900">
+        <!--SondergebietMesse-->
+        <annotation>
+          <documentation>Sondergebiet für Messe</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--SondergebietAndereNutzungen-->
+        <annotation>
+          <documentation>Sonstiges Sondergebiet</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_SPEZiele-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_SPEZiele">
+    <annotation>
+      <documentation>Aufzählung der Ziele für Schutz-, Pflege- und Entwicklungsmaßnahmen.
+</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--SchutzPflege-->
+        <annotation>
+          <documentation>Schutz und Pflege</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Entwicklung-->
+        <annotation>
+          <documentation>Entwicklung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--Anlage-->
+        <annotation>
+          <documentation>Neu-Anlage</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="4000">
+        <!--SchutzPflegeEntwicklung-->
+        <annotation>
+          <documentation>Schutz, Pflege und Entwicklung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstiges Ziel</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_VerlaengerungVeraenderungssperre-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_VerlaengerungVeraenderungssperre">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Keine-->
+        <annotation>
+          <documentation>Veränderungssperre wurde noch nicht verlängert.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--ErsteVerlaengerung-->
+        <annotation>
+          <documentation>Veränderungssperre wurde einmal verlängert.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--ZweiteVerlaengerung-->
+        <annotation>
+          <documentation>Veränderungssperre wurde zweimal verlängert.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_ZweckbestimmungGemeinbedarf-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_ZweckbestimmungGemeinbedarf">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--OeffentlicheVerwaltung-->
+        <annotation>
+          <documentation>Einrichtungen und Anlagen für öffentliche Verwaltung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10000">
+        <!--KommunaleEinrichtung-->
+        <annotation>
+          <documentation>Kommunale Einrichtung wie z. B. Rathaus, Gesundheitsamt, Gesundheitsfürsorgestelle, Gartenbauamt, Gartenarbeitsstützpunkt, Fuhrpark.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10001">
+        <!--BetriebOeffentlZweckbestimmung-->
+        <annotation>
+          <documentation>Betrieb mit öffentlicher Zweckbestimmung wie z.B. ein Stadtreinigungsbetrieb, Autobusbetriebshof, Omnibusbahnhof.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10002">
+        <!--AnlageBundLand-->
+        <annotation>
+          <documentation>Eine Anlage des Bundes oder eines Bundeslandes wie z. B.  Arbeitsamt, Autobahnmeisterei, Brückenmeisterei, Patentamt, Wasserbauhof, Finanzamt.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10003">
+        <!--SonstigeOeffentlicheVerwaltung-->
+        <annotation>
+          <documentation>Sonstige Einrichtung oder Anlage der öffentlichen Verwaltung wie z. B. die Industrie und Handelskammer oder Handwerkskammer.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1200">
+        <!--BildungForschung-->
+        <annotation>
+          <documentation>Einrichtungen und Anlagen für Bildung und Forschung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="12000">
+        <!--Schule-->
+        <annotation>
+          <documentation>Schulische Einrichtung. Darunter fallen u. a. Allgemeinbildende Schule, Oberstufenzentrum, Sonderschule, Fachschule, Volkshochschule,
+Konservatorium.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="12001">
+        <!--Hochschule-->
+        <annotation>
+          <documentation>Hochschule, Fachhochschule, Berufsakademie, o. Ä.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="12002">
+        <!--BerufsbildendeSchule-->
+        <annotation>
+          <documentation>Berufsbildende Schule</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="12003">
+        <!--Forschungseinrichtung-->
+        <annotation>
+          <documentation>Forschungseinrichtung, Forschungsinstitut.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="12004">
+        <!--SonstigesBildungForschung-->
+        <annotation>
+          <documentation>Sonstige Anlage oder Einrichtung aus Bildung und Forschung.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1400">
+        <!--Kirche-->
+        <annotation>
+          <documentation>Kirchliche Einrichtungen.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="14000">
+        <!--Sakralgebaeude-->
+        <annotation>
+          <documentation>Religiösen Zwecken dienendes Gebäude wie z. B. Kirche, 
+ Kapelle, Moschee, Synagoge, Gebetssaal.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="14001">
+        <!--KirchlicheVerwaltung-->
+        <annotation>
+          <documentation>Kirchliches Verwaltungsgebäude, z. B. Pfarramt, Bischöfliches Ordinariat, Konsistorium.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="14002">
+        <!--Kirchengemeinde-->
+        <annotation>
+          <documentation>Religiöse Gemeinde- oder Versammlungseinrichtung, z. B. Gemeindehaus, Gemeindezentrum.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="14003">
+        <!--SonstigesKirche-->
+        <annotation>
+          <documentation>Sonstige religiösen Zwecken dienende Anlage oder Einrichtung.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1600">
+        <!--Sozial-->
+        <annotation>
+          <documentation>Einrichtungen und Anlagen für soziale Zwecke.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="16000">
+        <!--EinrichtungKinder-->
+        <annotation>
+          <documentation>Soziale Einrichtung für Kinder, wie z. B. Kinderheim, Kindertagesstätte, Kindergarten.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="16001">
+        <!--EinrichtungJugendliche-->
+        <annotation>
+          <documentation>Soziale Einrichtung für Jugendliche, wie z. B. Jugendfreizeitheim/-stätte, Jugendgästehaus, Jugendherberge, Jugendheim.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="16002">
+        <!--EinrichtungFamilienErwachsene-->
+        <annotation>
+          <documentation>Soziale Einrichtung für Familien und Erwachsene, wie z. B. Bildungszentrum, Volkshochschule, Kleinkinderfürsorgestelle, Säuglingsfürsorgestelle, Nachbarschaftsheim.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="16003">
+        <!--EinrichtungSenioren-->
+        <annotation>
+          <documentation>Soziale Einrichtung für Senioren, wie z. B. Alten-/Seniorentagesstätte, Alten-/Seniorenheim, Alten-/Seniorenwohnheim, Altersheim.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="16004">
+        <!--SonstigeSozialeEinrichtung-->
+        <annotation>
+          <documentation>Sonstige soziale Einrichtung, z. B. Pflegeheim, Schwesternwohnheim, Studentendorf, Studentenwohnheim. Tierheim, Übergangsheim.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1800">
+        <!--Gesundheit-->
+        <annotation>
+          <documentation>Einrichtungen und Anlagen für gesundheitliche Zwecke.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="18000">
+        <!--Krankenhaus-->
+        <annotation>
+          <documentation>Krankenhaus oder vergleichbare Einrichtung (z. B. Klinik, Hospital, Krankenheim, Heil- und Pflegeanstalt),</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="18001">
+        <!--SonstigesGesundheit-->
+        <annotation>
+          <documentation>Sonstige Gesundheits-Einrichtung, z. B. Sanatorium, Kurklinik, Desinfektionsanstalt.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Kultur-->
+        <annotation>
+          <documentation>Einrichtungen und Anlagen für kulturelle Zwecke.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="20000">
+        <!--MusikTheater-->
+        <annotation>
+          <documentation>Kulturelle Einrichtung aus dem Bereich Musik oder Theater (z. B. Theater, Konzerthaus, Musikhalle, Oper).</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="20001">
+        <!--Bildung-->
+        <annotation>
+          <documentation>Kulturelle Einrichtung mit Bildungsfunktion ( z. B. Museum, Bibliothek, Bücherei, Stadtbücherei, Volksbücherei).</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="20002">
+        <!--SonstigeKultur-->
+        <annotation>
+          <documentation>Sonstige kulturelle Einrichtung, wie z. B. Archiv, Landesbildstelle, Rundfunk und Fernsehen, Kongress- und Veranstaltungshalle, Mehrzweckhalle..</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2200">
+        <!--Sport-->
+        <annotation>
+          <documentation>Einrichtungen und Anlagen für sportliche Zwecke.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="22000">
+        <!--Bad-->
+        <annotation>
+          <documentation>Schwimmbad, Freibad, Hallenbad, Schwimmhalle o. Ä..</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="22001">
+        <!--SportplatzSporthalle-->
+        <annotation>
+          <documentation>Sportplatz, Sporthalle, Tennishalle o. Ä.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="22002">
+        <!--SonstigerSport-->
+        <annotation>
+          <documentation>Sonstige Sporteinrichtung.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2400">
+        <!--SicherheitOrdnung-->
+        <annotation>
+          <documentation>Einrichtungen und Anlagen für Sicherheit und Ordnung.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="24000">
+        <!--Feuerwehr-->
+        <annotation>
+          <documentation>Einrichtung oder Anlage der Feuerwehr.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="24001">
+        <!--Schutzbauwerk-->
+        <annotation>
+          <documentation>Schutzbauwerk</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="24002">
+        <!--Justiz-->
+        <annotation>
+          <documentation>Einrichtung der Justiz, wie z. B. Justizvollzug, Gericht, Haftanstalt.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="24003">
+        <!--SonstigeSicherheitOrdnung-->
+        <annotation>
+          <documentation>Sonstige Anlage oder Einrichtung für Sicherheit und Ordnung, z. B. Polizei, Zoll, Feuerwehr, Zivilschutz, Bundeswehr, Landesverteidigung.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2600">
+        <!--Infrastruktur-->
+        <annotation>
+          <documentation>Einrichtungen und Anlagen der Infrastruktur.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="26000">
+        <!--Post-->
+        <annotation>
+          <documentation>Einrichtung der Post.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="26001">
+        <!--SonstigeInfrastruktur-->
+        <annotation>
+          <documentation>Sonstige Anlage oder Einrichtung der Infrastruktur.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstige Einrichtungen und Anlagen, die keiner anderen Kategorie zuzuordnen sind.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_ZweckbestimmungGewaesser-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_ZweckbestimmungGewaesser">
+    <annotation>
+      <documentation>Aufzählung der Zweckbestimmungen von Gewässern.</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Hafen-->
+        <annotation>
+          <documentation>Hafen</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1100">
+        <!--Wasserflaeche-->
+        <annotation>
+          <documentation>Stehende Wasserfläche, auch See, Teich.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1200">
+        <!--Fliessgewaesser-->
+        <annotation>
+          <documentation>Fließgewässer, auch Fluss, Bach</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstiges Gewässer, sofern keiner der anderen Codes zutreffend ist.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_ZweckbestimmungGruen-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_ZweckbestimmungGruen">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Parkanlage-->
+        <annotation>
+          <documentation>Parkanlage; auch: Erholungsgrün, Grünanlage, Naherholung.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10000">
+        <!--ParkanlageHistorisch-->
+        <annotation>
+          <documentation>Historische Parkanlage</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10001">
+        <!--ParkanlageNaturnah-->
+        <annotation>
+          <documentation>Naturnahe Parkanlage</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10002">
+        <!--ParkanlageWaldcharakter-->
+        <annotation>
+          <documentation>Parkanlage mit Waldcharakter</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10003">
+        <!--NaturnaheUferParkanlage-->
+        <annotation>
+          <documentation>Ufernahe Parkanlage</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1200">
+        <!--Dauerkleingarten-->
+        <annotation>
+          <documentation>Dauerkleingarten; auch: Gartenfläche, Hofgärten, Gartenland.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="12000">
+        <!--ErholungsGaerten-->
+        <annotation>
+          <documentation>Erholungsgarten</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1400">
+        <!--Sportplatz-->
+        <annotation>
+          <documentation>Sportplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="14000">
+        <!--Reitsportanlage-->
+        <annotation>
+          <documentation>Reitsportanlage</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="14001">
+        <!--Hundesportanlage-->
+        <annotation>
+          <documentation>Hundesportanlage</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="14002">
+        <!--Wassersportanlage-->
+        <annotation>
+          <documentation>Wassersportanlage</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="14003">
+        <!--Schiessstand-->
+        <annotation>
+          <documentation>Schießstand</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="14004">
+        <!--Golfplatz-->
+        <annotation>
+          <documentation>Golfplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="14005">
+        <!--Skisport-->
+        <annotation>
+          <documentation>Anlage für Skisport</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="14006">
+        <!--Tennisanlage-->
+        <annotation>
+          <documentation>Tennisanlage</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="14007">
+        <!--SonstigerSportplatz-->
+        <annotation>
+          <documentation>Sonstiger Sportplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1600">
+        <!--Spielplatz-->
+        <annotation>
+          <documentation>Spielplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="16000">
+        <!--Bolzplatz-->
+        <annotation>
+          <documentation>Bolzplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="16001">
+        <!--Abenteuerspielplatz-->
+        <annotation>
+          <documentation>Abenteuerspielplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1800">
+        <!--Zeltplatz-->
+        <annotation>
+          <documentation>Zeltplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="18000">
+        <!--Campingplatz-->
+        <annotation>
+          <documentation>Campingplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Badeplatz-->
+        <annotation>
+          <documentation>Badeplatz, auch Schwimmbad, Liegewiese.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2200">
+        <!--FreizeitErholung-->
+        <annotation>
+          <documentation>Anlage für Freizeit und Erholung.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="22000">
+        <!--Kleintierhaltung-->
+        <annotation>
+          <documentation>Anlage für Kleintierhaltung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="22001">
+        <!--Festplatz-->
+        <annotation>
+          <documentation>Festplatz</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2400">
+        <!--SpezGruenflaeche-->
+        <annotation>
+          <documentation>Spezielle Grünfläche</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="24000">
+        <!--StrassenbegleitGruen-->
+        <annotation>
+          <documentation>Straßenbegleitgrün</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="24001">
+        <!--BoeschungsFlaeche-->
+        <annotation>
+          <documentation>Böschungsfläche</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="24002">
+        <!--FeldWaldWiese-->
+        <annotation>
+          <documentation>Feld, Wald, Wiese allgemein</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="24003">
+        <!--Uferschutzstreifen-->
+        <annotation>
+          <documentation>Uferstreifen</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="24004">
+        <!--Abschirmgruen-->
+        <annotation>
+          <documentation>Abschirmgrün</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="24005">
+        <!--UmweltbildungsparkSchaugatter-->
+        <annotation>
+          <documentation>Umweltbildungspark, Schaugatter</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="24006">
+        <!--RuhenderVerkehr-->
+        <annotation>
+          <documentation>Fläche für den ruhenden Verkehr.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2600">
+        <!--Friedhof-->
+        <annotation>
+          <documentation>Friedhof</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstige Zweckbestimmung, falls keine der aufgeführten Klassifikationen anwendbar ist.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="99990">
+        <!--Gaertnerei-->
+        <annotation>
+          <documentation>Gärtnerei</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_ZweckbestimmungKennzeichnung-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_ZweckbestimmungKennzeichnung">
+    <annotation>
+      <documentation>Aufzählung der Kennzeichnungen nach §5, Abs. 3 BauGB</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Naturgewalten-->
+        <annotation>
+          <documentation>Flächen, bei deren Bebauung besondere bauliche Sicherungsmaßnahmen gegen Naturgewalten erforderlich sind (§5, Abs. 3, Nr. 1 BauGB).</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Abbauflaeche-->
+        <annotation>
+          <documentation>Flächen, unter denen der Bergbau umgeht oder die für den Abbau von Mineralien bestimmt sind (§5, Abs. 3, Nr. 2 BauGB).</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--AeussereEinwirkungen-->
+        <annotation>
+          <documentation>Flächen, bei deren Bebauung besondere bauliche Sicherungsmaßnahmen gegen äußere Einwirkungen erforderlich sind (§5, Abs. 3, Nr. 1 BauGB).</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="4000">
+        <!--SchadstoffBelastBoden-->
+        <annotation>
+          <documentation>Für bauliche Nutzung vorgesehene Flächen, deren Böden erheblich mit umweltgefährdenden Stoffen belastet sind (§5, Abs. 3, Nr. 3 BauGB).</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="5000">
+        <!--LaermBelastung-->
+        <annotation>
+          <documentation>Für bauliche Nutzung vorgesehene Flächen, die erheblicher Lärmbelastung ausgesetzt sind.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="6000">
+        <!--Bergbau-->
+        <annotation>
+          <documentation>Flächen für den Bergbau</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="7000">
+        <!--Bodenordnung-->
+        <annotation>
+          <documentation>Bodenordnung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="8000">
+        <!--Vorhabensgebiet-->
+        <annotation>
+          <documentation>Räumlich besonders gekennzeichnetes Vorhabengebiets, das kleiner als der Geltungsbereich ist, innerhalb eines vorhabenbezogenen BPlans.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--AndereGesetzlVorschriften-->
+        <annotation>
+          <documentation>Kennzeichnung nach anderen gesetzlichen Vorschriften.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_ZweckbestimmungLandwirtschaft-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_ZweckbestimmungLandwirtschaft">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--LandwirtschaftAllgemein-->
+        <annotation>
+          <documentation>Allgemeine Landwirtschaft</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1100">
+        <!--Ackerbau-->
+        <annotation>
+          <documentation>Ackerbau</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1200">
+        <!--WiesenWeidewirtschaft-->
+        <annotation>
+          <documentation>Wiesen- und Weidewirtschaft</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1300">
+        <!--GartenbaulicheErzeugung-->
+        <annotation>
+          <documentation>Gartenbauliche Erzeugung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1400">
+        <!--Obstbau-->
+        <annotation>
+          <documentation>Obstbau</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1500">
+        <!--Weinbau-->
+        <annotation>
+          <documentation>Weinbau</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1600">
+        <!--Imkerei-->
+        <annotation>
+          <documentation>Imkerei</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1700">
+        <!--Binnenfischerei-->
+        <annotation>
+          <documentation>Binnenfischerei</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstiges</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_ZweckbestimmungSpielSportanlage-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_ZweckbestimmungSpielSportanlage">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Sportanlage-->
+        <annotation>
+          <documentation>Sportanlage</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Spielanlage-->
+        <annotation>
+          <documentation>Spielanlage</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--SpielSportanlage-->
+        <annotation>
+          <documentation>Spiel- und/oder Sportanlage.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstiges</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_ZweckbestimmungVerEntsorgung-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_ZweckbestimmungVerEntsorgung">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Elektrizitaet-->
+        <annotation>
+          <documentation>Elektrizität allgemein</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10000">
+        <!--Hochspannungsleitung-->
+        <annotation>
+          <documentation>Hochspannungsleitung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10001">
+        <!--TrafostationUmspannwerk-->
+        <annotation>
+          <documentation>Trafostation, auch Umspannwerk</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10002">
+        <!--Solarkraftwerk-->
+        <annotation>
+          <documentation>Solarkraftwerk</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10003">
+        <!--Windkraftwerk-->
+        <annotation>
+          <documentation>Windkraftwerk, Windenergieanlage, Windrad.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10004">
+        <!--Geothermiekraftwerk-->
+        <annotation>
+          <documentation>Geothermie Kraftwerk</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10005">
+        <!--Elektrizitaetswerk-->
+        <annotation>
+          <documentation>Elektrizitätswerk allgemein</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10006">
+        <!--Wasserkraftwerk-->
+        <annotation>
+          <documentation>Wasserkraftwerk</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10007">
+        <!--BiomasseKraftwerk-->
+        <annotation>
+          <documentation>Biomasse-Kraftwerk</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10008">
+        <!--Kabelleitung-->
+        <annotation>
+          <documentation>Kabelleitung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="10009">
+        <!--Niederspannungsleitung-->
+        <annotation>
+          <documentation>Niederspannungsleitung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="100010">
+        <!--Leitungsmast-->
+        <annotation>
+          <documentation>Leitungsmast</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1200">
+        <!--Gas-->
+        <annotation>
+          <documentation>Gas allgemein</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="12000">
+        <!--Ferngasleitung-->
+        <annotation>
+          <documentation>Ferngasleitung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="12001">
+        <!--Gaswerk-->
+        <annotation>
+          <documentation>Gaswerk</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="12002">
+        <!--Gasbehaelter-->
+        <annotation>
+          <documentation>Gasbehälter</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="12003">
+        <!--Gasdruckregler-->
+        <annotation>
+          <documentation>Gasdruckregler</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="12004">
+        <!--Gasstation-->
+        <annotation>
+          <documentation>Gasstation</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="12005">
+        <!--Gasleitung-->
+        <annotation>
+          <documentation>Gasleitung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1300">
+        <!--Erdoel-->
+        <annotation>
+          <documentation>Erdöl allgemein</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="13000">
+        <!--Erdoelleitung-->
+        <annotation>
+          <documentation>Erdölleitung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="13001">
+        <!--Bohrstelle-->
+        <annotation>
+          <documentation>Bohrstelle</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="13002">
+        <!--Erdoelpumpstation-->
+        <annotation>
+          <documentation>Erdölpumpstation</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="13003">
+        <!--Oeltank-->
+        <annotation>
+          <documentation>Öltank</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1400">
+        <!--Waermeversorgung-->
+        <annotation>
+          <documentation>Wärmeversorgung allgemein</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="14000">
+        <!--Blockheizkraftwerk-->
+        <annotation>
+          <documentation>Blockheizkraftwerk</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="14001">
+        <!--Fernwaermeleitung-->
+        <annotation>
+          <documentation>Fernwärmeleitung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="14002">
+        <!--Fernheizwerk-->
+        <annotation>
+          <documentation>Fernheizwerk</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1600">
+        <!--Wasser-->
+        <annotation>
+          <documentation>Trink- und Brauchwasser allgemein</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="16000">
+        <!--Wasserwerk-->
+        <annotation>
+          <documentation>Wasserwerk</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="16001">
+        <!--Wasserleitung-->
+        <annotation>
+          <documentation>Trinkwasserleitung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="16002">
+        <!--Wasserspeicher-->
+        <annotation>
+          <documentation>Wasserspeicher</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="16003">
+        <!--Brunnen-->
+        <annotation>
+          <documentation>Brunnen</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="16004">
+        <!--Pumpwerk-->
+        <annotation>
+          <documentation>Pumpwerk</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="16005">
+        <!--Quelle-->
+        <annotation>
+          <documentation>Quelle</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1800">
+        <!--Abwasser-->
+        <annotation>
+          <documentation>Abwasser allgemein</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="18000">
+        <!--Abwasserleitung-->
+        <annotation>
+          <documentation>Abwasserleitung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="18001">
+        <!--Abwasserrueckhaltebecken-->
+        <annotation>
+          <documentation>Abwasserrückhaltebecken</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="18002">
+        <!--Abwasserpumpwerk-->
+        <annotation>
+          <documentation>Abwasserpumpwerk, auch Abwasserhebeanlage</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="18003">
+        <!--Klaeranlage-->
+        <annotation>
+          <documentation>Kläranlage</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="18004">
+        <!--AnlageKlaerschlamm-->
+        <annotation>
+          <documentation>Anlage zur Speicherung oder Behandlung von Klärschlamm.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="18005">
+        <!--SonstigeAbwasserBehandlungsanlage-->
+        <annotation>
+          <documentation>Sonstige Abwasser-Behandlungsanlage.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="18006">
+        <!--Salz oder Soleleitungen-->
+        <annotation>
+          <documentation>Salz- oder Sole-Leitungen</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2000">
+        <!--Regenwasser-->
+        <annotation>
+          <documentation>Regenwasser allgemein</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="20000">
+        <!--RegenwasserRueckhaltebecken-->
+        <annotation>
+          <documentation>Regenwasser Rückhaltebecken</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="20001">
+        <!--Niederschlagswasserleitung-->
+        <annotation>
+          <documentation>Niederschlagswasser-Leitung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2200">
+        <!--Abfallentsorgung-->
+        <annotation>
+          <documentation>Abfallentsorgung allgemein</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="22000">
+        <!--Muellumladestation-->
+        <annotation>
+          <documentation>Müll-Umladestation</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="22001">
+        <!--Muellbeseitigungsanlage-->
+        <annotation>
+          <documentation>Müllbeseitigungsanlage</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="22002">
+        <!--Muellsortieranlage-->
+        <annotation>
+          <documentation>Müllsortieranlage</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="22003">
+        <!--Recyclinghof-->
+        <annotation>
+          <documentation>Recyclinghof</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2400">
+        <!--Ablagerung-->
+        <annotation>
+          <documentation>Ablagerung allgemein</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="24000">
+        <!--Erdaushubdeponie-->
+        <annotation>
+          <documentation>Erdaushub-Deponie</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="24001">
+        <!--Bauschuttdeponie-->
+        <annotation>
+          <documentation>Bauschutt-Deponie</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="24002">
+        <!--Hausmuelldeponie-->
+        <annotation>
+          <documentation>Hausmüll-Deponie</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="24003">
+        <!--Sondermuelldeponie-->
+        <annotation>
+          <documentation>Sondermüll-Deponie</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="24004">
+        <!--StillgelegteDeponie-->
+        <annotation>
+          <documentation>Stillgelegte Deponie</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="24005">
+        <!--RekultivierteDeponie-->
+        <annotation>
+          <documentation>Rekultivierte Deponie</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2600">
+        <!--Telekommunikation-->
+        <annotation>
+          <documentation>Telekommunikation allgemein</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="26000">
+        <!--Fernmeldeanlage-->
+        <annotation>
+          <documentation>Fernmeldeanlage</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="26001">
+        <!--Mobilfunkstrecke-->
+        <annotation>
+          <documentation>Mobilfunkstrecke</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="26002">
+        <!--Fernmeldekabel-->
+        <annotation>
+          <documentation>Fernmeldekabel</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="2800">
+        <!--ErneuerbareEnergien-->
+        <annotation>
+          <documentation>Erneuerbare Energien allgemein</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="3000">
+        <!--KraftWaermeKopplung-->
+        <annotation>
+          <documentation>Fläche oder Anlage für Kraft-Wärme Kopplung</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstige, durch keinen anderen Code abbildbare Ver- oder Entsorgungsfläche bzw. -Anlage.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="99990">
+        <!--Produktenleitung-->
+        <annotation>
+          <documentation>Produktenleitung</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_ZweckbestimmungWald-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_ZweckbestimmungWald">
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--Naturwald-->
+        <annotation>
+          <documentation>Naturwald</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1200">
+        <!--Nutzwald-->
+        <annotation>
+          <documentation>Nutzwald</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1400">
+        <!--Erholungswald-->
+        <annotation>
+          <documentation>Erholungswald</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1600">
+        <!--Schutzwald-->
+        <annotation>
+          <documentation>Schutzwald</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1800">
+        <!--FlaecheForstwirtschaft-->
+        <annotation>
+          <documentation>Fläche für die Forstwirtschaft.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstige Zweckbestimmung</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_ZweckbestimmungWasserwirtschaft-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_ZweckbestimmungWasserwirtschaft">
+    <annotation>
+      <documentation>Aufzählung wasserwirtschaftlicher Zweckbestimmungen.</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="1000">
+        <!--HochwasserRueckhaltebecken-->
+        <annotation>
+          <documentation>Hochwasser-Rückhaltebecken</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1100">
+        <!--Ueberschwemmgebiet-->
+        <annotation>
+          <documentation>Überschwemmungs-gefährdetes Gebiet</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1200">
+        <!--Versickerungsflaeche-->
+        <annotation>
+          <documentation>Versickerungsfläche</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1300">
+        <!--Entwaesserungsgraben-->
+        <annotation>
+          <documentation>Entwässerungsgraben</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="1400">
+        <!--Deich-->
+        <annotation>
+          <documentation>Deich</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="9999">
+        <!--Sonstiges-->
+        <annotation>
+          <documentation>Sonstige Wasserwirtschaftsfläche, sofern keiner der anderen Codes zutreffend ist.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_AbstraktesPraesentationsobjekt-->
+  <!--=========================================================================================-->
+  <element abstract="true" name="XP_AbstraktesPraesentationsobjekt" type="xplan:XP_AbstraktesPraesentationsobjektType" substitutionGroup="gml:AbstractFeature" />
+  <complexType abstract="true" name="XP_AbstraktesPraesentationsobjektType">
+    <annotation>
+      <documentation>Abstrakte Basisklasse für alle Präsentationsobjekte. Die Attribute entsprechen dem ALKIS-Objekt AP_GPO, wobei das Attribut "signaturnummer" in &lt;i&gt;stylesheetId &lt;/i&gt;umbenannt wurde. Bei freien Präsentationsobjekten ist die Relation "&lt;i&gt;dientZurDarstellungVon&lt;/i&gt;" unbelegt, bei gebundenen Präsentationsobjekten zeigt die Relation auf ein von &lt;i&gt;XP_Objekt &lt;/i&gt;abgeleitetes Fachobjekt.
+Freie Präsentationsobjekte dürfen &lt;b&gt;ausschließlich &lt;/b&gt;zur graphischen Annotation eines Plans verwendet werden
+Gebundene Präsentationsobjekte mit Raumbezug dienen &lt;b&gt;ausschließlich &lt;/b&gt;dazu, Attributwerte des verbundenen Fachobjekts im Plan darzustellen. Die Namen der darzustellenden Fachobjekt-Attribute werden über das Attribut "&lt;i&gt;art&lt;/i&gt;" spezifiziert. Bei mehrfach belegbaren Attributen in Fachobjekten gibt &lt;i&gt;index &lt;/i&gt;die Position des Attributwertes an, auf den sich das Präsentationsobjekt bezieht.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="gml:AbstractFeatureType">
+        <sequence>
+          <element name="stylesheetId" minOccurs="0" type="gml:CodeType" />
+          <element name="darstellungsprioritaet" minOccurs="0" type="int" />
+          <element name="art" minOccurs="0" maxOccurs="unbounded" type="string" />
+          <element name="index" minOccurs="0" maxOccurs="unbounded" type="int" />
+          <element name="gehoertZuBereich" minOccurs="0" type="gml:ReferenceType">
+            <annotation>
+              <appinfo>
+                <gml:targetElement>xplan:XP_Bereich</gml:targetElement>
+                <gml:reversePropertyName>xplan:praesentationsobjekt</gml:reversePropertyName>
+              </appinfo>
+            </annotation>
+          </element>
+          <element name="dientZurDarstellungVon" minOccurs="0" maxOccurs="unbounded" type="gml:ReferenceType">
+            <annotation>
+              <appinfo>
+                <gml:targetElement>xplan:XP_Objekt</gml:targetElement>
+                <gml:reversePropertyName>xplan:wirdDargestelltDurch</gml:reversePropertyName>
+              </appinfo>
+            </annotation>
+          </element>
+          <element ref="xplan:_GenericApplicationPropertyOfXP_AbstraktesPraesentationsobjekt" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_AbstraktesPraesentationsobjekt" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--XP_FPO-->
+  <!--=========================================================================================-->
+  <element name="XP_FPO" type="xplan:XP_FPOType" substitutionGroup="xplan:XP_AbstraktesPraesentationsobjekt" />
+  <complexType name="XP_FPOType">
+    <annotation>
+      <documentation>Flächenförmiges Präsentationsobjekt. Entspricht der ALKIS Objektklasse AP_FPO.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_AbstraktesPraesentationsobjektType">
+        <sequence>
+          <element name="position" type="gml:GeometryPropertyType" />
+          <element ref="xplan:_GenericApplicationPropertyOfXP_FPO" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_FPO" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--XP_HorizontaleAusrichtung-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_HorizontaleAusrichtung">
+    <annotation>
+      <documentation>Enumeration der definierten horizontalen Fontausrichtungen
+</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="linksbündig">
+        <annotation>
+          <documentation>Text linksbündig am Textpunkt bzw. am ersten Punkt der Linie.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="rechtsbündig">
+        <annotation>
+          <documentation>Text rechtsbündig am Textpunkt bzw. am letzten Punkt der Linie.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="zentrisch">
+        <annotation>
+          <documentation>Text zentriert am Textpunkt bzw. in der Mitte der Textstandlinie.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_LPO-->
+  <!--=========================================================================================-->
+  <element name="XP_LPO" type="xplan:XP_LPOType" substitutionGroup="xplan:XP_AbstraktesPraesentationsobjekt" />
+  <complexType name="XP_LPOType">
+    <annotation>
+      <documentation>Linienförmiges Präsentationsobjekt Entspricht der ALKIS Objektklasse AP_LPO.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_AbstraktesPraesentationsobjektType">
+        <sequence>
+          <element name="position" type="gml:GeometryPropertyType" />
+          <element ref="xplan:_GenericApplicationPropertyOfXP_LPO" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_LPO" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--XP_LTO-->
+  <!--=========================================================================================-->
+  <element name="XP_LTO" type="xplan:XP_LTOType" substitutionGroup="xplan:XP_TPO" />
+  <complexType name="XP_LTOType">
+    <annotation>
+      <documentation>Textförmiges Präsentationsobjekt mit linienförmiger Textgeometrie. Entspricht der ALKIS-Objektklasse AP_LTO.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_TPOType">
+        <sequence>
+          <element name="position" type="gml:GeometryPropertyType" />
+          <element ref="xplan:_GenericApplicationPropertyOfXP_LTO" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_LTO" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--XP_Nutzungsschablone-->
+  <!--=========================================================================================-->
+  <element name="XP_Nutzungsschablone" type="xplan:XP_NutzungsschabloneType" substitutionGroup="xplan:XP_PTO" />
+  <complexType name="XP_NutzungsschabloneType">
+    <annotation>
+      <documentation>Modelliert eine Nutzungsschablone. Die darzustellenden Attributwerte werden zeilenweise in die Nutzungsschablone geschrieben.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_PTOType">
+        <sequence>
+          <element name="spaltenAnz" type="int" />
+          <element name="zeilenAnz" type="int" />
+          <element ref="xplan:_GenericApplicationPropertyOfXP_Nutzungsschablone" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_Nutzungsschablone" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--XP_PPO-->
+  <!--=========================================================================================-->
+  <element name="XP_PPO" type="xplan:XP_PPOType" substitutionGroup="xplan:XP_AbstraktesPraesentationsobjekt" />
+  <complexType name="XP_PPOType">
+    <annotation>
+      <documentation>Punktförmiges Präsentationsobjekt. Entspricht der ALKIS-Objektklasse AP_PPO.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_AbstraktesPraesentationsobjektType">
+        <sequence>
+          <element name="position" type="gml:GeometryPropertyType" />
+          <element name="drehwinkel" minOccurs="0" default="0" type="gml:AngleType" />
+          <element name="skalierung" minOccurs="0" default="1" type="double" />
+          <element name="hat" minOccurs="0" type="gml:ReferenceType">
+            <annotation>
+              <appinfo>
+                <gml:targetElement>xplan:XP_LPO</gml:targetElement>
+              </appinfo>
+            </annotation>
+          </element>
+          <element ref="xplan:_GenericApplicationPropertyOfXP_PPO" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_PPO" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--XP_Praesentationsobjekt-->
+  <!--=========================================================================================-->
+  <element name="XP_Praesentationsobjekt" type="xplan:XP_PraesentationsobjektType" substitutionGroup="xplan:XP_AbstraktesPraesentationsobjekt" />
+  <complexType name="XP_PraesentationsobjektType">
+    <annotation>
+      <documentation>Entspricht der ALKIS-Objektklasse AP_Darstellung mit dem Unterschied, dass auf das Attribut "positionierungssregel" verzichtet wurde.  Die Klasse darf nur als gebundenes Präsentationsobjekt verwendet werden. Die Standard-Darstellung des verbundenen Fachobjekts wird dann durch die über stylesheetId spezifizierte Darstellung ersetzt. Die Umsetzung dieses Konzeptes ist der Implementierung überlassen.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_AbstraktesPraesentationsobjektType">
+        <sequence>
+          <element ref="xplan:_GenericApplicationPropertyOfXP_Praesentationsobjekt" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_Praesentationsobjekt" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--XP_PTO-->
+  <!--=========================================================================================-->
+  <element name="XP_PTO" type="xplan:XP_PTOType" substitutionGroup="xplan:XP_TPO" />
+  <complexType name="XP_PTOType">
+    <annotation>
+      <documentation>Textförmiges Präsentationsobjekt mit punktförmiger Festlegung der Textposition. Entspricht der ALKIS-Objektklasse AP_PTO.
+</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_TPOType">
+        <sequence>
+          <element name="position" type="gml:GeometryPropertyType" />
+          <element name="drehwinkel" minOccurs="0" default="0" type="gml:AngleType" />
+          <element ref="xplan:_GenericApplicationPropertyOfXP_PTO" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_PTO" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--XP_TPO-->
+  <!--=========================================================================================-->
+  <element abstract="true" name="XP_TPO" type="xplan:XP_TPOType" substitutionGroup="xplan:XP_AbstraktesPraesentationsobjekt" />
+  <complexType abstract="true" name="XP_TPOType">
+    <annotation>
+      <documentation>Abstrakte Oberklasse für textliche Präsentationsobjekte. Entspricht der ALKIS Objektklasse AP_TPO</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="xplan:XP_AbstraktesPraesentationsobjektType">
+        <sequence>
+          <element name="schriftinhalt" minOccurs="0" type="string" />
+          <element name="fontSperrung" minOccurs="0" default="0" type="double" />
+          <element name="skalierung" minOccurs="0" default="1" type="double" />
+          <element name="horizontaleAusrichtung" minOccurs="0" type="xplan:XP_HorizontaleAusrichtung" />
+          <element name="vertikaleAusrichtung" minOccurs="0" type="xplan:XP_VertikaleAusrichtung" />
+          <element name="hat" minOccurs="0" type="gml:ReferenceType">
+            <annotation>
+              <appinfo>
+                <gml:targetElement>xplan:XP_LPO</gml:targetElement>
+              </appinfo>
+            </annotation>
+          </element>
+          <element ref="xplan:_GenericApplicationPropertyOfXP_TPO" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_TPO" type="anyType" abstract="true" />
+  <!--=========================================================================================-->
+  <!--XP_VertikaleAusrichtung-->
+  <!--=========================================================================================-->
+  <simpleType name="XP_VertikaleAusrichtung">
+    <annotation>
+      <documentation>Enumeration der definierten vertikalen Fontausrichtungen
+</documentation>
+    </annotation>
+    <restriction base="string">
+      <enumeration value="Basis">
+        <annotation>
+          <documentation>Textgeometrie bezieht sich auf die Basis- bzw. Grundlinie der Buchstaben.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="Mitte">
+        <annotation>
+          <documentation>Textgeometrie bezieht sich auf die Mittellinie der Buchstaben.</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="Oben">
+        <annotation>
+          <documentation>Textgeometrie bezieht sich auf die Oberlinie der Großbuchstaben.</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--=========================================================================================-->
+  <!--XP_Rasterdarstellung-->
+  <!--=========================================================================================-->
+  <element name="XP_Rasterdarstellung" type="xplan:XP_RasterdarstellungType" substitutionGroup="gml:AbstractFeature" />
+  <complexType name="XP_RasterdarstellungType">
+    <annotation>
+      <documentation>Georeferenzierte Rasterdarstellung eines Plans. Das über &lt;i&gt;refScan &lt;/i&gt;referierte Rasterbild zeigt den Basisplan, dessen Geltungsbereich durch den Geltungsbereich des Gesamtplans (Attribut &lt;i&gt;geltungsbereich &lt;/i&gt;von &lt;i&gt;XP_Plan&lt;/i&gt;) repräsentiert ist. Diesem Basisplan können Änderungen überlagert sein, denen jeweils eigene Rasterbilder und Geltungsbereiche zugeordnet sind (&lt;i&gt;XP_RasterplanAenderung &lt;/i&gt;und abgeleitete Klassen).
+
+Im Standard sind nur georeferenzierte Rasterpläne zugelassen. Die über &lt;i&gt;refScan &lt;/i&gt;referierte externe Referenz muss deshalb entweder vom Typ "&lt;i&gt;PlanMitGeoreferenz&lt;/i&gt;" sein oder einen WMS-Request enthalten.</documentation>
+    </annotation>
+    <complexContent>
+      <extension base="gml:AbstractFeatureType">
+        <sequence>
+          <element name="refScan" maxOccurs="unbounded" type="xplan:XP_ExterneReferenzPropertyType" />
+          <element name="refText" minOccurs="0" type="xplan:XP_ExterneReferenzPropertyType" />
+          <element name="refLegende" minOccurs="0" maxOccurs="unbounded" type="xplan:XP_ExterneReferenzPropertyType" />
+          <element ref="xplan:_GenericApplicationPropertyOfXP_Rasterdarstellung" minOccurs="0" maxOccurs="unbounded" />
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  <element name="_GenericApplicationPropertyOfXP_Rasterdarstellung" type="anyType" abstract="true" />
+</schema>
