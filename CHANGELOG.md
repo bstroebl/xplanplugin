@@ -1,8 +1,11 @@
 # Change Log
 
-## [Unreleased](https://github.com/bstroebl/xplanplugin/compare/v2.1.0...develop)
+## [Unreleased](https://github.com/bstroebl/xplanplugin/compare/v3.0.0...develop)
+
+# 3.0.0 - 2018-08-23 https://github.com/bstroebl/xplanplugin/compare/v2.0.0...v3.0.0
 
 ### Added
+- Importfunktion für XPlanGML-Dateien
 - Bearbeite XP_ExterneReferenz mit eigenem Dialog
 
 ### Fixed
