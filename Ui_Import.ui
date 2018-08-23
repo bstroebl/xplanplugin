@@ -203,7 +203,7 @@
         <string>falls ein Schema dieses Namens bereits existiert soll es überschreiben werden</string>
        </property>
        <property name="text">
-        <string>Überschreiben</string>
+        <string>überschreiben</string>
        </property>
       </widget>
      </item>
