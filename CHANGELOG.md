@@ -2,6 +2,11 @@
 
 ## [Unreleased](https://github.com/bstroebl/xplanplugin/compare/v3.0.0...develop)
 
+### Added
+
+### Fixed
+- Passe Erzeugung der Nutzungsschablone an geänderte Datenstruktur an
+
 # 3.0.0 - 2018-08-23 https://github.com/bstroebl/xplanplugin/compare/v2.0.0...v3.0.0
 
 ### Added

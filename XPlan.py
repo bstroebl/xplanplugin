@@ -329,6 +329,7 @@ class XPlan():
             sQuery += " FROM \"BP_Bebauung\".\"BP_BaugebietsTeilFlaeche\" b \
             JOIN \"BP_Bebauung\".\"BP_BaugebietObjekt\" o ON b.gid = o.gid \
             JOIN \"BP_Bebauung\".\"BP_FestsetzungenBaugebiet\" f ON b.gid = f.gid \
+            JOIN \"BP_Bebauung\".\"BP_BaugebietBauweise\" bw ON b.gid = bw.gid \
             WHERE b.gid = :gid;"
             query = QtSql.QSqlQuery(self.db)
             query.prepare(sQuery)
