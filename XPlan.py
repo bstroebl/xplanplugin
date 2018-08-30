@@ -652,7 +652,10 @@ class XPlan():
                             bpPlanId = bereichFeat[gehoertZuPlanFld]
 
                             if bpPlanId in bpPlaene:
-                                bpPlaene[bpPlanId].append(QgsGeometry(bereichFeat.geometry()))
+                                bereichGeom = QgsGeometry(bereichFeat.geometry())
+
+                                if not bereichGeom.isEmpty():
+                                    bpPlaene[bpPlanId].append(bereichGeom)
 
                         bpBereichLayer.invertSelection()
                         bpPlanLayer.beginEditCommand(u"XPlan: räumliche Geltungsbereiche erneuert")
