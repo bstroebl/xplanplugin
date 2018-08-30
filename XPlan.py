@@ -636,9 +636,12 @@ class XPlan():
 
             if bpBereichLayer != None:
                 bpPlaene = {}
+                bpFids = {}
+                planGidField = bpPlanLayer.fieldNameIndex("gid")
 
                 for bpPlanFeat in self.tools.getFeatures(bpPlanLayer):
-                    bpPlaene[bpPlanFeat.id()] = []
+                    bpPlaene[bpPlanFeat[planGidField]] = []
+                    bpFids[bpPlanFeat[planGidField]] = bpPlanFeat.id()
 
                 if len(bpPlaene) > 0:
                     if self.tools.setEditable(bpPlanLayer, True, self.iface):
@@ -654,10 +657,11 @@ class XPlan():
                         bpBereichLayer.invertSelection()
                         bpPlanLayer.beginEditCommand(u"XPlan: räumliche Geltungsbereiche erneuert")
 
-                        for fid, geomList in bpPlaene.iteritems():
+                        for gid, geomList in bpPlaene.iteritems():
                             if len(geomList) == 0:
                                 continue
 
+                            fid = bpFids[gid]
                             first = True
                             for aGeom in geomList:
                                 if first:
