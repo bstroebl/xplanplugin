@@ -7,6 +7,7 @@
 ### Fixed
 - Passe Erzeugung der Nutzungsschablone an geänderte Datenstruktur an
 - Berechne raeumlichenGeltungsbereich über gid statt fid
+- Berücksichtige, dass Bereiche keine Geometrie brauchen
 
 # 3.0.0 - 2018-08-23 https://github.com/bstroebl/xplanplugin/compare/v2.0.0...v3.0.0
 
