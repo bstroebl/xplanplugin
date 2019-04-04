@@ -19,13 +19,17 @@ email                : bernhard.stroebl@jena.de
  *                                                                         *
  ***************************************************************************/
 """
-# Import the PyQt and QGIS libraries
-from PyQt4 import QtSql,  QtXml
+from __future__ import absolute_import
+from builtins import str
+from builtins import range
+from builtins import object
+from qgis.PyQt import QtSql, QtXml
+
 # Initialize Qt resources from file resources.py
 from qgis.core import *
 from qgis.gui import *
-from XPlanDialog import BereichsauswahlDialog
-from XPlanDialog import StilauswahlDialog
+from .XPlanDialog import BereichsauswahlDialog
+from .XPlanDialog import StilauswahlDialog
 
 class XPTools():
     def __init__(self, iface, standardName, simpleStyleName):
@@ -146,7 +150,7 @@ class XPTools():
         styleMan.renameStyle(u"", self.simpleStyleName)
 
         if stile != None:
-            for key, value in stile.items():
+            for key, value in list(stile.items()):
                 bereich = value[0]
                 stil = value[1]
 
@@ -154,14 +158,14 @@ class XPTools():
                     styleMan.setCurrentStyle(self.simpleStyleName)
 
                     if layer.wkbType() in [1, 4]:
-                        sl = QgsMarkerSymbolV2.createSimple({"color":stil})
+                        sl = QgsMarkerSymbol.createSimple({"color":stil})
                     elif layer.wkbType() in [2, 5]:
-                        sl = QgsLineSymbolV2.createSimple({"color":stil})
+                        sl = QgsLineSymbol.createSimple({"color":stil})
                     elif layer.wkbType() in [3, 6]:
-                        sl = QgsFillSymbolV2.createSimple({"color":stil})
+                        sl = QgsFillSymbol.createSimple({"color":stil})
 
-                    layer.rendererV2().setSymbol(sl)
-                    self.iface.legendInterface().refreshLayerSymbology(layer)
+                    layer.renderer().setSymbol(sl)
+                    self.iface.layerTreeView().refreshLayerSymbology(layer.id())
                 else:
                     styleMan.renameStyle(bereich, bereich + "_old") # falls schon vorhanden
                     style = QgsMapLayerStyle(stil)
@@ -175,10 +179,30 @@ class XPTools():
         styleMan = layer.styleManager()
 
         if styleMan.setCurrentStyle(bereich):
-            self.iface.legendInterface().refreshLayerSymbology(layer)
+            self.iface.layerTreeView().refreshLayerSymbology(layer.id())
         else:
             if styleMan.setCurrentStyle(self.standardName):
-                self.iface.legendInterface().refreshLayerSymbology(layer)
+                self.iface.layerTreeView().refreshLayerSymbology(layer.id())
+
+    def createAction(self, layer, actionName, actionString, type = "Python",
+            actionScopes = {"Canvas"}):
+
+        createAction = True # store if an action with this name already exists
+
+        for act in layer.actions().actions():
+            if act.name() == actionName:
+                createAction = False
+                break
+
+        if createAction:
+            if type == "Python":
+                actionType = 1 # actionType 1: Python
+            else:
+                actionType = 1
+
+            newAction = QgsAction(actionType,  actionName, actionString)
+            newAction.setActionScopes(actionScopes)
+            layer.actions().addAction(newAction)
 
     def getBereichTyp(self,  db,  bereichGid):
         '''gibt den Typ (FP, BP etc) des Bereichs mit der übergebenen gid zurück'''
@@ -281,7 +305,7 @@ class XPTools():
         wenn keine Selektion besteht, alle Features zurück
         aus Processing'''
 
-        class Features:
+        class Features(object):
 
             def __init__(self, layer):
                 self.layer = layer
@@ -328,7 +352,7 @@ class XPTools():
             if aJoinInfo.joinLayerId == joinLayer.id():
                 sourceLayer.removeJoin(joinLayer.id())
 
-        joinInfo = QgsVectorJoinInfo()
+        joinInfo = QgsVectorLayerJoinInfo()
         joinInfo.targetFieldIndex = sourceLayer.fieldNameIndex(targetField)
         joinInfo.joinFieldIndex = joinLayer.fieldNameIndex(joinField)
         joinInfo.joinFieldName = joinField
@@ -510,7 +534,7 @@ class XPTools():
         doc=QtXml.QDomDocument()
         rootNode = doc.createElement("qgis")
         versionAttr = doc.createAttribute("version")
-        versionAttr.setValue(QGis.QGIS_VERSION)
+        versionAttr.setValue(Qgis.QGIS_VERSION)
         rootNode.setAttributeNode(versionAttr)
         minScaleAttr = doc.createAttribute("minimumScale")
         minScaleAttr.setValue(str(layer.minimumScale()))
@@ -530,41 +554,91 @@ class XPTools():
 
     def getGroupIndex(self,  groupName):
         '''Finde den Gruppenindex für Gruppe groupName'''
-        retValue = -1
-        groups = self.iface.legendInterface().groups()
+        return self.shuffleGroup(groupName, atTop = False)
 
-        for i in range(len(groups)):
-            if groups[i] == groupName:
-                retValue = i
-                break
+    def getGroup(self, groupName):
+        '''Finde die Gruppe groupName'''
 
-        return retValue
+        return QgsProject.instance().layerTreeRoot().findGroup(groupName)
 
-    def createGroup(self,  grpName):
-        grpIdx = self.iface.legendInterface().addGroup(grpName,  False) # False = expand
+    def createGroup(self, groupName, atTop = True):
+        group = self.getGroup(groupName)
 
-        if QGis.QGIS_VERSION_INT >= 20400:
-            # Gruppe an der Spitze des LAyerbaums einfügen
-            root=QgsProject.instance().layerTreeRoot()
-            group = root.findGroup(grpName)
-            group2 = group.clone()
-            root.insertChildNode(0,  group2)
+        if group == None:
+            root = QgsProject.instance().layerTreeRoot()
+
+            if atTop:
+                return root.insertGroup(0, groupName)
+            else:
+                return root.addGroup(groupName)
+        else:
+            return self.shuffleGroup(groupName, atTop)
+
+    def shuffleGroup(self, groupName, toTop = True):
+        group = self.getGroup(groupName)
+
+        if group != None:
+            root = QgsProject.instance().layerTreeRoot()
+
+            if toTop:
+                group2 = root.insertGroup(0, groupName)
+            else:
+                group2 = root.addGroup(groupName)
+
             root.removeChildNode(group)
-            grpIdx = self.getGroupIndex(grpName)
 
-        return grpIdx
+            return group2
+        else:
+            return None
+
+    def moveLayerToGroup(self, layer, groupName):
+        group = self.getGroup(groupName)
+
+        if group== None:
+            #Gruppe anlegen
+            group = self.createGroup(groupName)
+        else:
+            if group.findLayer(layer.id()) != None:
+                return True
+
+        if group != None:
+            root = QgsProject.instance().layerTreeRoot()
+            layerTreeLayer = root.findLayer(layer.id())
+
+            if layerTreeLayer != None:
+                wasVisible = layerTreeLayer.itemVisibilityChecked()
+                newLayerTreeLayer = group.addLayer(layer)
+                newLayerTreeLayer.setItemVisibilityChecked(wasVisible)
+
+                if root.removeLayer(layer) == None: # falls layer in Root
+                    try:
+                        layerTreeLayer.parent().removeLayer(layer)
+                        # falls layer in root, crashed QGIS bei parent() :-(
+                    except:
+                        pass
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    def setLayerVisible(self, layer, visible = True):
+        root = QgsProject.instance().layerTreeRoot()
+        layerTreeLayer = root.findLayer(layer.id())
+
+        if layerTreeLayer != None:
+            layerTreeLayer.setItemVisibilityChecked(visible)
 
     def createFeature(self,  layer, fid = None):
         '''Ein Feature für den übergebenen Layer erzeugen'''
         if isinstance(layer, QgsVectorLayer):
-            #TODO: Für QGIS3 newFeature = QgsVectorLayerUtils.createFeature(layer)
+            newFeature = QgsVectorLayerUtils.createFeature(layer)
+
             if fid:
-                newFeature = QgsFeature(fid)
-            else:
-                newFeature = QgsFeature()
+                newFeaturesetId(fid)
 
             provider = layer.dataProvider()
-            fields = layer.pendingFields()
+            fields = layer.fields()
             newFeature.initAttributes(fields.count())
 
             for i in range(fields.count()):
@@ -629,12 +703,12 @@ class XPTools():
 
     def showWarning(self, msg, title = "XPlanung"):
         self.iface.messageBar().pushMessage(title, msg,
-            level=QgsMessageBar.WARNING, duration = 10)
+            level=Qgis.Warning, duration = 10)
         #self.log(msg, "warn")
 
     def showError(self, msg, title = "XPlanung"):
         self.iface.messageBar().pushMessage(title,
-            msg, level=QgsMessageBar.CRITICAL, duration = 10)
+            msg, level=Qgis.Critical, duration = 10)
         self.log(msg, "error")
 
     def noStyleWarning(self, layer):
@@ -645,9 +719,10 @@ class XPTools():
 
     def log(self, msg, type = 'info'):
         if type == 'info':
-            msgType = QgsMessageLog.INFO
+            msgType = Qgis.Info
         if type == 'warn':
-            msgType = QgsMessageLog.WARNING
+            msgType = Qgis.Warning
         if type == 'error':
-            msgType = QgsMessageLog.CRITICAL
+            msgType = Qgis.Critical
         QgsMessageLog.logMessage(msg, "XPlanung", msgType)
+

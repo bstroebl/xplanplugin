@@ -20,7 +20,8 @@ email                : bernhard.stroebl@jena.de
  ***************************************************************************/
  This script initializes the plugin, making it known to QGIS.
 """
+from __future__ import absolute_import
 
 def classFactory(iface):
-  from XPlan import XPlan
+  from .XPlan import XPlan
   return XPlan(iface)

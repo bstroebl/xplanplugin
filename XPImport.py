@@ -19,15 +19,16 @@ email                : bernhard.stroebl@jena.de
  *                                                                         *
  ***************************************************************************/
 """
-# Import the PyQt and QGIS libraries
-from PyQt4 import QtSql, QtGui
+from builtins import str
+from builtins import object
+from qgis.PyQt import QtSql, QtGui
 import qgis.core
 from qgis.gui import *
 from processing.tools.system import isWindows
 import subprocess
 import os
 
-class XPImporter():
+class XPImporter(object):
     def __init__(self, db, tools, params):
         self.db = db
         self.tools = tools
@@ -66,7 +67,7 @@ class XPImporter():
         else:
             commands = ['ogr2ogr'] + arguments
 
-        fused_command = ' '.join([unicode(c) for c in commands])
+        fused_command = ' '.join([str(c) for c in commands])
 
         try:
             proc = subprocess.check_output(
@@ -77,9 +78,9 @@ class XPImporter():
             )
             for line in proc:
                 loglines.append(line)
-            loglines = ' '.join([unicode(c) for c in loglines])
+            loglines = ' '.join([str(c) for c in loglines])
             success = 0
-        except subprocess.CalledProcessError, e:
+        except subprocess.CalledProcessError as e:
             success = e.returncode
             loglines = e.output
 

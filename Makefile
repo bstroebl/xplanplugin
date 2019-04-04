@@ -1,5 +1,5 @@
 #/***************************************************************************
-# radwege
+# xplanung
 #                             -------------------
 # begin                : 2012-03-01
 # copyright            : (C) 2012 by Bernhard Stroebl, KIJ/DV
@@ -20,60 +20,47 @@ PLUGINNAME = xplanung
 
 PY_FILES = XPlan.py XPlanDialog.py __init__.py HandleDb.py XPTools.py XPImport.py
 
-EXTRAS = tools/icons/logo_xplanung.png
+EXTRAS = tools/icons/logo_xplanung.png metadata.txt license.txt
 
-SCHEMAS = schema
-
-LICENSE = license.txt
-
-METADATA = metadata.txt
+DIRS = schema svg
 
 UI_FILES = Ui_Bereichsauswahl.ui Ui_conf.ui Ui_ObjektartLaden.ui Ui_Stilauswahl.ui Ui_Nutzungsschablone.ui Ui_Bereichsmanager.ui Ui_Referenzmanager.ui Ui_Import.ui
 
-#RESOURCE_FILES = tools/resources_rc.py
+QGISDIR=.local/share/QGIS/QGIS3/profiles/default
 
 default: deploy
 
-#compile: $(UI_FILES) $(RESOURCE_FILES)
-#compile: $(UI_FILES)
-
-#%_rc.py : %.qrc
-#	pyrcc4 -o $@  $<
-
-#%.py : %.ui
-#	pyuic4 -o $@ $<
-
-# The deploy target only works on unix like operating system where
-# the Python plugin directory is located at:
-# $HOME/.qgis/python/plugins
 deploy:
-	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
-	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/schema
-	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/tools
-	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/tools/icons
-	mkdir -p $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/svg/XPlanung_qgis
-	cp -vf $(PY_FILES) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
-	cp -vf $(UI_FILES) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
-	cp -vf $(METADATA) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
-	cp -vf $(LICENSE) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
-	#cp -vf $(RESOURCE_FILES) $(HOME)/.qgis/python/plugins/$(PLUGINNAME)/tools
-	cp -vf $(EXTRAS) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/tools/icons
-	cp -vf svg/XPlanung_qgis/*.svg $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)/svg/XPlanung_qgis
-	cp -vfr $(SCHEMAS) $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
-
-# The derase deletes deployed plugin
-derase:
-	rm -Rf $(HOME)/.qgis2/python/plugins/$(PLUGINNAME)
+	@echo
+	@echo "------------------------------------------"
+	@echo "Deploying plugin to your .qgis3 directory."
+	@echo "------------------------------------------"
+	# The deploy  target only works on unix like operating system where
+	# the Python plugin directory is located at:
+	# $HOME/$(QGISDIR)/python/plugins
+	mkdir -p $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
+	cp -vf $(PY_FILES) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
+	cp -vf $(EXTRAS) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
+	cp -vf $(UI_FILES) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
+	cp -vfr $(DIRS) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 
 # The dclean target removes compiled python files from plugin directory
 dclean:
-	find $(HOME)/.qgis2/python/plugins/$(PLUGINNAME) -iname "*.pyc" -delete
+	find $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME) -iname "*.pyc" -delete
+
+# The derase deletes deployed plugin
+derase:
+	@echo
+	@echo "-------------------------"
+	@echo "Removing deployed plugin."
+	@echo "-------------------------"
+	rm -Rf $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 
 # The zip target deploys the plugin and creates a zip file with the deployed
 # content. You can then upload the zip file on http://plugins.qgis.org
 zip: deploy dclean
 	rm -f $(PLUGINNAME).zip
-	cd $(HOME)/.qgis2/python/plugins; zip -9r $(CURDIR)/$(PLUGINNAME).zip $(PLUGINNAME)
+	cd $(HOME)/$(QGISDIR)/python/plugins; zip -9r $(CURDIR)/$(PLUGINNAME).zip $(PLUGINNAME)
 
 # Create a zip package of the plugin named $(PLUGINNAME).zip.
 # This requires use of git (your plugin development directory must be a

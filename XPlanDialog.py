@@ -20,7 +20,9 @@ email                : bernhard.stroebl@jena.de
  ***************************************************************************/
 """
 # Import the PyQt and QGIS libraries
-from PyQt4 import QtCore, QtGui, QtSql,  uic
+from qgis.PyQt import QtCore, QtWidgets, QtSql, uic
+from builtins import str
+from builtins import range
 from qgis.core import *
 from qgis.gui import *
 import qgis.gui
@@ -56,17 +58,17 @@ REFERENZMANAGER_CLASS, _ = uic.loadUiType(os.path.join(
 IMPORT_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'Ui_Import.ui'))
 
-class XP_Chooser(QtGui.QDialog, CHOOSER_CLASS):
+class XP_Chooser(QtWidgets.QDialog, CHOOSER_CLASS):
     '''Ein Dialog mit einem TreeWidget um ein Element auszuwählen, abstrakt'''
 
     def __init__(self, objektart, db, title):
-        QtGui.QDialog.__init__(self)
+        QtWidgets.QDialog.__init__(self)
         self.objektart = objektart
         self.db = db
         self.setupUi(self)
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
-        self.okBtn = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)
+        self.okBtn = self.buttonBox.button(QtWidgets.QDialogButtonBox.Ok)
         self.okBtn.setEnabled(False)
         self.setWindowTitle(title)
         self.initialize()
@@ -75,7 +77,7 @@ class XP_Chooser(QtGui.QDialog, CHOOSER_CLASS):
         self.done(0)
 
     def showQueryError(self, query):
-        QtGui.QMessageBox.warning(None, "DBError",  "Database Error: \
+        QtWidgets.QMessageBox.warning(None, "DBError",  "Database Error: \
             %(error)s \n %(query)s" % {"error": query.lastError().text(),
             "query": query.lastQuery()})
 
@@ -100,10 +102,10 @@ class ChoosePlan(XP_Chooser):
                 planGid = query.value(1)
                 nummer = query.value(2)
 
-                parentItem = QtGui.QTreeWidgetItem([parent])
+                parentItem = QtWidgets.QTreeWidgetItem([parent])
                 parentItem.gid = planGid
                 self.layerChooser.addTopLevelItem(parentItem)
-                childItem = QtGui.QTreeWidgetItem([nummer])
+                childItem = QtWidgets.QTreeWidgetItem([nummer])
                 childItem.parent = parent
                 childItem.gid = planGid
                 parentItem.addChild(childItem)
@@ -114,7 +116,7 @@ class ChoosePlan(XP_Chooser):
 
         self.layerChooser.resizeColumnToContents(0)
 
-    @QtCore.pyqtSlot(QtGui.QTreeWidgetItem, int)
+    @QtCore.pyqtSlot(QtWidgets.QTreeWidgetItem, int)
     def on_layerChooser_itemDoubleClicked(self, thisItem, thisColumn):
         if thisItem.gid == None:
             if thisItem.isExpanded():
@@ -180,12 +182,12 @@ class ChooseObjektart(XP_Chooser):
                 description = query.value(3)
 
                 if parent != lastParent:
-                    parentItem = QtGui.QTreeWidgetItem([parent])
+                    parentItem = QtWidgets.QTreeWidgetItem([parent])
                     parentItem.geomColumn = None
                     self.layerChooser.addTopLevelItem(parentItem)
                     lastParent = parent
 
-                childItem = QtGui.QTreeWidgetItem([child])
+                childItem = QtWidgets.QTreeWidgetItem([child])
                 childItem.parent = parent
                 childItem.geomColumn = geomColumn
                 childItem.description = description
@@ -200,7 +202,7 @@ class ChooseObjektart(XP_Chooser):
         if len(self.bereiche) > 1:
             self.chkBereich.setLabel(u"nur Objekte der aktiven Bereiche laden")
 
-    @QtCore.pyqtSlot(QtGui.QTreeWidgetItem, int)
+    @QtCore.pyqtSlot(QtWidgets.QTreeWidgetItem, int)
     def on_layerChooser_itemDoubleClicked(self, thisItem, thisColumn):
         if thisItem.geomColumn == None:
             if thisItem.isExpanded():
@@ -236,9 +238,9 @@ class ChooseObjektart(XP_Chooser):
         self.aktiveBereiche = self.chkAktiverBereich.isChecked()
         self.done(1)
 
-class XPlanungConf(QtGui.QDialog,  CONF_CLASS):
+class XPlanungConf(QtWidgets.QDialog,  CONF_CLASS):
     def __init__(self, dbHandler, tools):
-        QtGui.QDialog.__init__(self)
+        QtWidgets.QDialog.__init__(self)
         self.dbHandler = dbHandler
         self.tools = tools
         self.setupUi(self)
@@ -289,9 +291,9 @@ class XPlanungConf(QtGui.QDialog,  CONF_CLASS):
                 self.tools.showWarning(u"Nach einem Wechsel der DB-Verbindung wird empfohlen, QGIS neu zu starten")
             self.done(1)
 
-class BereichsauswahlDialog(QtGui.QDialog, BEREICH_CLASS):
+class BereichsauswahlDialog(QtWidgets.QDialog, BEREICH_CLASS):
     def __init__(self, iface, db,  multiSelect,  title = "Bereichsauswahl"):
-        QtGui.QDialog.__init__(self)
+        QtWidgets.QDialog.__init__(self)
         # Set up the user interface from Designer.
         self.setupUi(self)
         self.setWindowTitle(title)
@@ -299,11 +301,11 @@ class BereichsauswahlDialog(QtGui.QDialog, BEREICH_CLASS):
         self.iface = iface
         self.db = db
         self.selected = {} # dict, das id: Name der ausgewählten Bereiche enthält
-        self.okBtn = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)
+        self.okBtn = self.buttonBox.button(QtWidgets.QDialogButtonBox.Ok)
         self.okBtn.setEnabled(False)
 
         if multiSelect:
-            self.bereich.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+            self.bereich.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
 
         self.initializeValues()
 
@@ -329,7 +331,7 @@ class BereichsauswahlDialog(QtGui.QDialog, BEREICH_CLASS):
                 aPlanArt = query.value(0)
 
                 if aPlanArt not in planArten:
-                    radPlanArt = QtGui.QRadioButton(aPlanArt,  planArt)
+                    radPlanArt = QtWidgets.QRadioButton(aPlanArt,  planArt)
                     radPlanArt.setObjectName(aPlanArt)
 
                     if firstRecord:
@@ -348,7 +350,7 @@ class BereichsauswahlDialog(QtGui.QDialog, BEREICH_CLASS):
         self.fillBereichTree()
 
     def debug(self,  msg):
-        QtGui.QMessageBox.information(None, "Debug",  msg)
+        QtWidgets.QMessageBox.information(None, "Debug",  msg)
 
     def fillBereichTree(self):
         self.bereich.clear()
@@ -393,13 +395,13 @@ class BereichsauswahlDialog(QtGui.QDialog, BEREICH_CLASS):
                         child = query.value(3)
 
                         if parentId != lastParentId:
-                            parentItem = QtGui.QTreeWidgetItem([parent])
+                            parentItem = QtWidgets.QTreeWidgetItem([parent])
                             parentItem.parentId = parentId
                             parentItem.childId = None
                             self.bereich.addTopLevelItem(parentItem)
                             lastParentId = parentId
 
-                        childItem = QtGui.QTreeWidgetItem([child])
+                        childItem = QtWidgets.QTreeWidgetItem([child])
                         childItem.parentId = None
                         childItem.childId = childId
                         parentItem.addChild(childItem)
@@ -417,7 +419,7 @@ class BereichsauswahlDialog(QtGui.QDialog, BEREICH_CLASS):
     #def on_bereich_itemSelectionChanged(self):
     #   self.debug("bereich_itemSelectionChanged")
 
-    @QtCore.pyqtSlot(QtGui.QTreeWidgetItem,  int)
+    @QtCore.pyqtSlot(QtWidgets.QTreeWidgetItem,  int)
     def on_bereich_itemDoubleClicked(self,  thisItem,  thisColumn):
         if thisItem.childId == None:
             if thisItem.isExpanded():
@@ -462,9 +464,9 @@ class BereichsauswahlDialog(QtGui.QDialog, BEREICH_CLASS):
             %(error)s \n %(query)s" % {"error": query.lastError().text(),
             "query": query.lastQuery()}, level=QgsMessageBar.CRITICAL)
 
-class StilauswahlDialog(QtGui.QDialog, STIL_CLASS):
+class StilauswahlDialog(QtWidgets.QDialog, STIL_CLASS):
     def __init__(self, iface, aDict, title = "Stilauswahl"):
-        QtGui.QDialog.__init__(self)
+        QtWidgets.QDialog.__init__(self)
         # Set up the user interface from Designer.
         self.setupUi(self)
         self.setWindowTitle(title)
@@ -472,7 +474,7 @@ class StilauswahlDialog(QtGui.QDialog, STIL_CLASS):
         self.iface = iface
         self.aDict = aDict
         self.selected = -1 # id des ausgewälten Stils
-        self.okBtn = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)
+        self.okBtn = self.buttonBox.button(QtWidgets.QDialogButtonBox.Ok)
         self.okBtn.setEnabled(False)
 
         self.initializeValues()
@@ -481,17 +483,17 @@ class StilauswahlDialog(QtGui.QDialog, STIL_CLASS):
         self.fillStilList()
 
     def debug(self,  msg):
-        QtGui.QMessageBox.information(None, "Debug",  msg)
+        QtWidgets.QMessageBox.information(None, "Debug",  msg)
 
     def fillStilList(self):
         self.stil.clear()
 
-        for key, value in self.aDict.items():
-            anItem = QtGui.QListWidgetItem(value)
+        for key, value in list(self.aDict.items()):
+            anItem = QtWidgets.QListWidgetItem(value)
             anItem.id = key
             self.stil.addItem(anItem)
 
-    @QtCore.pyqtSlot(QtGui.QListWidgetItem)
+    @QtCore.pyqtSlot(QtWidgets.QListWidgetItem)
     def on_stil_itemDoubleClicked(self, thisItem):
         self.selected = thisItem.id
         self.accept()
@@ -517,11 +519,11 @@ class StilauswahlDialog(QtGui.QDialog, STIL_CLASS):
             %(error)s \n %(query)s" % {"error": query.lastError().text(),
             "query": query.lastQuery()}, level=QgsMessageBar.CRITICAL)
 
-class XPNutzungsschablone(QtGui.QDialog, SCHABLONE_CLASS):
+class XPNutzungsschablone(QtWidgets.QDialog, SCHABLONE_CLASS):
     '''Ein Dialog zur Konfiguraton der Nutzungsschablone (BPlan'''
 
     def __init__(self, nutzungsschablone):
-        QtGui.QDialog.__init__(self)
+        QtWidgets.QDialog.__init__(self)
 
         if nutzungsschablone == None:
             self.nutzungsschablone = [None, None, None, None, None, None]
@@ -595,9 +597,9 @@ class XPNutzungsschablone(QtGui.QDialog, SCHABLONE_CLASS):
 
         self.done(1)
 
-class BereichsmanagerDialog(QtGui.QDialog, BEREICHSMANAGER_CLASS):
+class BereichsmanagerDialog(QtWidgets.QDialog, BEREICHSMANAGER_CLASS):
     def __init__(self, xplanplugin):
-        QtGui.QDialog.__init__(self)
+        QtWidgets.QDialog.__init__(self)
         # Set up the user interface from Designer.
         self.setupUi(self)
         self.xplanplugin = xplanplugin
@@ -612,7 +614,7 @@ class BereichsmanagerDialog(QtGui.QDialog, BEREICHSMANAGER_CLASS):
     def fillLayerList(self):
         self.layerList.clear()
 
-        for key, value in self.xplanplugin.xpLayers.items():
+        for key, value in list(self.xplanplugin.xpLayers.items()):
             try:
                 aLayer = value[0]
                 aLayerName = aLayer.name()
@@ -623,12 +625,12 @@ class BereichsmanagerDialog(QtGui.QDialog, BEREICHSMANAGER_CLASS):
             bereichsFilterAktiv = aLayer.subsetString() != ""
 
             if not featuresHaveBeenAdded:
-                anItem = QtGui.QListWidgetItem(aLayerName)
+                anItem = QtWidgets.QListWidgetItem(aLayerName)
                 anItem.layer = aLayer
                 anItem.bereichsFilterAktiv = bereichsFilterAktiv
                 self.layerList.addItem(anItem)
 
-        for key, value in self.xplanplugin.displayLayers.items():
+        for key, value in list(self.xplanplugin.displayLayers.items()):
             try:
                 aLayer = value[0]
                 aLayerName = aLayer.name()
@@ -636,7 +638,7 @@ class BereichsmanagerDialog(QtGui.QDialog, BEREICHSMANAGER_CLASS):
                 continue
 
             bereichsFilterAktiv = aLayer.subsetString() != ""
-            anItem = QtGui.QListWidgetItem(aLayerName)
+            anItem = QtWidgets.QListWidgetItem(aLayerName)
             anItem.layer = aLayer
             anItem.bereichsFilterAktiv = bereichsFilterAktiv
             self.layerList.addItem(anItem)
@@ -664,7 +666,7 @@ class BereichsmanagerDialog(QtGui.QDialog, BEREICHSMANAGER_CLASS):
                 aendernToolTip = u"aktive Bereiche ändern"
                 deaktToolTip = "aktive Bereiche deaktivieren"
 
-            for key, value in self.xplanplugin.aktiveBereiche.items():
+            for key, value in list(self.xplanplugin.aktiveBereiche.items()):
                 if lblText == "":
                     lblText = value
                 else:
@@ -678,7 +680,7 @@ class BereichsmanagerDialog(QtGui.QDialog, BEREICHSMANAGER_CLASS):
         self.btnAktiverBereichDeaktivieren.setToolTip(deaktToolTip)
         self.on_layerList_itemSelectionChanged()
 
-    @QtCore.pyqtSlot( QtGui.QListWidgetItem  )
+    @QtCore.pyqtSlot( QtWidgets.QListWidgetItem  )
     def on_layerList_itemDoubleClicked(self, anItem):
         self.xplanplugin.aktiveBereicheFiltern(anItem.layer)
         anItem.bereichsFilterAktiv = True
@@ -733,25 +735,25 @@ class BereichsmanagerDialog(QtGui.QDialog, BEREICHSMANAGER_CLASS):
 
         self.done(self.selected)
 
-class ReferenzmanagerDialog(QtGui.QDialog, REFERENZMANAGER_CLASS):
+class ReferenzmanagerDialog(QtWidgets.QDialog, REFERENZMANAGER_CLASS):
     def __init__(self, xplanplugin, referenzenLayer):
-        QtGui.QDialog.__init__(self)
+        QtWidgets.QDialog.__init__(self)
         # Set up the user interface from Designer.
         self.setupUi(self)
         self.xplanplugin = xplanplugin
         self.referenzenLayer = referenzenLayer
         self.referenzen.customContextMenuRequested.connect(self.on_referenzen_customContextMenuRequested)
-        self.referenzen.contextMenu = QtGui.QMenu(self.referenzen)
-        self.editAction = QtGui.QAction("Bearbeiten", self.referenzen.contextMenu)
+        self.referenzen.contextMenu = QtWidgets.QMenu(self.referenzen)
+        self.editAction = QtWidgets.QAction("Bearbeiten", self.referenzen.contextMenu)
         self.editAction.triggered.connect(self.editReferenz)
         self.referenzen.contextMenu.addAction(self.editAction)
-        self.removeAction = QtGui.QAction(u"Löschen", self.referenzen.contextMenu)
+        self.removeAction = QtWidgets.QAction(u"Löschen", self.referenzen.contextMenu)
         self.removeAction.triggered.connect(self.removeReferenz)
         self.referenzen.contextMenu.addAction(self.removeAction)
-        self.newAction = QtGui.QAction("Neue externeReferenz", self.referenzen.contextMenu)
+        self.newAction = QtWidgets.QAction("Neue externeReferenz", self.referenzen.contextMenu)
         self.newAction.triggered.connect(self.newReferenz)
         self.referenzen.contextMenu.addAction(self.newAction)
-        self.buttonBox.button(QtGui.QDialogButtonBox.Reset).clicked.connect(self.initialize)
+        self.buttonBox.button(QtWidgets.QDialogButtonBox.Reset).clicked.connect(self.initialize)
         self.initialize()
 
     def initialize(self):
@@ -773,7 +775,7 @@ class ReferenzmanagerDialog(QtGui.QDialog, REFERENZMANAGER_CLASS):
 
         for aFeat in self.referenzenLayer.selectedFeatures():
             if aFeat.id() > 0:
-                anItem = QtGui.QListWidgetItem(aFeat["referenzName"])
+                anItem = QtWidgets.QListWidgetItem(aFeat["referenzName"])
                 anItem.feature = aFeat
                 self.referenzen.addItem(anItem)
 
@@ -849,7 +851,7 @@ class ReferenzmanagerDialog(QtGui.QDialog, REFERENZMANAGER_CLASS):
     def on_btnFilter_clicked(self):
         self.fillReferenzen()
 
-    @QtCore.pyqtSlot( QtGui.QListWidgetItem )
+    @QtCore.pyqtSlot( QtWidgets.QListWidgetItem )
     def on_referenzen_itemDoubleClicked(self, clickedItem):
         self.editFeature(clickedItem.feature)
 
@@ -869,9 +871,9 @@ class ReferenzmanagerDialog(QtGui.QDialog, REFERENZMANAGER_CLASS):
     def reject(self):
         self.done(0)
 
-class ImportDialog(QtGui.QDialog, IMPORT_CLASS):
+class ImportDialog(QtWidgets.QDialog, IMPORT_CLASS):
     def __init__(self, xplanplugin):
-        QtGui.QDialog.__init__(self)
+        QtWidgets.QDialog.__init__(self)
         # Set up the user interface from Designer.
         self.setupUi(self)
         self.xplanplugin = xplanplugin
@@ -973,13 +975,13 @@ class ImportDialog(QtGui.QDialog, IMPORT_CLASS):
             self.txlSchema.setText(neuesSchema)
 
     def chooseEPSG(self):
-        sel = QgsGenericProjectionSelector()
+        sel = QgsProjectionSelectionDialog()
         result = sel.exec_()
 
         if result == 0:
             return None
         else:
-            return sel.selectedAuthId()
+            return sel.crs().authid()
 
     def enableTxlSchema(self):
         if self.cbxSchema.currentText() == self.neuString:
@@ -992,7 +994,7 @@ class ImportDialog(QtGui.QDialog, IMPORT_CLASS):
             self.chkUeberschreiben.setEnabled(False)
 
     def enableOk(self):
-        okBtn = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)
+        okBtn = self.buttonBox.button(QtWidgets.QDialogButtonBox.Ok)
         schritt1 = self.chkSchritt1.isChecked()
         schritt2 = self.chkSchritt2.isChecked()
         neuesSchema = (self.cbxSchema.currentText() == self.neuString)
@@ -1038,7 +1040,7 @@ class ImportDialog(QtGui.QDialog, IMPORT_CLASS):
         else:
             usePath = os.path.abspath(os.path.dirname("$HOME"))
 
-        fileName = QtGui.QFileDialog.getOpenFileName(caption = u"XPlanGML-Datei wählen",
+        fileName = QtWidgets.QFileDialog.getOpenFileName(caption = u"XPlanGML-Datei wählen",
             directory = usePath, filter = "GML-Dateien (*.gml)")
 
         if fileName != "":

@@ -19,13 +19,13 @@ email                : bernhard.stroebl@jena.de
  *                                                                         *
  ***************************************************************************/
 """
-# Import the PyQt and QGIS libraries
-from PyQt4 import QtCore
-from PyQt4 import QtSql
-from qgis.gui import QgsMessageBar
-import qgis.core
+from builtins import object
+from qgis.PyQt import QtCore, QtSql
 
-class DbHandler():
+from qgis.gui import *
+from qgis.core import *
+
+class DbHandler(object):
     '''class to handle a QtSql.QSqlDatabase connnection to a PostgreSQL server'''
 
     def __init__(self, iface):
@@ -42,11 +42,16 @@ class DbHandler():
         passwd = ( s.value( "pwd", "" ) )
         authcfg = s.value( "authcfg", "" )
 
-        if authcfg != "" and hasattr(qgis.core,'QgsAuthManager'):
-            amc = qgis.core.QgsAuthMethodConfig()
-            qgis.core.QgsAuthManager.instance().loadAuthenticationConfig( authcfg, amc, True)
-            username = amc.config( "username", username )
-            passwd = amc.config( "password", passwd )
+        if authcfg != "":
+            amc = QgsAuthMethodConfig()
+            success, amc = QgsApplication.instance().authManager().loadAuthenticationConfig(
+                authcfg, amc, True)
+
+            if success: # es gibt die authcfg
+                username = amc.config( "username" )
+                passwd = amc.config( "password" )
+            else:
+                authcfg = None
         else:
             authcfg = None
 
@@ -66,7 +71,7 @@ class DbHandler():
         if not ok2:
             self.iface.messageBar().pushMessage("Fehler", \
             u"Konnte keine Verbindung mit der Datenbank aufbauen", \
-            level=QgsMessageBar.CRITICAL)
+            level=Qgis.Critical)
             return None
         else:
             return db

@@ -19,8 +19,12 @@ email                : bernhard.stroebl@jena.de
  *                                                                         *
  ***************************************************************************/
 """
-# Import the PyQt and QGIS libraries
-from PyQt4 import QtCore, QtGui, QtSql
+from __future__ import absolute_import
+from builtins import map
+from builtins import str
+from builtins import range
+from builtins import object
+from qgis.PyQt import QtCore, QtWidgets, QtSql
 from qgis.core import *
 from qgis.gui import *
 
@@ -31,14 +35,14 @@ except:
 
 import sys, os
 
-BASEDIR = os.path.dirname( unicode(__file__,sys.getfilesystemencoding()) )
+BASEDIR = os.path.dirname( str(__file__) )
 
-from HandleDb import DbHandler
-from XPTools import XPTools
-from XPImport import XPImporter
-from XPlanDialog import XPlanungConf
-from XPlanDialog import ChooseObjektart
-from XPlanDialog import XPNutzungsschablone, BereichsmanagerDialog, ReferenzmanagerDialog, ImportDialog
+from .HandleDb import DbHandler
+from .XPTools import XPTools
+from .XPImport import XPImporter
+from .XPlanDialog import XPlanungConf
+from .XPlanDialog import ChooseObjektart
+from .XPlanDialog import XPNutzungsschablone, BereichsmanagerDialog, ReferenzmanagerDialog, ImportDialog
 
 class XpError(object):
     '''General error'''
@@ -46,20 +50,20 @@ class XpError(object):
         self.value = value
 
         if iface == None:
-            QtGui.QMessageBox.warning(None, "XPlanung", value, duration = 10)
+            QtWidgets.QMessageBox.warning(None, "XPlanung", value, duration = 10)
         else:
             iface.messageBar().pushMessage("XPlanung", value,
-                level=QgsMessageBar.CRITICAL)
+                level=Qgis.Critical)
     def __str__(self):
         return repr(self.value)
 
-class XPlan():
+class XPlan(object):
     def __init__(self, iface):
         # Save reference to the QGIS interface
         self.iface = iface
         self.standardName = u"XP-Standard"
         self.simpleStyleName = "einfarbig"
-        self.tmpAct = QtGui.QAction(self.iface.mainWindow()) # eine nicht benötigte QAction
+        self.tmpAct = QtWidgets.QAction(self.iface.mainWindow()) # eine nicht benötigte QAction
         self.app = QgsApplication.instance()
         self.app.xpPlugin = self
         self.nutzungsschablone = None
@@ -72,13 +76,15 @@ class XPlan():
             # featuresHaveBeenAdded (Boolean), bereichsFilterAktiv (Boolean)]
         self.displayLayers = {} # dict, key = layerId
             # item = [layer, None, None, bereichsFilterAktiv] für Ansichtslayer
+        self.planBereichLayer = {} # dict, key = layerId item = layer
+            # für *Plan und *Bereich-Layer (editierbar), damit sie ihre Referenz nicht verlieren
         self.layerLayer = None
         # Liste der implementierten Fachschemata
         self.implementedSchemas = []
         self.willAktivenBereich = True # Nutzer möchte aktive Bereiche festlegen
 
         #importiere DataDrivenInputMask
-        pluginDir = QtCore.QFileInfo(QgsApplication.qgisUserDbFilePath()).path() + "/python/plugins/"
+        pluginDir = QtCore.QFileInfo(QgsApplication.qgisUserDatabaseFilePath()).path() + "/python/plugins/"
         maskDir = pluginDir + "DataDrivenInputMask"
         maskFound = False
 
@@ -108,89 +114,90 @@ class XPlan():
         # Layer der die Zuordnung von Objekten zu Bereichen enthält
         self.gehoertZuLayer = None
 
-        qs = QtCore.QSettings( "QGIS", "QGIS2" )
-        svgpaths = qs.value( "svg/searchPathsForSVG", "", type=str ).split("|")
+        qs = QtCore.QSettings( "QGIS", "QGIS3" )
+        svgpaths = qs.value( "svg/searchPathsForSVG", "", type=str )
         svgpath = os.path.abspath( os.path.join( BASEDIR, "svg" ) )
-        if not svgpath.upper() in map(unicode.upper, svgpaths):
+
+        if not svgpath.upper() in list(map(str.upper, svgpaths)):
             svgpaths.append( svgpath )
-            qs.setValue( "svg/searchPathsForSVG", u"|".join( svgpaths ) )
+            qs.setValue( "svg/searchPathsForSVG", svgpaths )
 
         self.initializeAllLayers()
 
     def initGui(self):
         # Code von fTools
 
-        self.xpMenu = QtGui.QMenu(u"XPlanung")
-        self.bereichMenu = QtGui.QMenu(u"XP_Bereich")
+        self.xpMenu = QtWidgets.QMenu(u"XPlanung")
+        self.bereichMenu = QtWidgets.QMenu(u"XP_Bereich")
         self.bereichMenu.setToolTip(u"Ein Planbereich fasst die Inhalte eines Plans " +\
             u"nach bestimmten Kriterien zusammen.")
-        self.bpMenu = QtGui.QMenu(u"BPlan")
+        self.bpMenu = QtWidgets.QMenu(u"BPlan")
         self.bpMenu.setToolTip(u"Fachschema BPlan für Bebauungspläne")
-        self.fpMenu = QtGui.QMenu(u"FPlan")
+        self.fpMenu = QtWidgets.QMenu(u"FPlan")
         self.fpMenu.setToolTip(u"Fachschema FPlan für Flächennutzungspläne")
-        self.lpMenu = QtGui.QMenu(u"LPlan")
+        self.lpMenu = QtWidgets.QMenu(u"LPlan")
         self.lpMenu.setToolTip(u"Fachschema LPlan für Landschaftspläne")
-        self.rpMenu = QtGui.QMenu(u"Regionalplan")
+        self.rpMenu = QtWidgets.QMenu(u"Regionalplan")
         self.rpMenu.setToolTip(u"Fachschema für Regionalpläne")
-        self.soMenu = QtGui.QMenu(u"SonstigePlanwerke")
+        self.soMenu = QtWidgets.QMenu(u"SonstigePlanwerke")
         self.soMenu.setToolTip(u"Fachschema zur Modellierung nachrichtlicher Übernahmen " + \
             u"aus anderen Rechtsbereichen und sonstiger raumbezogener Pläne nach BauGB. ")
-        self.xpDbMenu = QtGui.QMenu(u"XPlanung")
+        self.xpDbMenu = QtWidgets.QMenu(u"XPlanung")
 
-        self.action9 = QtGui.QAction(u"Einstellungen", self.iface.mainWindow())
+        self.action9 = QtWidgets.QAction(u"Einstellungen", self.iface.mainWindow())
         self.action9.triggered.connect(self.setSettings)
-        self.action0 = QtGui.QAction(u"Initialisieren", self.iface.mainWindow())
+        self.action0 = QtWidgets.QAction(u"Initialisieren", self.iface.mainWindow())
         self.action0.triggered.connect(self.initialize)
-        self.action1 = QtGui.QAction(u"Bereich laden", self.iface.mainWindow())
+        self.action1 = QtWidgets.QAction(u"Bereich laden", self.iface.mainWindow())
         self.action1.setToolTip(u"Alle zu einem Bereich gehörenden Elemente " + \
             u"laden und mit gespeichertem Stil darstellen")
         self.action1.triggered.connect(self.bereichLaden)
-        self.action2 = QtGui.QAction(u"Layer initialisieren", self.iface.mainWindow())
+        self.action2 = QtWidgets.QAction(u"Layer initialisieren", self.iface.mainWindow())
         self.action2.setToolTip(u"aktiver Layer: Eingabemaske erzeugen, neue Features den aktiven " +\
             u"Bereichen zuweisen.")
         self.action2.triggered.connect(self.layerInitializeSlot)
-        self.action3 = QtGui.QAction(u"Bereichsmanager starten", self.iface.mainWindow())
+        self.action3 = QtWidgets.QAction(u"Bereichsmanager starten", self.iface.mainWindow())
         self.action3.setToolTip(u"Bereichsmanager starten")
         self.action3.triggered.connect(self.bereichsmanagerStartenSlot)
-        self.action4 = QtGui.QAction(u"Auswahl den aktiven Bereichen zuordnen", self.iface.mainWindow())
+        self.action4 = QtWidgets.QAction(u"Auswahl den aktiven Bereichen zuordnen", self.iface.mainWindow())
         self.action4.setToolTip(u"aktiver Layer: ausgewählte Elemente den aktiven Bereichen zuweisen. " +\
                                 u"Damit werden sie zum originären Inhalt des Planbereichs.")
         self.action4.triggered.connect(self.aktivenBereichenZuordnenSlot)
-        self.action6 = QtGui.QAction(u"Layer darstellen (nach PlanZV)", self.iface.mainWindow())
+        self.action6 = QtWidgets.QAction(u"Layer darstellen (nach PlanZV)", self.iface.mainWindow())
         self.action6.setToolTip(u"aktiver Layer: gespeicherten Stil anwenden")
         self.action6.triggered.connect(self.layerStyleSlot)
-        self.action10 = QtGui.QAction(u"Mehrfachdateneingabe", self.iface.mainWindow())
+        self.action10 = QtWidgets.QAction(u"Mehrfachdateneingabe", self.iface.mainWindow())
         self.action10.setToolTip(u"Eingabe für alle gewählten Objekte")
         self.action10.triggered.connect(self.layerMultiEditSlot)
-        self.action7 = QtGui.QAction(u"Layerstil speichern", self.iface.mainWindow())
+        self.action7 = QtWidgets.QAction(u"Layerstil speichern", self.iface.mainWindow())
         self.action7.setToolTip(u"aktiver Layer: Stil speichern")
         self.action7.triggered.connect(self.saveStyleSlot)
-        self.action8 = QtGui.QAction(u"gespeicherten Layerstil löschen", self.iface.mainWindow())
+        self.action8 = QtWidgets.QAction(u"gespeicherten Layerstil löschen", self.iface.mainWindow())
         self.action8.setToolTip(u"aktiver Layer: aktien Layerstil löschen")
         self.action8.triggered.connect(self.deleteStyleSlot)
 
-        self.action20 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
+        self.action20 = QtWidgets.QAction(u"Objektart laden", self.iface.mainWindow())
         self.action20.triggered.connect(self.loadXP)
-        self.action21 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
+        self.action21 = QtWidgets.QAction(u"Objektart laden", self.iface.mainWindow())
         self.action21.triggered.connect(self.loadBP)
-        self.action22 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
+        self.action22 = QtWidgets.QAction(u"Objektart laden", self.iface.mainWindow())
         self.action22.triggered.connect(self.loadFP)
-        self.action23 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
+        self.action23 = QtWidgets.QAction(u"Objektart laden", self.iface.mainWindow())
         self.action23.triggered.connect(self.loadLP)
-        self.action24 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
+        self.action24 = QtWidgets.QAction(u"Objektart laden", self.iface.mainWindow())
         self.action24.triggered.connect(self.loadSO)
-        self.action25 = QtGui.QAction(u"ExterneReferenzen bearbeiten", self.iface.mainWindow())
+        self.action25 = QtWidgets.QAction(u"ExterneReferenzen bearbeiten", self.iface.mainWindow())
         self.action25.triggered.connect(self.referenzmanagerStarten)
-        self.action26 = QtGui.QAction(u"räuml. Geltungsbereiche neu berechnen",
+        self.action26 = QtWidgets.QAction(u"räuml. Geltungsbereiche neu berechnen",
             self.iface.mainWindow())
         self.action26.triggered.connect(self.geltungsbereichBerechnen)
-        self.action27 = QtGui.QAction(u"Objektart laden", self.iface.mainWindow())
+        self.action27 = QtWidgets.QAction(u"Objektart laden", self.iface.mainWindow())
         self.action27.triggered.connect(self.loadRP)
-        self.action28 = QtGui.QAction(u"Nutzungsschablone konfigurieren", self.iface.mainWindow())
+        self.action28 = QtWidgets.QAction(u"Nutzungsschablone konfigurieren", self.iface.mainWindow())
         self.action28.triggered.connect(self.konfiguriereNutzungsschablone)
-        self.action29 = QtGui.QAction(u"Stylesheetparameter konfigurieren", self.iface.mainWindow())
+        self.action29 = QtWidgets.QAction(u"Stylesheetparameter konfigurieren", self.iface.mainWindow())
         self.action29.triggered.connect(self.konfiguriereStylesheet)
-        self.action30 = QtGui.QAction(u"Importieren", self.iface.mainWindow())
+        self.action30 = QtWidgets.QAction(u"Importieren", self.iface.mainWindow())
         self.action30.triggered.connect(self.importData)
 
         self.xpMenu.addActions([self.action20, self.action25, self.action29,
@@ -247,7 +254,7 @@ class XPlan():
             XpError(u"Kann Tabelle QGIS.layer nicht laden!", self.iface)
             return False
         else:
-            self.layerLayer.layerDeleted.connect(self.onLayerLayerDeleted)
+            self.layerLayer.destroyed.connect(self.onLayerLayerDeleted)
             return True
 
 
@@ -294,7 +301,7 @@ class XPlan():
         returnValue = [None, None, None]
 
         if self.nutzungsschablone != None:
-            # Anzeahl Zeilen und Spalten feststellen
+            # Anzahl Zeilen und Spalten feststellen
             if self.nutzungsschablone[1] != None or \
                     self.nutzungsschablone[3] != None or \
                     self.nutzungsschablone[5] != None:
@@ -450,7 +457,7 @@ class XPlan():
             nutzungsschabloneFeat = self.tools.createFeature(nutzungsschabloneLayer)
             nutzungsschabloneFeat[nutzungsschabloneLayer.fieldNameIndex("spaltenAnz")] = anzSpalten
             nutzungsschabloneFeat[nutzungsschabloneLayer.fieldNameIndex("zeilenAnz")] = anzZeilen
-            nutzungsschabloneFeat.setGeometry(QgsGeometry.fromPoint(QgsPoint(x, y)))
+            nutzungsschabloneFeat.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(x, y)))
 
             if self.tools.setEditable(nutzungsschabloneLayer):
                 if not nutzungsschabloneLayer.addFeature(nutzungsschabloneFeat):
@@ -546,7 +553,7 @@ class XPlan():
 
         if stylesheetParameterLayer != None and stylesheetLayer != None:
             if forCode == None:
-                forCode, ok = QtGui.QInputDialog.getInt(None, u"Stylesheetparameter konfigurieren",
+                forCode, ok = QtWidgets.QInputDialog.getInt(None, u"Stylesheetparameter konfigurieren",
                     u"Code des Stylesheets eingeben", min = 1)
             else:
                 ok = True
@@ -654,13 +661,13 @@ class XPlan():
                             if bpPlanId in bpPlaene:
                                 bereichGeom = QgsGeometry(bereichFeat.geometry())
 
-                                if not bereichGeom.isEmpty():
+                                if not bereichGeom.isNull():
                                     bpPlaene[bpPlanId].append(bereichGeom)
 
                         bpBereichLayer.invertSelection()
                         bpPlanLayer.beginEditCommand(u"XPlan: räumliche Geltungsbereiche erneuert")
 
-                        for gid, geomList in bpPlaene.iteritems():
+                        for gid, geomList in list(bpPlaene.items()):
                             if len(geomList) == 0:
                                 continue
 
@@ -686,12 +693,7 @@ class XPlan():
             extRefLayer = self.getLayerForTable(refSchema, refTable)
 
             if extRefLayer != None:
-                grpIdx = self.getGroupIndex(refSchema)
-
-                if grpIdx == -1:
-                    grpIdx = self.createGroup(refSchema)
-
-                self.iface.legendInterface().moveLayer(extRefLayer, grpIdx)
+                self.tools.moveLayerToGroup(extRefLayer, refSchema)
                 dlg = ReferenzmanagerDialog(self, extRefLayer)
                 dlg.show()
                 dlg.exec_()
@@ -699,8 +701,6 @@ class XPlan():
     def onLayerDestroyed(self, layer):
         '''Slot, der aufgerufen wird wenn ein XP-Layer aus dem Projekt entfernt wird
         erst in QGIS3 wird das Layerobjekt übergeben'''
-
-        return None #TODO: für QGIS3 entfernen
 
         try:
             self.xpLayers.pop(layer.id())
@@ -727,13 +727,14 @@ class XPlan():
     def initializeAllLayers(self, layerCheck = True):
         allLayerIds = []
 
-        for layer in self.iface.legendInterface().layers():
-            allLayerIds.append(layer.id())
+        for aLayerTreeLayer in QgsProject.instance().layerTreeRoot().findLayers():
+            allLayerIds.append(aLayerTreeLayer.layer().id())
 
         # entfernte Layer aus Dicts entfernen
         if len(self.xpLayers) > 0:
             removeXp = []
-            for aLayerId, value in self.xpLayers.items():
+
+            for aLayerId, value in list(self.xpLayers.items()):
                 if allLayerIds.count(aLayerId) == 0:
                     removeXp.append(aLayerId)
 
@@ -742,15 +743,16 @@ class XPlan():
 
         if len(self.displayLayers) > 0:
             removeDisp = []
-            for aLayerId, value in self.displayLayers.items():
+
+            for aLayerId, value in list(self.displayLayers.items()):
                 if allLayerIds.count(aLayerId) == 0:
                     removeDisp.append(aLayerId)
 
             for aLayerId in removeDisp:
                 self.displayLayers.pop(aLayerId)
 
-        for layer in self.iface.legendInterface().layers():
-            self.layerInitialize(layer, layerCheck = layerCheck)
+        for aLayerTreeLayer in QgsProject.instance().layerTreeRoot().findLayers():
+            self.layerInitialize(aLayerTreeLayer.layer(), layerCheck = layerCheck)
 
     def initialize(self,  aktiveBereiche = True):
         self.db = self.dbHandler.dbConnect()
@@ -814,12 +816,7 @@ class XPlan():
                         geomColumn, displayName = displayName)
 
                     if editLayer != None:
-                        grpIdx = self.getGroupIndex(schemaName)
-
-                        if grpIdx == -1:
-                            grpIdx = self.createGroup(schemaName)
-
-                        self.iface.legendInterface().moveLayer(editLayer, grpIdx)
+                        self.tools.moveLayerToGroup(editLayer, schemaName)
                         editLayer.setAbstract(description)
                         stile = self.tools.getLayerStyles(self.db,
                             editLayer, schemaName, tableName)
@@ -832,6 +829,7 @@ class XPlan():
                             ddInit = self.layerInitialize(editLayer,
                                 layerCheck = self.willAktivenBereich)
 
+                            self.debug("ddinit = " + str(ddInit))
                             if ddInit:
                                 self.app.xpManager.addAction(editLayer,
                                     actionName = "XP_Sachdaten",
@@ -841,19 +839,8 @@ class XPlan():
                                 self.layerFilterBereich(editLayer, aktiveBereiche)
 
                             if tableName == "BP_BaugebietsTeilFlaeche":
-                                actionNutzungsschablone = u"Nutzungsschablone plazieren"
-                                createNewAction= True
-
-                                for i in range(editLayer.actions().size()):
-                                    act = editLayer.actions().at(i)
-
-                                    if act.name() == actionNutzungsschablone:
-                                        createNewAction = False
-                                        break
-
-                                if createNewAction:
-                                    editLayer.actions().addAction(1, actionNutzungsschablone, # actionType 1: Python
-                                        "app=QgsApplication.instance();app.xpPlugin.plaziereNutzungsschablone(" + \
+                                self.tools.createAction(editLayer, "Nutzungsschablone plazieren",
+                                    "app=QgsApplication.instance();app.xpPlugin.plaziereNutzungsschablone(" + \
                                         "[% \"gid\" %],[% $clickx %],[% $clicky %]);")
 
                             if withDisplay:
@@ -862,17 +849,17 @@ class XPlan():
                                     geomColumn, displayName = displayName)
 
                                 if displayLayer == None:
+                                    self.debug("displayLayer == None")
                                     # lade Layer als Darstelllungsvariante
                                     # eigene Darstellungsvarianten gibt es nur, wenn nötig
                                     displayLayer, isView = self.loadTable(schemaName, tableName,
-                                        geomColumn,  displayName = displayName)
+                                        geomColumn, displayName = displayName)
 
                                 if displayLayer != None:
                                     if nurAktiveBereiche:
                                         self.layerFilterBereich(displayLayer, aktiveBereiche)
 
-                                    self.iface.legendInterface().moveLayer(
-                                        displayLayer, grpIdx)
+                                    self.tools.moveLayerToGroup(displayLayer, schemaName)
 
                                     if stile != None:
                                         self.tools.applyStyles(displayLayer, stile)
@@ -886,6 +873,7 @@ class XPlan():
     def loadTable(self,  schemaName, tableName, geomColumn,
             displayName = None, filter = None):
         '''eine Relation als Layer laden'''
+
         thisLayer = None
 
         if displayName == None:
@@ -930,7 +918,7 @@ class XPlan():
     def aktiveBereicheGids(self):
         bereiche = []
 
-        for aKey, aValue in self.aktiveBereiche.iteritems():
+        for aKey, aValue in list(self.aktiveBereiche.items()):
             bereiche.append(aKey)
 
         return bereiche
@@ -1005,9 +993,8 @@ class XPlan():
                 if self.tools.setEditable(self.layerLayer):
                     if self.layerLayer.deleteFeature(stilId):
                         if self.layerLayer.commitChanges():
-                            self.iface.messageBar().pushMessage("XPlanung",
-                                u"Stil " + bereich + u" gelöscht",
-                                level=QgsMessageBar.INFO, duration = 10)
+                            self.tools.showInfo("XPlanung",
+                                u"Stil " + bereich + u" gelöscht",)
                         else:
                             XpError(u"Konnte Änderungen an " + \
                                 self.layerLayer.name() + u"nicht speichern!",
@@ -1042,15 +1029,15 @@ class XPlan():
 
         if doc != None:
             if stilId != None: # Eintrag ändern
-                reply = QtGui.QMessageBox.question(
+                reply = QtWidgets.QMessageBox.question(
                     None, u"Stil vorhanden",
                     u"Vorhandenen Stil für Bereich %s ersetzen?" % bereich,
-                    QtGui.QMessageBox.Yes | QtGui.QMessageBox.No | QtGui.QMessageBox.Cancel,
-                    defaultButton = QtGui.QMessageBox.No)
+                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Cancel,
+                    defaultButton = QtWidgets.QMessageBox.No)
 
-                if reply == QtGui.QMessageBox.Yes:
+                if reply == QtWidgets.QMessageBox.Yes:
                     changeStyle = True
-                elif reply == QtGui.QMessageBox.No:
+                elif reply == QtWidgets.QMessageBox.No:
                     changeStyle = False
                 else:
                     return None
@@ -1115,22 +1102,6 @@ class XPlan():
                 if stil != None:
                     self.tools.useStyle(layer, stil)
 
-
-    def createGroup(self,  grpName):
-        grpIdx = self.iface.legendInterface().addGroup(grpName,  False) # False = expand
-
-        if QGis.QGIS_VERSION_INT >= 20400:
-            # Gruppe an der Spitze des LAyerbaums einfügen
-            root=QgsProject.instance().layerTreeRoot()
-            group = root.findGroup(grpName)
-            group2 = group.clone()
-            root.insertChildNode(0,  group2)
-            root.removeChildNode(group)
-            grpIdx = self.getGroupIndex(grpName)
-
-        return grpIdx
-
-
     def getLayerForTable(self, schemaName, tableName,
         geomColumn = None, showMsg = True):
         '''Den Layer schemaName.tableName finden bzw. laden.
@@ -1164,18 +1135,6 @@ class XPlan():
                     {"schema":schemaName, "table":tableName},
                     self.iface)
             return None
-
-    def getGroupIndex(self, groupName):
-        '''Finde den Gruppenindex für Gruppe groupName'''
-        retValue = -1
-        groups = self.iface.legendInterface().groups()
-
-        for i in range(len(groups)):
-            if groups[i] == groupName:
-                retValue = i
-                break
-
-        return retValue
 
     def layerInitialize(self,  layer,  msg = False,  layerCheck = True):
         '''einen XP_Layer initialisieren, gibt Boolschen Wert zurück'''
@@ -1244,6 +1203,8 @@ class XPlan():
                                 layer.editingStarted.connect(self.onEditingStarted)
                                 layer.destroyed.connect(self.onLayerDestroyed)
                                 self.xpLayers[layer.id()] = [layer, None, False, False]
+                            else:
+                                self.planBereichLayer[layer.id()] = layer
                     else:
                         self.displayLayers[layer.id()] = [layer,  None, None, False]
             else:
@@ -1310,11 +1271,11 @@ class XPlan():
 
                 while(True):
                     if len(self.aktiveBereiche) == 0 and self.willAktivenBereich:
-                        thisChoice = QtGui.QMessageBox.question(None, "Keine aktiven Bereiche",
+                        thisChoice = QtWidgets.QMessageBox.question(None, "Keine aktiven Bereiche",
                             u"Wollen Sie aktive Bereiche festlegen? ",
-                            QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+                            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
-                        if thisChoice == QtGui.QMessageBox.Yes:
+                        if thisChoice == QtWidgets.QMessageBox.Yes:
                             self.aktiveBereicheFestlegen()
                         else:
                             self.willAktivenBereich = False
@@ -1335,7 +1296,7 @@ class XPlan():
             "XP_Basisobjekte", "XP_Objekt_gehoertZuBereich")
 
         if self.gehoertZuLayer != None:
-            self.gehoertZuLayer.layerDeleted.connect(self.onGehoertZuLayerDeleted)
+            self.gehoertZuLayer.destroyed.connect(self.onGehoertZuLayerDeleted)
 
     def bereichsmanagerStartenSlot(self):
         if self.db == None:
@@ -1377,7 +1338,7 @@ class XPlan():
                 if not self.tools.setEditable(self.gehoertZuLayer, True, self.iface):
                     return False
 
-                if len(layer.selectedFeaturesIds()) == 0:
+                if len(layer.selectedFeatureIds()) == 0:
                     XpError(u"Bereichszuordnung: Der Layer " + layer.name() + u" hat keine Auswahl!",
                         self.iface)
                     return False
@@ -1398,7 +1359,7 @@ class XPlan():
                 zugeordnet = 0 # Zähler
 
                 for aGid in gids:
-                    for aBereichGid in self.aktiveBereiche.iterkeys():
+                    for aBereichGid in list(self.aktiveBereiche.keys()):
                         doInsert = True
                         #prüfen, ob dieses XP_Objekt bereits diesem XP_Bereich zugewiesen ist
                         try:
@@ -1470,7 +1431,7 @@ class XPlan():
             self.tools.showError(u"Präsentationsobjekte können nur einem Bereich zugeordnet werden!")
             return False
         else:
-            for k in self.aktiveBereiche.iterkeys():
+            for k in list(self.aktiveBereiche.keys()):
                 bereichGid = k
 
             apoLayer = self.getLayerForTable("XP_Praesentationsobjekte",
@@ -1539,7 +1500,7 @@ class XPlan():
             bereichDict = self.tools.chooseBereich(self.db)
 
             if len(bereichDict) > 0:
-                for k in bereichDict.iterkeys():
+                for k in list(bereichDict.keys()):
                     bereich = k
                     break
 
@@ -1549,23 +1510,15 @@ class XPlan():
                     layers = self.tools.getLayerInBereich(self.db, [bereich])
 
                     if len(layers) == 0:
-                        self.iface.messageBar().pushMessage(
-                            "XPlanung", u"In diesem Bereich sind keine Objekte vorhanden!",
-                            level=QgsMessageBar.WARNING, duration = 10)
+                        self.tools.showWarning(
+                            u"In diesem Bereich sind keine Objekte vorhanden!")
                         return None
                     else: # den Bereich selbst reintun
                         layers[2][bereichTyp + "_Basisobjekte"] = [bereichTyp + "_Bereich"]
 
-                    # eine Gruppe für den Bereich machen
-                    lIface = self.iface.legendInterface()
-                    groupIdx = self.tools.createGroup(bereichDict[bereich])
-
-                    if groupIdx == -1:
-                        return None
-
                     # Layer in die Gruppe laden und features entsprechend einschränken
                     for aLayerType in layers:
-                        for aKey in aLayerType.iterkeys():
+                        for aKey in list(aLayerType.keys()):
                             for aRelName in aLayerType[aKey]:
                                 filter = self.getBereichFilter(aKey, aRelName, [bereich])
 
@@ -1593,13 +1546,14 @@ class XPlan():
                                         self.tools.applyStyles(aLayer, stile)
                                         self.tools.useStyle(aLayer, bereichDict[bereich])
 
-                                    lIface.moveLayer(aLayer,  groupIdx)
-                                    lIface.setLayerVisible(aLayer,  True)
+                                    self.tools.moveLayerToGroup(aLayer, bereichDict[bereich])
+                                    self.tools.setLayerVisible(aLayer,  True)
             self.iface.mapCanvas().refresh() # neuzeichnen
 
     def onEditingStarted(self):
         if len(self.aktiveBereiche) > 0:
-            for layer in self.iface.legendInterface().layers():
+            for aLayerTreeLayer in QgsProject.instance().layerTreeRoot().findLayers():
+                layer = aLayerTreeLayer.layer()
                 layerId = layer.id()
 
                 try:
@@ -1618,7 +1572,8 @@ class XPlan():
 
     def onEditingStopped(self):
         if len(self.aktiveBereiche) > 0:
-            for layer in self.iface.legendInterface().layers():
+            for aLayerTreeLayer in QgsProject.instance().layerTreeRoot().findLayers():
+                layer = aLayerTreeLayer.layer()
                 layerId = layer.id()
 
                 try:
@@ -1645,7 +1600,7 @@ class XPlan():
                         for aNewFeat in layer.getFeatures(request):
                             newIds.append(aNewFeat.id())
 
-                        layer.selectByIds(newIds)
+                        layer.select(newIds)
 
                         if layer.selectedFeatureCount() > 0:
                             if not self.aktivenBereichenZuordnen(layer):
