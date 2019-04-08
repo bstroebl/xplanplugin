@@ -103,7 +103,7 @@ class XPImporter(object):
                             return[1, u"Konnte xp_gid-Feld für " + importSchema + "." + \
                                 importRelname + " nicht anlegen"]
 
-        return [success, loglines]
+        return [success, str(loglines)]
 
     def importPlan(self):
         if not self.db.transaction():
@@ -148,17 +148,12 @@ class XPImporter(object):
         host = ( s.value( "host", "" ) )
         port = ( s.value( "port", "5432" ) )
         database = ( s.value( "dbname", "" ) )
-        username = ( s.value( "uid", "" ) )
-        passwd = ( s.value( "pwd", "" ) )
         authcfg = s.value( "authcfg", "" )
+        username, passwd, authcfg = self.tools.getAuthUserNamePassword(authcfg)
 
-        if authcfg != "" and hasattr(qgis.core,'QgsAuthManager'):
-            amc = qgis.core.QgsAuthMethodConfig()
-            qgis.core.QgsAuthManager.instance().loadAuthenticationConfig( authcfg, amc, True)
-            username = amc.config( "username", username )
-            passwd = amc.config( "password", passwd )
-        else:
-            authcfg = None
+        if authcfg == None:
+            username = ( s.value( "uid", "" ) )
+            passwd = ( s.value( "pwd", "" ) )
 
         retValue = {}
         retValue["host"] = host

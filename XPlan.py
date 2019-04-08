@@ -67,17 +67,15 @@ class XPlan(object):
         self.app = QgsApplication.instance()
         self.app.xpPlugin = self
         self.nutzungsschablone = None
-        self.dbHandler = DbHandler(self.iface)
-        self.db = None
         self.tools = XPTools(self.iface, self.standardName, self.simpleStyleName)
+        self.dbHandler = DbHandler(self.iface, self.tools)
+        self.db = None
         self.aktiveBereiche = {}
         self.xpLayers = {} # dict, key = layerId
             # item = [layer (QgsVectorLayer), maxGid (long),
             # featuresHaveBeenAdded (Boolean), bereichsFilterAktiv (Boolean)]
         self.displayLayers = {} # dict, key = layerId
             # item = [layer, None, None, bereichsFilterAktiv] für Ansichtslayer
-        self.planBereichLayer = {} # dict, key = layerId item = layer
-            # für *Plan und *Bereich-Layer (editierbar), damit sie ihre Referenz nicht verlieren
         self.layerLayer = None
         # Liste der implementierten Fachschemata
         self.implementedSchemas = []
@@ -437,6 +435,7 @@ class XPlan(object):
             anzSpalten,  anzZeilen, schablonenText = self.erzeugeNutzungsschablone(gid)
 
             if anzSpalten == None and anzZeilen == None:
+                self.debug("anzSpalten == None and anzZeilen == None")
                 return None
 
             nutzungsschabloneLayer = self.getLayerForTable(
@@ -444,6 +443,7 @@ class XPlan(object):
                 geomColumn = "position")
 
             if nutzungsschabloneLayer == None:
+                self.debug("nutzungsschabloneLayer nicht gefunden")
                 return None
             else:
                 self.layerInitialize(nutzungsschabloneLayer)
@@ -452,11 +452,12 @@ class XPlan(object):
                 "XP_Praesentationsobjekte", "XP_TPO")
 
             if tpoLayer == None:
+                self.debug("tpoLayer nicht gefunden")
                 return None
 
             nutzungsschabloneFeat = self.tools.createFeature(nutzungsschabloneLayer)
-            nutzungsschabloneFeat[nutzungsschabloneLayer.fieldNameIndex("spaltenAnz")] = anzSpalten
-            nutzungsschabloneFeat[nutzungsschabloneLayer.fieldNameIndex("zeilenAnz")] = anzZeilen
+            nutzungsschabloneFeat[nutzungsschabloneLayer.fields().lookupField("spaltenAnz")] = anzSpalten
+            nutzungsschabloneFeat[nutzungsschabloneLayer.fields().lookupField("zeilenAnz")] = anzZeilen
             nutzungsschabloneFeat.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(x, y)))
 
             if self.tools.setEditable(nutzungsschabloneLayer):
@@ -474,7 +475,7 @@ class XPlan(object):
 
                         if nutzungsschabloneLayer.getFeatures(
                                 QgsFeatureRequest().setFilterExpression(expr)).nextFeature(savedFeat):
-                            newGid = savedFeat[nutzungsschabloneLayer.fieldNameIndex("gid")]
+                            newGid = savedFeat[nutzungsschabloneLayer.fields().lookupField("gid")]
                         else:
                             self.tools.showError(u"Neu angelegtes Objekt nicht gefunden!")
                             return None
@@ -485,7 +486,7 @@ class XPlan(object):
 
                             if tpoLayer.getFeatures(
                                     QgsFeatureRequest().setFilterExpression(expr)).nextFeature(tpoFeat):
-                                tpoLayer.changeAttributeValue(tpoFeat.id(), tpoLayer.fieldNameIndex("schriftinhalt"),
+                                tpoLayer.changeAttributeValue(tpoFeat.id(), tpoLayer.fields().lookupField("schriftinhalt"),
                                     schablonenText)
                                 if not tpoLayer.commitChanges():
                                     self.tools.showError(u"Konnte Schriftinhalt nicht speichern")
@@ -580,13 +581,13 @@ class XPlan(object):
                                 return None
                             else:
                                 if not stylesheetLayer.changeAttributeValue(
-                                        styleFeat.id(), stylesheetLayer.fieldNameIndex("Code"), forCode):
+                                        styleFeat.id(), stylesheetLayer.fields().lookupField("Code"), forCode):
                                     self.tools.showError(u"Konnte Code für stylesheet nicht ändern")
                                     stylesheetLayer.rollBack()
                                     return None
                                 else:
                                     if not stylesheetLayer.changeAttributeValue(
-                                            styleFeat.id(), stylesheetLayer.fieldNameIndex("Bezeichner"), "Code " + str(forCode)):
+                                            styleFeat.id(), stylesheetLayer.fields().lookupField("Bezeichner"), "Code " + str(forCode)):
                                         self.tools.showError(u"Konnte Bezeichner für stylesheet nicht ändern")
                                         stylesheetLayer.rollBack()
                                         return None
@@ -606,7 +607,7 @@ class XPlan(object):
                                 return None
                             else:
                                 if not stylesheetParameterLayer.changeAttributeValue(
-                                        paraFeat.id(), stylesheetParameterLayer.fieldNameIndex("Code"), forCode):
+                                        paraFeat.id(), stylesheetParameterLayer.fields().lookupField("Code"), forCode):
                                     self.tools.showError(u"Konnte Code für stylesheetParameter nicht ändern")
                                     stylesheetParameterLayer.rollBack()
                                     return None
@@ -644,7 +645,7 @@ class XPlan(object):
             if bpBereichLayer != None:
                 bpPlaene = {}
                 bpFids = {}
-                planGidField = bpPlanLayer.fieldNameIndex("gid")
+                planGidField = bpPlanLayer.fields().lookupField("gid")
 
                 for bpPlanFeat in self.tools.getFeatures(bpPlanLayer):
                     bpPlaene[bpPlanFeat[planGidField]] = []
@@ -653,7 +654,7 @@ class XPlan(object):
                 if len(bpPlaene) > 0:
                     if self.tools.setEditable(bpPlanLayer, True, self.iface):
                         bpBereichLayer.selectAll()
-                        gehoertZuPlanFld = bpBereichLayer.fieldNameIndex("gehoertZuPlan")
+                        gehoertZuPlanFld = bpBereichLayer.fields().lookupField("gehoertZuPlan")
 
                         for bereichFeat in self.tools.getFeatures(bpBereichLayer):
                             bpPlanId = bereichFeat[gehoertZuPlanFld]
@@ -693,7 +694,7 @@ class XPlan(object):
             extRefLayer = self.getLayerForTable(refSchema, refTable)
 
             if extRefLayer != None:
-                self.tools.moveLayerToGroup(extRefLayer, refSchema)
+                self.app.xpManager.moveLayerToGroup(extRefLayer, refSchema)
                 dlg = ReferenzmanagerDialog(self, extRefLayer)
                 dlg.show()
                 dlg.exec_()
@@ -816,7 +817,7 @@ class XPlan(object):
                         geomColumn, displayName = displayName)
 
                     if editLayer != None:
-                        self.tools.moveLayerToGroup(editLayer, schemaName)
+                        self.app.xpManager.moveLayerToGroup(editLayer, schemaName)
                         editLayer.setAbstract(description)
                         stile = self.tools.getLayerStyles(self.db,
                             editLayer, schemaName, tableName)
@@ -829,7 +830,6 @@ class XPlan(object):
                             ddInit = self.layerInitialize(editLayer,
                                 layerCheck = self.willAktivenBereich)
 
-                            self.debug("ddinit = " + str(ddInit))
                             if ddInit:
                                 self.app.xpManager.addAction(editLayer,
                                     actionName = "XP_Sachdaten",
@@ -840,8 +840,8 @@ class XPlan(object):
 
                             if tableName == "BP_BaugebietsTeilFlaeche":
                                 self.tools.createAction(editLayer, "Nutzungsschablone plazieren",
-                                    "app=QgsApplication.instance();app.xpPlugin.plaziereNutzungsschablone(" + \
-                                        "[% \"gid\" %],[% $clickx %],[% $clicky %]);")
+                                    "app=QgsApplication.instance();app.xpPlugin.plaziereNutzungsschablone(" +\
+                                        "[%gid%],[% x( $geometry )%],[% y( $geometry )%]);")
 
                             if withDisplay:
                                 displayName = tableName + " (Darst.)"
@@ -859,7 +859,7 @@ class XPlan(object):
                                     if nurAktiveBereiche:
                                         self.layerFilterBereich(displayLayer, aktiveBereiche)
 
-                                    self.tools.moveLayerToGroup(displayLayer, schemaName)
+                                    self.app.xpManager.moveLayerToGroup(displayLayer, schemaName)
 
                                     if stile != None:
                                         self.tools.applyStyles(displayLayer, stile)
@@ -1050,13 +1050,13 @@ class XPlan(object):
                 if self.layerLayer.getFeatures(
                         QgsFeatureRequest().setFilterFid(stilId).setFlags(
                         QgsFeatureRequest.NoGeometry)).nextFeature(feat):
-                    feat[self.layerLayer.fieldNameIndex("style")] = doc.toString()
+                    feat[self.layerLayer.fields().lookupField("style")] = doc.toString()
 
                     if self.app.xpManager.showFeatureForm(
                             self.layerLayer, feat) != 0:
                         if self.tools.setEditable(self.layerLayer):
                             self.layerLayer.changeAttributeValue(
-                                stilId, self.layerLayer.fieldNameIndex("style"),
+                                stilId, self.layerLayer.fields().lookupField("style"),
                                 doc.toString())
                             if not self.layerLayer.commitChanges():
                                 XpError(u"Konnte Änderungen an " + \
@@ -1065,11 +1065,11 @@ class XPlan(object):
             else: # neuer Eintrag
                 newFeat = self.tools.createFeature(self.layerLayer)
                 # füge den neuen Stil in das Feature ein
-                newFeat[self.layerLayer.fieldNameIndex("style")] = doc.toString()
+                newFeat[self.layerLayer.fields().lookupField("style")] = doc.toString()
                 # vergebe eine Fake-Id, damit kein Fehler kommt, id wird aus Sequenz vergeben
-                newFeat[self.layerLayer.fieldNameIndex("id")] = 1
-                newFeat[self.layerLayer.fieldNameIndex("schemaname")] = schemaName
-                newFeat[self.layerLayer.fieldNameIndex("tablename")] = tableName
+                newFeat[self.layerLayer.fields().lookupField("id")] = 1
+                newFeat[self.layerLayer.fields().lookupField("schemaname")] = schemaName
+                newFeat[self.layerLayer.fields().lookupField("tablename")] = tableName
 
                 if self.tools.setEditable(self.layerLayer, True, self.iface):
                     if self.layerLayer.addFeature(newFeat):
@@ -1203,8 +1203,6 @@ class XPlan(object):
                                 layer.editingStarted.connect(self.onEditingStarted)
                                 layer.destroyed.connect(self.onLayerDestroyed)
                                 self.xpLayers[layer.id()] = [layer, None, False, False]
-                            else:
-                                self.planBereichLayer[layer.id()] = layer
                     else:
                         self.displayLayers[layer.id()] = [layer,  None, None, False]
             else:
@@ -1343,8 +1341,8 @@ class XPlan(object):
                         self.iface)
                     return False
 
-                bereichFld = self.gehoertZuLayer.fieldNameIndex("gehoertZuBereich")
-                objektFld = self.gehoertZuLayer.fieldNameIndex("XP_Objekt_gid")
+                bereichFld = self.gehoertZuLayer.fields().lookupField("gehoertZuBereich")
+                objektFld = self.gehoertZuLayer.fields().lookupField("XP_Objekt_gid")
 
                 gids = self.tools.getSelectedFeaturesGids(layer)
 
@@ -1374,7 +1372,7 @@ class XPlan(object):
 
                         if doInsert:
                             newFeat = self.tools.createFeature(self.gehoertZuLayer)
-                            self.gehoertZuLayer.addFeature(newFeat,  False)
+                            self.gehoertZuLayer.addFeature(newFeat)
                             self.gehoertZuLayer.changeAttributeValue(newFeat.id(),  bereichFld, aBereichGid)
                             self.gehoertZuLayer.changeAttributeValue(newFeat.id(),  objektFld, aGid)
                             zugeordnet += 1
@@ -1441,7 +1439,7 @@ class XPlan(object):
                 if not self.tools.setEditable(apoLayer, True):
                     return False
                 else:
-                    fldIdx = apoLayer.fieldNameIndex("gehoertZuBereich")
+                    fldIdx = apoLayer.fields().lookupField("gehoertZuBereich")
                     gids = self.tools.intListToString(self.tools.getSelectedFeaturesGids(layer))
                     request = QgsFeatureRequest()
                     request.setFilterExpression("gid IN (" + gids + ")")
@@ -1546,7 +1544,7 @@ class XPlan(object):
                                         self.tools.applyStyles(aLayer, stile)
                                         self.tools.useStyle(aLayer, bereichDict[bereich])
 
-                                    self.tools.moveLayerToGroup(aLayer, bereichDict[bereich])
+                                    self.app.xpManager.moveLayerToGroup(aLayer, bereichDict[bereich])
                                     self.tools.setLayerVisible(aLayer,  True)
             self.iface.mapCanvas().refresh() # neuzeichnen
 

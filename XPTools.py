@@ -147,7 +147,7 @@ class XPTools():
         '''
         styleMan = layer.styleManager()
         # den unbenannten Stil umbenennen
-        styleMan.renameStyle(u"", self.simpleStyleName)
+        styleMan.renameStyle(u"default", self.simpleStyleName)
 
         if stile != None:
             for key, value in list(stile.items()):
@@ -288,7 +288,7 @@ class XPTools():
         return retValue
 
     def getSelectedFeaturesGids(self, layer):
-        gidFld = layer.fieldNameIndex("gid")
+        gidFld = layer.fields().lookupField("gid")
         gids = []
 
         for aFeat in layer.selectedFeatures():
@@ -353,8 +353,8 @@ class XPTools():
                 sourceLayer.removeJoin(joinLayer.id())
 
         joinInfo = QgsVectorLayerJoinInfo()
-        joinInfo.targetFieldIndex = sourceLayer.fieldNameIndex(targetField)
-        joinInfo.joinFieldIndex = joinLayer.fieldNameIndex(joinField)
+        joinInfo.targetFieldIndex = sourceLayer.fields().lookupField(targetField)
+        joinInfo.joinFieldIndex = joinLayer.fields().lookupField(joinField)
         joinInfo.joinFieldName = joinField
         joinInfo.targetFieldName = targetField
         joinInfo.joinLayerId = joinLayer.id()
@@ -552,76 +552,6 @@ class XPTools():
         else:
             return None
 
-    def getGroupIndex(self,  groupName):
-        '''Finde den Gruppenindex für Gruppe groupName'''
-        return self.shuffleGroup(groupName, atTop = False)
-
-    def getGroup(self, groupName):
-        '''Finde die Gruppe groupName'''
-
-        return QgsProject.instance().layerTreeRoot().findGroup(groupName)
-
-    def createGroup(self, groupName, atTop = True):
-        group = self.getGroup(groupName)
-
-        if group == None:
-            root = QgsProject.instance().layerTreeRoot()
-
-            if atTop:
-                return root.insertGroup(0, groupName)
-            else:
-                return root.addGroup(groupName)
-        else:
-            return self.shuffleGroup(groupName, atTop)
-
-    def shuffleGroup(self, groupName, toTop = True):
-        group = self.getGroup(groupName)
-
-        if group != None:
-            root = QgsProject.instance().layerTreeRoot()
-
-            if toTop:
-                group2 = root.insertGroup(0, groupName)
-            else:
-                group2 = root.addGroup(groupName)
-
-            root.removeChildNode(group)
-
-            return group2
-        else:
-            return None
-
-    def moveLayerToGroup(self, layer, groupName):
-        group = self.getGroup(groupName)
-
-        if group== None:
-            #Gruppe anlegen
-            group = self.createGroup(groupName)
-        else:
-            if group.findLayer(layer.id()) != None:
-                return True
-
-        if group != None:
-            root = QgsProject.instance().layerTreeRoot()
-            layerTreeLayer = root.findLayer(layer.id())
-
-            if layerTreeLayer != None:
-                wasVisible = layerTreeLayer.itemVisibilityChecked()
-                newLayerTreeLayer = group.addLayer(layer)
-                newLayerTreeLayer.setItemVisibilityChecked(wasVisible)
-
-                if root.removeLayer(layer) == None: # falls layer in Root
-                    try:
-                        layerTreeLayer.parent().removeLayer(layer)
-                        # falls layer in root, crashed QGIS bei parent() :-(
-                    except:
-                        pass
-                return True
-            else:
-                return False
-        else:
-            return False
-
     def setLayerVisible(self, layer, visible = True):
         root = QgsProject.instance().layerTreeRoot()
         layerTreeLayer = root.findLayer(layer.id())
@@ -726,3 +656,21 @@ class XPTools():
             msgType = Qgis.Critical
         QgsMessageLog.logMessage(msg, "XPlanung", msgType)
 
+    def getAuthUserNamePassword(self, authcfg):
+        username = None
+        password = None
+
+        if authcfg != "" and authcfg != None:
+            amc = QgsAuthMethodConfig()
+            success, amc = QgsApplication.instance().authManager().loadAuthenticationConfig(
+            authcfg, amc, True)
+
+            if success: # es gibt die authcfg
+                username = amc.config( "username" )
+                password = amc.config( "password" )
+            else:
+                authcfg = None
+        else:
+            authcfg = None
+
+        return [username, password, authcfg]

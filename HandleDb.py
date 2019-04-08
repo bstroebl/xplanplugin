@@ -28,8 +28,9 @@ from qgis.core import *
 class DbHandler(object):
     '''class to handle a QtSql.QSqlDatabase connnection to a PostgreSQL server'''
 
-    def __init__(self, iface):
+    def __init__(self, iface, tools):
         self.iface = iface
+        self.tools = tools
         self.db = None
 
     def dbConnect(self, thisPassword = None):
@@ -38,22 +39,12 @@ class DbHandler(object):
         host = ( s.value( "host", "" ) )
         port = ( s.value( "port", "5432" ) )
         database = ( s.value( "dbname", "" ) )
-        username = ( s.value( "uid", "" ) )
-        passwd = ( s.value( "pwd", "" ) )
         authcfg = s.value( "authcfg", "" )
+        username, passwd, authcfg = self.tools.getAuthUserNamePassword(authcfg)
 
-        if authcfg != "":
-            amc = QgsAuthMethodConfig()
-            success, amc = QgsApplication.instance().authManager().loadAuthenticationConfig(
-                authcfg, amc, True)
-
-            if success: # es gibt die authcfg
-                username = amc.config( "username" )
-                passwd = amc.config( "password" )
-            else:
-                authcfg = None
-        else:
-            authcfg = None
+        if authcfg == None:
+            username = ( s.value( "uid", "" ) )
+            passwd = ( s.value( "pwd", "" ) )
 
         if thisPassword:
             passwd = thisPassword

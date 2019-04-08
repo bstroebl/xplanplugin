@@ -1040,7 +1040,8 @@ class ImportDialog(QtWidgets.QDialog, IMPORT_CLASS):
         else:
             usePath = os.path.abspath(os.path.dirname("$HOME"))
 
-        fileName = QtWidgets.QFileDialog.getOpenFileName(caption = u"XPlanGML-Datei wählen",
+        fileName, selFilter = QtWidgets.QFileDialog.getOpenFileName( \
+            caption = u"XPlanGML-Datei wählen",
             directory = usePath, filter = "GML-Dateien (*.gml)")
 
         if fileName != "":
