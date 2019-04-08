@@ -112,7 +112,7 @@ class XPlan(object):
         # Layer der die Zuordnung von Objekten zu Bereichen enthält
         self.gehoertZuLayer = None
 
-        qs = QtCore.QSettings( "QGIS", "QGIS3" )
+        qs = QtCore.QSettings()
         svgpaths = qs.value( "svg/searchPathsForSVG", "", type=str )
         svgpath = os.path.abspath( os.path.join( BASEDIR, "svg" ) )
 
