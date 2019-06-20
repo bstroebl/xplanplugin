@@ -1,6 +1,6 @@
 # Change Log
 
-## [In Minor Releases enthaltene Änderungen](https://github.com/bstroebl/xplanplugin/compare/v4.0.0...develop)
+## [Änderungen seither](https://github.com/bstroebl/xplanplugin/compare/v4.0.0...develop)
 
 ### Fixed
 - Lies QSettings plattformunabhängig
