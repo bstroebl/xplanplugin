@@ -6,7 +6,7 @@
 - Lies QSettings plattformunabhängig
 - Ergänze SVG-Pfad auch wenn er leer ist oder nur ein Element hat
 
-# 4.0.0 - 2019-04-08 https://github.com/bstroebl/xplanplugin/compare/v3.0.0...v4.0.0
+# [4.0.0 - 2019-04-08](https://github.com/bstroebl/xplanplugin/compare/v3.0.0...v4.0.0)
 
 ### Added
 - Füge Tutorials und Workshopmaterial hinzu
@@ -19,7 +19,7 @@
 - Berechne raeumlichenGeltungsbereich über gid statt fid
 - Berücksichtige, dass Bereiche keine Geometrie brauchen
 
-# 3.0.0 - 2018-08-23 https://github.com/bstroebl/xplanplugin/compare/v2.0.0...v3.0.0
+# [3.0.0 - 2018-08-23](https://github.com/bstroebl/xplanplugin/compare/v2.0.0...v3.0.0)
 
 ### Added
 - Importfunktion für XPlanGML-Dateien
