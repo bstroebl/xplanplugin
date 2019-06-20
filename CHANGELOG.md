@@ -1,8 +1,18 @@
 # Change Log
 
-## [Unreleased](https://github.com/bstroebl/xplanplugin/compare/v3.0.0...develop)
+## [In Minor Releases enthaltene Änderungen](https://github.com/bstroebl/xplanplugin/compare/v4.0.0...develop)
+
+### Fixed
+- Lies QSettings plattformunabhängig
+- Ergänze SVG-Pfad auch wenn er leer ist oder nur ein Element hat
+
+# 4.0.0 - 2019-04-08 https://github.com/bstroebl/xplanplugin/compare/v3.0.0...v4.0.0
 
 ### Added
+- Füge Tutorials und Workshopmaterial hinzu
+
+### Changed
+- Update Plugin auf QGIS3
 
 ### Fixed
 - Passe Erzeugung der Nutzungsschablone an geänderte Datenstruktur an
