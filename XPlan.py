@@ -114,6 +114,13 @@ class XPlan(object):
 
         qs = QtCore.QSettings()
         svgpaths = qs.value( "svg/searchPathsForSVG", "", type=str )
+
+        if isinstance(svgpaths, str):
+            if svgpaths == "":
+                svgpaths = []
+            else:
+                svgpaths = [svgpaths]
+
         svgpath = os.path.abspath( os.path.join( BASEDIR, "svg" ) )
 
         if not svgpath.upper() in list(map(str.upper, svgpaths)):
