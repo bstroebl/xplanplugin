@@ -547,7 +547,7 @@ class XPTools():
         rootNode.setAttributeNode(scaleBasedVisAttr)
         doc.appendChild(rootNode)
 
-        if layer.writeSymbology(rootNode,doc,"Fehler"):
+        if layer.writeSymbology(rootNode,doc,"Fehler", QgsReadWriteContext()):
             return doc
         else:
             return None
