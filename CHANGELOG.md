@@ -5,6 +5,7 @@
 ### Fixed
 - Lies QSettings plattformunabhängig
 - Ergänze SVG-Pfad auch wenn er leer ist oder nur ein Element hat
+- QGIS3-api Anpassungen
 
 # [4.0.0 - 2019-04-08](https://github.com/bstroebl/xplanplugin/compare/v3.0.0...v4.0.0)
 
