@@ -115,6 +115,8 @@ class XPImporter(object):
         impPlanRelname = planResult[1]
 
         if numPlaene <= 0:
+            self.tools.showWarning(u"Konnte Plan nicht importieren")
+
             if not self.db.rollback():
                 self.tools.showWarning(u"Konnte Transaktion micht zurückrollen")
             return None
@@ -124,6 +126,8 @@ class XPImporter(object):
         impBereichRelname = bereichResult[1]
 
         if numBereiche <= 0:
+            self.tools.showWarning(u"Konnte Bereich nicht importieren")
+
             if not self.db.rollback():
                 self.tools.showWarning(u"Konnte Transaktion micht zurückrollen")
             return None
@@ -135,6 +139,8 @@ class XPImporter(object):
             else:
                 return self.importMsg
         else:
+            self.tools.showWarning(u"Konnte Objekte nicht importieren")
+
             if not self.db.rollback():
                 self.tools.showWarning(u"Konnte Transaktion micht zurückrollen")
             return None
@@ -287,6 +293,24 @@ class XPImporter(object):
             AND att1.attnum > 0 \
             AND att2.attrelid = :imp_oid \
             AND att2.attnum > 0"
+
+    def __impAppendCodeListSql(self, codeList, impField, importSchema, impRelname, isArrayField):
+
+        appendCodeListSql = "INSERT INTO " + codeList + " \
+            (\"Bezeichner\") "
+
+        if isArrayField:
+            appendCodeListSql += "SELECT DISTINCT UNNEST(\"" + impField + "\")"
+        else:
+            appendCodeListSql += "SELECT DISTINCT \"" + impField + "\""
+
+        appendCodeListSql += " FROM \"" + importSchema + "\".\"" + impRelname + "\" imp \
+            LEFT JOIN " + codeList + " cl ON \
+            imp.\"" + impField + "\" = cl.\"Bezeichner\" \
+            WHERE cl.\"Bezeichner\" IS NULL \
+            AND imp.\"" + impField + "\" IS NOT NULL;"
+
+        return appendCodeListSql
 
     def __impFindArrayFields(self, thisOid):
         arrayFieldSql = self.__impFindArrayFieldsSql()
@@ -449,34 +473,357 @@ class XPImporter(object):
         return ["gesetzlicheGrundlage"]
 
     def __impUseCodeListFields(self):
-        return ["stylesheetId"]
+        '''
+        gibt ein Dict zurück:
+        key = Name des Feldes, das auf die CodeList referenziert
+        item = array mit arrays:
+            0 CodeList (Schema.Relation)
+            1 array mit
+                0 Schema und
+                1 Relation in der das Feld auftaucht und für die dann diese CodeList gültig ist
+                0 und 1 können auch None sein, dann gilt die CodeList für alle Relationen, in
+                der ein Feld des Namens key auftaucht
+        '''
+        return {
+            "abweichendeBauweise": [
+                ["\"BP_Bebauung\".\"BP_AbweichendeBauweise\"",
+                    [None,None] #BP_BaugebietBauweise,BP_BesondererNutzungszweckFlaeche,BP_GemeinbedarfsFlaeche
+                ]
+            ],
+            "auspraegung": [
+                ["\"FP_Ver_und_Entsorgung\".\"FP_ZentralerVersorgungsbereichAuspraegung\"",
+                    ["FP_Ver_und_Entsorgung", "FP_ZentralerVersorgungsbereich"]
+                ]
+            ],
+            "baumArt": [
+                ["\"BP_Naturschutz_Landschaftsbild_Naturhaushalt\".\"BP_VegetationsobjektTypen\"",
+                    ["BP_Naturschutz_Landschaftsbild_Naturhaushalt", "BP_AnpflanzungBindungErhaltung"]
+                ]
+            ],
+            "detailArtDerFestlegung": [
+                ["\"SO_NachrichtlicheUebernahmen\".\"SO_DetailKlassifizNachSonstigemRecht\"",
+                    ["SO_NachrichtlicheUebernahmen", "SO_SonstigesRecht"]
+                ],
+                ["\"SO_NachrichtlicheUebernahmen\".\"SO_DetailKlassifizNachStrassenverkehrsrecht\"",
+                    ["SO_NachrichtlicheUebernahmen", "SO_Strassenverkehrsrecht"]
+                ],
+                ["\"SO_Schutzgebiete\".\"SO_DetailKlassifizSchutzgebietNaturschutzrecht\"",
+                    ["SO_Schutzgebiete", "SO_SchutzgebietNaturschutzrecht"]
+                ],
+                ["\"SO_Schutzgebiete\".\"SO_DetailKlassifizSchutzgebietWasserrecht\"",
+                    ["SO_Schutzgebiete", "SO_SchutzgebietWasserrecht"]
+                ],
+                ["\"SO_Schutzgebiete\".\"SO_DetailKlassifizSchutzgebietSonstRecht\"",
+                    ["SO_Schutzgebiete", "SO_SchutzgebietSonstigesRecht"]
+                ],
+                ["\"SO_NachrichtlicheUebernahmen\".\"SO_DetailKlassifizGewaesser\"",
+                    ["SO_NachrichtlicheUebernahmen", "SO_Gewaesser"]
+                ],
+                ["\"SO_NachrichtlicheUebernahmen\".\"SO_DetailKlassifizNachWasserrecht\"",
+                    ["SO_NachrichtlicheUebernahmen", "SO_Wasserrecht"]
+                ],
+                ["\"SO_NachrichtlicheUebernahmen\".\"SO_DetailKlassifizNachForstrecht\"",
+                    ["SO_NachrichtlicheUebernahmen", "SO_Forstrecht"]
+                ],
+                ["\"SO_NachrichtlicheUebernahmen\".\"SO_DetailKlassifizNachDenkmalschutzrecht\"",
+                    ["SO_NachrichtlicheUebernahmen", "SO_Denkmalschutzrecht"]
+                ],
+                ["\"SO_NachrichtlicheUebernahmen\".\"SO_DetailKlassifizNachSchienenverkehrsrecht\"",
+                    ["SO_NachrichtlicheUebernahmen", "SO_Schienenverkehrsrecht"]
+                ],
+                ["\"SO_NachrichtlicheUebernahmen\".\"SO_DetailKlassifizNachLuftverkehrsrecht\"",
+                    ["SO_NachrichtlicheUebernahmen", "SO_Luftverkehrsrecht"]
+                ],
+                ["\"SO_NachrichtlicheUebernahmen\".\"SO_DetailKlassifizNachBodenschutzrecht\"",
+                    ["SO_NachrichtlicheUebernahmen", "SO_Bodenschutzrecht"]
+                ],
+                ["\"SO_NachrichtlicheUebernahmen\".\"SO_DetailKlassifizBauverbot\"",
+                    ["SO_NachrichtlicheUebernahmen", "SO_Bauverbotszone"]
+                ],
+                ["\"SO_Schutzgebiete\".\"SO_DetailKlassifizNachForstrecht\"",
+                    ["SO_Schutzgebiete", "SO_SchutzgebietNaturschutzrecht"]
+                ]
+            ],
+            "detaillierteArtDerBaulNutzung": [
+                ["\"BP_Bebauung\".\"BP_DetailArtDerBaulNutzung\"",
+                    ["BP_Bebauung", "BP_BaugebietsTeilFlaeche"]
+                ],
+                ["\"FP_Bebauung\".\"FP_DetailArtDerBaulNutzung\"",
+                    ["FP_Bebauung", "FP_BebauungsFlaeche"]
+                ]
+            ],
+            "detaillierteDachform": [
+                ["\"BP_Bebauung\".\"BP_DetailDachform\"",
+                    [None,None] #"BP_Bebauung", "BP_Dachgestaltung" und "BP_Bebauung"."BP_GestaltungBaugebiet"
+                ]
+            ],
+            "detaillierteFunktion": [
+                ["\"LP_Erholung\".\"LP_ErholungFreizeitDetailFunktionen\"",
+                    ["LP_Erholung", "LP_ErholungFreizeit"]
+                ]
+            ],
+            "detaillierteTechnVorkehrung": [
+                ["\"BP_Umwelt\".\"BP_DetailTechnVorkehrungImmissionsschutz\"",
+                    ["BP_Umwelt", "BP_Immissionsschutz"]
+                ]
+            ],
+            "detaillierteZweckbestimmung": [
+                ["\"BP_Wasser\".\"BP_DetailZweckbestGewaesser\"",
+                    ["BP_Wasser", "BP_GewaesserFlaeche"]
+                ],
+                ["\"BP_Wasser\".\"BP_DetailZweckbestWasserwirtschaft\"",
+                    ["BP_Wasser", "BP_WasserwirtschaftsFlaeche"]
+                ],
+                ["\"BP_Landwirtschaft_Wald_und_Gruen\".\"BP_DetailZweckbestLandwirtschaft\"",
+                    ["BP_Landwirtschaft_Wald_und_Gruen", "BP_Landwirtschaft"]
+                ],
+                ["\"BP_Landwirtschaft_Wald_und_Gruen\".\"BP_DetailZweckbestWaldFlaeche\"",
+                    ["BP_Landwirtschaft_Wald_und_Gruen", "BP_WaldFlaeche"]
+                ],
+                ["\"BP_Landwirtschaft_Wald_und_Gruen\".\"BP_DetailZweckbestGruenFlaeche\"",
+                    ["BP_Landwirtschaft_Wald_und_Gruen", "BP_GruenFlaeche"]
+                ],
+                ["\"BP_Bebauung\".\"BP_DetailZweckbestGemeinschaftsanlagen\"",
+                    ["BP_Bebauung", "BP_GemeinschaftsanlagenFlaeche"]
+                ],
+                ["\"BP_Bebauung\".\"BP_DetailZweckbestNebenanlagen\"",
+                    ["BP_Bebauung", "BP_NebenanlagenFlaeche"]
+                ],
+                ["\"BP_Gemeinbedarf_Spiel_und_Sportanlagen\".\"BP_DetailZweckbestGemeinbedarf\"",
+                    ["BP_Gemeinbedarf_Spiel_und_Sportanlagen", "BP_GemeinbedarfsFlaeche"]
+                ],
+                ["\"BP_Gemeinbedarf_Spiel_und_Sportanlagen\".\"BP_DetailZweckbestSpielSportanlage\"",
+                    ["BP_Gemeinbedarf_Spiel_und_Sportanlagen", "BP_SpielSportanlagenFlaeche"]
+                ],
+                ["\"BP_Verkehr\".\"BP_DetailZweckbestStrassenverkehr\"",
+                    ["BP_Verkehr", "BP_VerkehrsFlaecheBesondererZweckbestimmung"]
+                ],
+                ["\"BP_Ver_und_Entsorgung\".\"BP_DetailZweckbestVerEntsorgung\"",
+                    ["BP_Ver_und_Entsorgung", "BP_VerEntsorgung"]
+                ],
+                ["\"FP_Gemeinbedarf_Spiel_und_Sportanlagen\".\"FP_DetailZweckbestGemeinbedarf\"",
+                    ["FP_Gemeinbedarf_Spiel_und_Sportanlagen", "FP_Gemeinbedarf"]
+                ],
+                ["\"FP_Gemeinbedarf_Spiel_und_Sportanlagen\".\"FP_DetailZweckbestSpielSportanlage\"",
+                    ["FP_Gemeinbedarf_Spiel_und_Sportanlagen", "FP_SpielSportanlage"]
+                ],
+                ["\"FP_Landwirtschaft_Wald_und_Gruen\".\"FP_DetailZweckbestWaldFlaeche\"",
+                    ["FP_Landwirtschaft_Wald_und_Gruen", "FP_WaldFlaeche"]
+                ],
+                ["\"FP_Landwirtschaft_Wald_und_Gruen\".\"FP_DetailZweckbestLandwirtschaftsFlaeche\"",
+                    ["FP_Landwirtschaft_Wald_und_Gruen", "FP_Landwirtschaft"]
+                ],
+                ["\"FP_Landwirtschaft_Wald_und_Gruen\".\"FP_DetailZweckbestGruen\"",
+                    ["FP_Landwirtschaft_Wald_und_Gruen", "FP_Gruen"]
+                ],
+                ["\"FP_Ver_und_Entsorgung\".\"FP_DetailZweckbestVerEntsorgung\"",
+                    ["FP_Ver_und_Entsorgung", "FP_VerEntsorgung"]
+                ],
+                ["\"FP_Verkehr\".\"FP_DetailZweckbestStrassenverkehr\"",
+                    ["FP_Verkehr", "FP_Strassenverkehr"]
+                ],
+                ["\"FP_Wasser\".\"FP_DetailZweckbestGewaesser\"",
+                    ["FP_Wasser", "FP_Gewaesser"]
+                ],
+                ["\"FP_Wasser\".\"FP_DetailZweckbestWasserwirtschaft\"",
+                    ["FP_Wasser", "FP_Wasserwirtschaft"]
+                ]
+            ],
+            "detailTyp": [
+                ["\"BP_Sonstiges\".\"BP_DetailAbgrenzungenTypen\"",
+                    ["BP_Sonstiges", "BP_NutzungsartenGrenze"]
+                ],
+                ["\"LP_SchutzgebieteObjekte\".\"LP_BodenschutzrechtDetailTypen\"",
+                    ["LP_SchutzgebieteObjekte", "LP_Bodenschutzrecht"]
+                ],
+                ["\"LP_SchutzgebieteObjekte\".\"LP_WaldschutzDetailTypen\"",
+                    ["LP_SchutzgebieteObjekte", "LP_Forstrecht"]
+                ],
+                ["\"LP_SchutzgebieteObjekte\".\"LP_InternatSchutzobjektDetailTypen\"",
+                    ["LP_SchutzgebieteObjekte", "LP_SchutzobjektInternatRecht"]
+                ],
+                ["\"LP_SchutzgebieteObjekte\".\"LP_SchutzobjektLandesrechtDetailTypen\"",
+                    ["LP_SchutzgebieteObjekte", "LP_SchutzobjektLandesrecht"]
+                ],
+                ["\"LP_SchutzgebieteObjekte\".\"LP_SonstRechtDetailTypen\"",
+                    ["LP_SchutzgebieteObjekte", "LP_SonstigesRecht"]
+                ],
+                ["\"LP_SchutzgebieteObjekte\".\"LP_WasserrechtGemeingebrEinschraenkungNaturschutzDetailTypen\"",
+                    ["LP_SchutzgebieteObjekte", "LP_WasserrechtGemeingebrEinschraenkungNaturschutz"]
+                ],
+                ["\"LP_SchutzgebieteObjekte\".\"LP_WasserrechtSchutzgebietDetailTypen\"",
+                    ["LP_SchutzgebieteObjekte", "LP_WasserrechtSchutzgebiet"]
+                ],
+                ["\"LP_SchutzgebieteObjekte\".\"LP_WasserrechtWirtschaftAbflussHochwSchutzDetailTypen\"",
+                    ["LP_SchutzgebieteObjekte", "LP_WasserrechtWirtschaftAbflussHochwSchutz"]
+                ]
+            ],
+            "massnahme": [
+                ["\"LP_Sonstiges\".\"LP_MassnahmeLandschaftsbild\"",
+                    ["LP_Sonstiges", "LP_Landschaftsbild"]
+                ]
+            ],
+            "nutzung": [
+                ["\"BP_Bebauung\".\"BP_NutzungNichUueberbaubGrundstFlaeche\"",
+                    ["BP_Bebauung", "BP_NichtUeberbaubareGrundstuecksflaeche"]
+                ]
+            ],
+            "pflanzart": [
+                ["\"LP_MassnahmenNaturschutz\".\"LP_AnpflanzungBindungErhaltung_pflanzart\"",
+                    ["LP_MassnahmenNaturschutz", "LP_Pflanzart"]
+                ]
+            ],
+            "planArt": [
+                ["\"SO_Basisobjekte\".\"SO_PlanArt\"",
+                    ["SO_Basisobjekte", "SO_Plan"]
+                ]
+            ],
+            "sonstGebietsArt": [
+                ["\"SO_SonstigeGebiete\".\"SO_SonstGebietsArt\"",
+                    ["SO_SonstigeGebiete", "SO_Gebiet"]
+                ]
+            ],
+            "sonstPlanArt": [
+                ["\"BP_Basisobjekte\".\"BP_SonstPlanArt\"",
+                    ["BP_Basisobjekte", "BP_Plan"]
+                ],
+                ["\"FP_Basisobjekte\".\"FP_SonstPlanArt\"",
+                    ["FP_Basisobjekte", "FP_Plan"]
+                ],
+                ["\"LP_Basisobjekte\".\"LP_SonstPlanArt\"",
+                    ["LP_Basisobjekte", "LP_Plan"]
+                ],
+                ["\"RP_Basisobjekte\".\"RP_SonstPlanArt\"",
+                    ["RP_Basisobjekte", "RP_Plan"]
+                ]
+            ],
+            "sonstRechtscharakter": [
+                ["\"SO_Basisobjekte\".\"SO_SonstRechtscharakter\"",
+                    ["SO_Basisobjekte", "SO_Objekt"]
+                ]
+            ],
+            "sonstRechtsstandGebiet": [
+                ["\"SO_SonstigeGebiete\".\"SO_SonstRechtsstandGebietTyp\"",
+                    ["SO_SonstigeGebiete", "SO_Gebiet"]
+                ]
+            ],
+            "sonstTyp": [
+                ["\"SO_Sonstiges\".\"SO_SonstGrenzeTypen\"",
+                    ["SO_Sonstiges", "SO_Grenze"]
+                ],
+                ["\"BP_Bebauung\".\"BP_spezielleBauweiseSonstTypen\"",
+                    ["BP_Bebauung", "BP_SpezielleBauweise"]
+                ],
+                ["\"RP_Sonstiges\".\"RP_SonstGrenzeTypen\"",
+                    ["RP_Sonstiges", "RP_Grenze"]
+                ]
+            ],
+            "spezifischePraegung": [
+                ["\"FP_Basisobjekte\".\"FP_SpezifischePraegungTypen\"",
+                    ["FP_Basisobjekte", "FP_Objekt"]
+                ]
+            ],
+            "status": [
+                ["\"BP_Basisobjekte\".\"BP_Status\"",
+                    ["BP_Basisobjekte", "BP_Plan"]
+                ],
+                ["\"FP_Basisobjekte\".\"FP_Status\"",
+                    ["FP_Basisobjekte", "FP_Plan"]
+                ],
+                ["\"RP_Basisobjekte\".\"RP_Status\"",
+                    ["RP_Basisobjekte", "RP_Plan"]
+                ]
+            ],
+            "stylesheetId": [
+                ["\"XP_Praesentationsobjekte\".\"XP_StylesheetListe\"", [None, None]]
+            ],
+            "typ": [
+                ["\"RP_Sonstiges\".\"RP_GenerischesObjektTypen\"",
+                    ["RP_Sonstiges", "RP_GenerischesObjekt"]
+                ],
+                ["\"LP_SchutzgebieteObjekte\".\"LP_WasserrechtSonstigeTypen\"",
+                    ["LP_SchutzgebieteObjekte", "LP_WasserrechtSonstige"]
+                ]
+            ],
+            "zweckbestimmung": [
+                ["\"BP_Sonstiges\".\"BP_ZweckbestimmungGenerischeObjekte\"",
+                    ["BP_Sonstiges", "BP_GenerischesObjekt"]
+                ],
+                ["\"FP_Sonstiges\".\"FP_ZweckbestimmungGenerischeObjekte\"",
+                    ["FP_Sonstiges", "FP_GenerischesObjekt"]
+                ],
+                ["\"LP_Sonstiges\".\"LP_ZweckbestimmungGenerischeObjekte\"",
+                    ["LP_Sonstiges", "LP_GenerischesObjekt"]
+                ]
+            ]
+        }
 
-    def __impAppendCodeList(self, codeListField, impField, importSchema, impRelname):
+    def __impIsCodeListField(self, codeListField, xpNspname, xpRelname):
+        '''
+        prüft, ob das CodeList-Feld wirklich eins ist
+        GenerischesObjekt.zweckbestimmung sind CodeLists, andere zweckbestimmung nicht
+        '''
+        if codeListField == "zweckbestimmung":
+            if xpRelname.find("Gener") != -1:
+                return True
+            else:
+                return False
+        else:
+            return True
+
+    def __impAppendCodeList(self, codeListField, impField, importSchema, impRelname, xpNspname, xpRelname, isArrayField):
         '''
         Eine CodeList mit neuen Werten ergänzen
-        Eien CodeList ist eine Relation mit den Feldern Code und Bezeichner
+        Eine CodeList ist eine Relation mit den Feldern Code und Bezeichner
+        xpNspname.xpRelname ist die Relation, bei deren Import ein CodeList-Wert gefunden wurde
         '''
-        codeList = self.__impGetCodeList(codeListField)
+
+        if not self.__impIsCodeListField(codeListField, xpNspname, xpRelname):
+            return 0
+
+        codeList = self.__impGetCodeList(codeListField, xpNspname, xpRelname)
 
         if codeList != "":
-            codeListSql = "INSERT INTO " + codeList + " \
-            (\"Bezeichner\") \
-            SELECT DISTINCT \"" + impField + "\" \
-            FROM \"" + importSchema + "\".\"" + impRelname + "\" imp \
-            LEFT JOIN " + codeList + " cl ON \
-            imp.\"" + impField + "\" = cl.\"Bezeichner\" \
-            WHERE cl.\"Bezeichner\" IS NULL \
-            AND imp.\"" + impField + "\" IS NOT NULL;"
+            codeListSql = self.__impAppendCodeListSql(codeList, impField, importSchema, impRelname, isArrayField)
             return self.__impExecuteSql(codeListSql)
         else:
             return -1
 
-    def __impGetCodeList(self, codeListField):
+    def __impGetCodeList(self, codeListField, xpNspname, xpRelname):
         '''
         Gibt die CodeList-Relation für ein übergebenes CodeListFeld zurück
         '''
-        if codeListField == "stylesheetId":
-            return "\"XP_Praesentationsobjekte\".\"XP_StylesheetListe\""
+
+        useCodeLists = self.__impUseCodeListFields()
+
+        try:
+            codeListArray = useCodeLists[codeListField]
+        except:
+            return ""
+
+        if not self.__impIsCodeListField(codeListField, xpNspname, xpRelname):
+            return ""
+
+        matchFound = False
+
+        for anItem in codeListArray:
+            aCodeList = anItem[0]
+            aRelation = anItem[1]
+            aSchemaName = aRelation[0]
+
+            if aSchemaName == None:
+                matchFound = True
+                break
+            else:
+                if aSchemaName == xpNspname:
+                    aRelName = aRelation[1]
+
+                    if aRelName == xpRelname:
+                        matchFound = True
+                        break
+
+        if matchFound:
+            return aCodeList
         else:
             return ""
 
@@ -573,6 +920,7 @@ class XPImporter(object):
         numUpdate = self.__impPerformUpdateXP(impOid, importSchema, impRelname,
             xpOid, xpNspname, xpRelname, pkField = pkField)
 
+        self.debug("__impUpdateXP: \n" + importSchema + "." + impRelname + ": " + str(numUpdate))
         if numUpdate == -1:
             return -1
         else:
@@ -586,7 +934,7 @@ class XPImporter(object):
                 return numUpdate
 
     def __impPerformUpdateXP(self, impOid, importSchema, impRelname,
-        xpOid, xpNspname, xpRelname, pkField = "gid"):
+        xpOid, xpNspname, xpRelname, pkField = "gid", arrayFields = []):
         '''
         Update xpRelname aus den gleichnamigen Feldern von impRelname
         '''
@@ -612,8 +960,14 @@ class XPImporter(object):
 
                 if xpField in self.__impSkipTheseFields():
                     continue
-                elif xpField in self.__impUseCodeListFields():
-                    if self.__impAppendCodeList(xpField, impField, importSchema, impRelname) == -1:
+                elif xpField in list(self.__impUseCodeListFields().keys()) and \
+                    self.__impIsCodeListField(xpField, xpNspname, xpRelname):
+                    codeListSucces = self.__impAppendCodeList(xpField, impField,
+                        importSchema, impRelname, xpNspname, xpRelname, isArrayField = False)
+                        #TODO: rauskkriegen, ob arrayfield
+
+                    if codeListSucces == -1:
+                        self.tools.showWarning("CodeListError " + xpNspname + "." + xpRelname + "." + xpField)
                         return -1
 
                 if updateSql == "":
@@ -628,11 +982,17 @@ class XPImporter(object):
 
                 if xpField == "uuid":
                     valuesSql += " COALESCE(\"" + impField + "\",id)::" + xpType
-                elif xpField in self.__impUseCodeListFields():
-                    valuesSql += " " + xpField + ".\"Code\""
-                                    # xpField dient hier als alias für die angejointe CodeList--Tabelle
-                    joinSql += " JOIN " + self.__impGetCodeList(xpField) + " as " + xpField + \
-                        " ON quelle.\"" + impField + "\" = " + xpField + ".\"Bezeichner\"" # alias setzen
+                elif xpField in list(self.__impUseCodeListFields().keys()) and\
+                    self.__impIsCodeListField(xpField, xpNspname, xpRelname):
+
+                    codeList = self.__impGetCodeList(xpField, xpNspname, xpRelname)
+
+                    if codeList != "":
+                        valuesSql += " " + xpField + ".\"Code\""
+                                        # xpField dient hier als alias für die angejointe CodeList--Tabelle
+                        joinSql += " LEFT JOIN " + codeList + " as " + xpField + \
+                            " ON quelle.\"" + impField + "\" = " + xpField + ".\"Bezeichner\"" # alias setzen
+                            # LEFT JOIN, weil das Feld ja nicht belegt sein muß
                 else:
                     valuesSql += "\"" + impField + "\"::" + xpType
             xpAttrQuery.finish()
@@ -647,6 +1007,7 @@ class XPImporter(object):
                     ") WHERE " + pkField + " IN (SELECT xp_gid FROM \"" + \
                     importSchema + "\".\"" + impRelname + "\");"
         updateSql += valuesSql
+        self.debug("updateSql \n"+ updateSql)
         return self.__impExecuteSql(updateSql)
 
     def __impGetAllFields(self, nspName, relName):
@@ -880,6 +1241,7 @@ class XPImporter(object):
         numUpdated = self.__impUpdateXP(impOid, importSchema,
             impRelname, parentOid, parentNspname, parentRelname,
             arrayFields)
+        self.debug("__impBereich: \n" + importSchema + "." + impRelname + ": " + str(numUpdated))
 
         if numUpdated == -1:
             return [-1, None]
@@ -992,6 +1354,7 @@ class XPImporter(object):
                             numUpdated = self.__impUpdateXP(impOid, importSchema,
                                 impRelname, parentOid, parentNspname, parentRelname,
                                 arrayFields, pkField = pkField)
+                            self.debug("__impObjekte: \n" + importSchema + "." + impRelname + ": " + str(numUpdated))
 
                             if numUpdated == -1:
                                 return False
