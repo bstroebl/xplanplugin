@@ -1075,7 +1075,7 @@ class XPImporter(object):
 
     def __impFindPlan(self, importSchema):
         tableSql = self.__impGetTableSql()
-        planSql = tableSql + " WHERE c2.relname ILIKE '%_plan' and c2.relkind = 'r'"
+        planSql = tableSql + " WHERE c2.relname ILIKE '%p_plan' and c2.relkind = 'r'"
         planQuery = QtSql.QSqlQuery(self.db)
         planQuery.prepare(planSql)
         planQuery.bindValue(":import1", importSchema)
