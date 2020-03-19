@@ -1,11 +1,18 @@
 # Change Log
 
-## [Änderungen seither](https://github.com/bstroebl/xplanplugin/compare/v4.0.0...develop)
+## [Änderungen seither](https://github.com/bstroebl/xplanplugin/compare/v4.1.0...develop)
+
+# [4.1.0 - 2020-03-19](https://github.com/bstroebl/xplanplugin/compare/v4.0.0...v4.1.0)
+
+### Added
+- Füge XPlan-5.2-Schemadateien hinzu
+- Importiere auch Werte in CodeListen
 
 ### Fixed
 - Lies QSettings plattformunabhängig
 - Ergänze SVG-Pfad auch wenn er leer ist oder nur ein Element hat
 - QGIS3-api Anpassungen
+- Klammere XP_verbundenerPlan aus
 
 # [4.0.0 - 2019-04-08](https://github.com/bstroebl/xplanplugin/compare/v3.0.0...v4.0.0)
 
