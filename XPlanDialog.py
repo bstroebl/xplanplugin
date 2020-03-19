@@ -462,7 +462,7 @@ class BereichsauswahlDialog(QtWidgets.QDialog, BEREICH_CLASS):
         self.iface.messageBar().pushMessage(
             "DBError",  "Database Error: \
             %(error)s \n %(query)s" % {"error": query.lastError().text(),
-            "query": query.lastQuery()}, level=QgsMessageBar.CRITICAL)
+            "query": query.lastQuery()}, level=Qgis.Critical)
 
 class StilauswahlDialog(QtWidgets.QDialog, STIL_CLASS):
     def __init__(self, iface, aDict, title = "Stilauswahl"):
@@ -517,7 +517,7 @@ class StilauswahlDialog(QtWidgets.QDialog, STIL_CLASS):
         self.iface.messageBar().pushMessage(
             "DBError",  "Database Error: \
             %(error)s \n %(query)s" % {"error": query.lastError().text(),
-            "query": query.lastQuery()}, level=QgsMessageBar.CRITICAL)
+            "query": query.lastQuery()}, level=Qgis.Critical)
 
 class XPNutzungsschablone(QtWidgets.QDialog, SCHABLONE_CLASS):
     '''Ein Dialog zur Konfiguraton der Nutzungsschablone (BPlan'''
