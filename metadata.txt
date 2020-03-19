@@ -13,7 +13,7 @@ name=XPlanung
 qgisMinimumVersion=3.0
 description=This QGIS plugin allows interaction between QGIS and the XPlan-PostGIS project. XPlanung is a German standard for spatial planning data; it thus addresses German speaking users only.
 about=XPlanung ist ein Standard für den Datenaustausch von Bauleitplänen, Raumordnungsplänen und Landschaftsplänen. Weitere Informationen gibt es auf http://www.xplanungwiki.de/. Das Plugin ermöglicht die Bearbeitung und Anzeige von Daten, die in einer xplan-PostGIS-Datenbank liegen; es benötigt deshalb eine PostGIS-DB mit dem Xplanungs-Schema sowie zusätzlich das Plugin DataDrivenInputMask.
-version=4.0.3
+version=4.1.0
 
 # end of mandatory metadata
 
