@@ -768,6 +768,8 @@ class XPImporter(object):
                 return True
             else:
                 return False
+        elif codeListField ==  "massnahme":
+            return xpRelname == "LP_Landschaftsbild"
         else:
             return True
 
