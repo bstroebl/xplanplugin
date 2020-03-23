@@ -897,19 +897,19 @@ class ImportDialog(QtWidgets.QDialog, IMPORT_CLASS):
 
     def __getSchemas(self):
         '''
-        SQL, das alle nicht-Xplanungs-Schemas in der DB liefert
+        Abfrage, die alle User-erzeugten nicht-Xplanungs-Schemas in der DB liefert
         '''
         schemaSql = "SELECT nspname from pg_namespace \
-            WHERE nspowner != 10 \
+            WHERE nspname not in ('information_schema', 'pg_catalog', 'public', 'QGIS') \
+            AND nspname not like 'pg_toast%' \
+            AND nspname not like 'pg_temp_%' \
             AND nspname not like 'BP_%' \
             AND nspname not like 'FP_%' \
             AND nspname not like 'LP_%' \
             AND nspname not like 'RP_%'\
             AND nspname not like 'SO_%' \
-            AND nspname not like 'XP_%' \
-            AND nspname != 'QGIS' \
-            AND nspname != 'public' \
-            ORDER BY 1;"
+            AND nspname not like 'XP_%';"
+
         schemaQuery = QtSql.QSqlQuery(self.xplanplugin.db)
         schemaQuery.prepare(schemaSql)
         schemaQuery.exec_()
