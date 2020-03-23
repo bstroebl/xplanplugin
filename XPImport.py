@@ -209,17 +209,18 @@ class XPImporter(object):
 
     def __impGetNspnameSql(self):
         '''
-        SQL, das alle nicht-Xplanungs-Schemas in der DB liefert
+        SQL, das alle User-erzeugten nicht-Xplanungs-Schemas in der DB liefert
         '''
         return "SELECT nspname from pg_namespace \
-            WHERE nspowner != 10 \
+            WHERE nspname not in ('information_schema', 'pg_catalog', 'public', 'QGIS') \
+            AND nspname not like 'pg_toast%' \
+            AND nspname not like 'pg_temp_%' \
             AND nspname not like 'BP_%' \
             AND nspname not like 'FP_%' \
             AND nspname not like 'LP_%' \
             AND nspname not like 'RP_%'\
             AND nspname not like 'SO_%' \
-            AND nspname not like 'XP_%' \
-            AND nspname != 'QGIS';"
+            AND nspname not like 'XP_%';"
 
     def __impGetChildTablesSql(self):
         '''
