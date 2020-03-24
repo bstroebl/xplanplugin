@@ -923,7 +923,6 @@ class XPImporter(object):
         numUpdate = self.__impPerformUpdateXP(impOid, importSchema, impRelname,
             xpOid, xpNspname, xpRelname, pkField = pkField)
 
-        self.debug("__impUpdateXP: \n" + importSchema + "." + impRelname + ": " + str(numUpdate))
         if numUpdate == -1:
             return -1
         else:
@@ -1010,7 +1009,7 @@ class XPImporter(object):
                     ") WHERE " + pkField + " IN (SELECT xp_gid FROM \"" + \
                     importSchema + "\".\"" + impRelname + "\");"
         updateSql += valuesSql
-        self.debug("updateSql \n"+ updateSql)
+
         return self.__impExecuteSql(updateSql)
 
     def __impGetAllFields(self, nspName, relName):
@@ -1244,7 +1243,6 @@ class XPImporter(object):
         numUpdated = self.__impUpdateXP(impOid, importSchema,
             impRelname, parentOid, parentNspname, parentRelname,
             arrayFields)
-        self.debug("__impBereich: \n" + importSchema + "." + impRelname + ": " + str(numUpdated))
 
         if numUpdated == -1:
             return [-1, None]
@@ -1357,7 +1355,6 @@ class XPImporter(object):
                             numUpdated = self.__impUpdateXP(impOid, importSchema,
                                 impRelname, parentOid, parentNspname, parentRelname,
                                 arrayFields, pkField = pkField)
-                            self.debug("__impObjekte: \n" + importSchema + "." + impRelname + ": " + str(numUpdated))
 
                             if numUpdated == -1:
                                 return False
@@ -1383,6 +1380,9 @@ class XPImporter(object):
 
                     if numCopied == -1:
                         self.importMsg += "Nicht importiert: "  + spezialRelname + "\n"
+                    elif numCopied == -9999:
+                        # nichts kopiert aber es war auch nicht nötig, etwas zu kopieren
+                        pass
                     elif numCopied == 1:
                         self.importMsg += u"1 Datensatz aus " +  \
                             spezialRelname + " importiert \n"
@@ -1434,7 +1434,22 @@ class XPImporter(object):
                             return -1
 
                     return numInserted
-
+        elif impRelname.lower().find("_dientzurdarstellungvon") != -1:
+            impPoName = impRelname[:6]
+            insertSql = "INSERT INTO \
+        \"XP_Praesentationsobjekte\".\"XP_APObjekt_dientZurDarstellungVon\" \
+        (\"XP_APObjekt_gid\",\"dientZurDarstellungVon\",art,index) \
+        SELECT po.xp_gid,xp.gid,po.art,po.index \
+        FROM \"" + importSchema + "\".\"" + impRelname + "\" i \
+        JOIN \"" + importSchema + "\".\"" + impPoName + "\" po \
+            ON i.parent_id = po.id \
+        JOIN \"XP_Basisobjekte\".\"XP_Objekt\" xp \
+            ON i.href = '#' || xp.gml_id \
+         WHERE po.art IS NOT NULL;"
+            return self.__impExecuteSql(insertSql)
+        elif impRelname.lower().find("wirddargestelltdurch") != -1:
+            # Gegenpart zu dientZurDarstellungVon
+            return -9999
         elif impRelname.lower() == impPlanRelname + "_gemeinde":
             insertSql = "INSERT INTO \
         \"" + modellbereich + "_Basisobjekte\".\"" + modellbereich + "_Plan_gemeinde\" \
