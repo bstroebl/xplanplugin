@@ -1515,6 +1515,15 @@ class XPImporter(object):
         JOIN \"XP_Basisobjekte\".\"XP_Objekt\" xp ON i.parent_pkid = xp.gml_id \
         JOIN \"" + importSchema + "\".hoehenangabe h ON i.child_pkid = h.ogr_pkid;"
             return self.__impExecuteSql(insertSql)
+        elif impRelname.lower().find("_reftextinhalt") != -1:
+            insertSql =  "INSERT INTO \
+        \"" + modellbereich + "_Basisobjekte\".\"" + modellbereich + "_Objekt_refTextInhalt\" \
+        (\"" + modellbereich + "_Objekt_gid\",\"refTextInhalt\") \
+        SELECT xp.gid,ta.xp_gid \
+        FROM \"" + importSchema + "\".\"" + impRelname + "\" i \
+        JOIN \"XP_Basisobjekte\".\"XP_Objekt\" xp ON i.parent_id = xp.gml_id \
+        JOIN \"" + importSchema + "\".\"" + modellbereich.lower() + "_textabschnitt\" ta ON i.reftextinhalt_pkid = ta.id;"
+            return self.__impExecuteSql(insertSql)
         elif impRelname.lower().find("_dientzurdarstellungvon") != -1:
             impPoName = impRelname[:6]
             insertSql = "INSERT INTO \
