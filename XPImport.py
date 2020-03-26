@@ -222,6 +222,15 @@ class XPImporter(object):
             AND nspname not like 'SO_%' \
             AND nspname not like 'XP_%';"
 
+    def __impGetRelationOidSql(self):
+        '''
+        SQL, das OID einer Relation zurückgibt
+        '''
+
+        return "SELECT c.oid FROM pg_class c \
+        JOIN pg_namespace n ON c.relnamespace = n.oid \
+        WHERE n.nspname = :nspname AND c.relname = :relname"
+
     def __impGetChildTablesSql(self):
         '''
         SQL, das alle Kindtabellen mit Punkt/Linie/Flaeche für :oid (pg_class.oid) liefert
@@ -279,21 +288,28 @@ class XPImporter(object):
                 AND att.attrelid = :oid \
                 AND array_length(pcon.conkey, 1) = 1"
 
-    def __impGetMatchingAttributesSql(self):
+    def __impGetMatchingAttributesSql(self, replace = []):
         '''
         SQL, das gleichnamige Attribute in den Relationen :xp_oid (pg_class.oid)
         und :imp_oid (pg_class.oid) liefert
         '''
-        return "SELECT att1.attname as xp_attname, \
+        retValue = "SELECT att1.attname as xp_attname, \
             att2.attname as imp_attname, \
             t.typname as xp_typename \
             FROM pg_attribute att1 \
-            join pg_attribute att2 on lower(att1.attname) = lower(att2.attname) \
-            join pg_type t on att1.atttypid = t.oid \
-            WHERE att1.attrelid = :xp_oid \
-            AND att1.attnum > 0 \
-            AND att2.attrelid = :imp_oid \
-            AND att2.attnum > 0"
+            join pg_attribute att2 on lower(att1.attname) = "
+
+        if replace == []:
+            retValue += "lower(att2.attname)"
+        else:
+            retValue += "replace(lower(att2.attname),:replace0,:replace1)"
+
+        retValue += " join pg_type t on att1.atttypid = t.oid \
+        WHERE att1.attrelid = :xp_oid \
+        AND att1.attnum > 0 \
+        AND att2.attrelid = :imp_oid \
+        AND att2.attnum > 0"
+        return retValue
 
     def __impAppendCodeListSql(self, codeList, impField, importSchema, impRelname, isArrayField):
 
@@ -402,6 +418,27 @@ class XPImporter(object):
             "\" SET xp_gid = nextval('\"" + parentNspname + "\".\"" + seqName + \
             "\"');"
         return self.__impExecuteSql(updateGidSql)
+
+    def __impGetRelationOid(self, nspname, relname):
+        relSql = self.__impGetRelationOidSql()
+        relQuery = QtSql.QSqlQuery(self.db)
+        relQuery.prepare(relSql)
+        relQuery.bindValue(":nspname", nspname)
+        relQuery.bindValue(":relname", relname)
+        relQuery.exec_()
+        retValue = None
+
+        if relQuery.isActive():
+            while relQuery.next(): # returns false when all records are done
+                retValue = relQuery.value(0)
+                break
+
+            relQuery.finish()
+        else:
+            self.showQueryError(relQuery)
+            return None
+
+        return retValue
 
     def __impGetChildTables(self, thisOid):
         childSql = self.__impGetChildTablesSql()
@@ -839,14 +876,14 @@ class XPImporter(object):
         return self.__impExecuteSql(updateSql)
 
     def __impInsertInXP(self, impOid, importSchema, impRelname,
-        xpOid, xpNspname, xpRelname, arrayFields, pkField = "gid"):
+        xpOid, xpNspname, xpRelname, arrayFields, pkField = "gid", replace = []):
         '''
         Füge ein neues Objekt in eine XP-Tabelle ein
         return: Anzahl eingefügter Datensätze oder -1 (= Fehler)
         '''
 
         numInserted = self.__impPerformInsertInXP(impOid, importSchema, impRelname,
-            xpOid, xpNspname, xpRelname, pkField = pkField)
+            xpOid, xpNspname, xpRelname, pkField = pkField, replace = replace)
 
         if numInserted == -1:
             return -1
@@ -863,12 +900,17 @@ class XPImporter(object):
                 return numInserted
 
     def __impPerformInsertInXP(self, impOid, importSchema, impRelname,
-        xpOid, xpNspname, xpRelname, pkField = "gid"):
-        attributeSql = self.__impGetMatchingAttributesSql()
+        xpOid, xpNspname, xpRelname, pkField = "gid", replace = []):
+        attributeSql = self.__impGetMatchingAttributesSql(replace = replace)
         xpAttrQuery = QtSql.QSqlQuery(self.db)
         xpAttrQuery.prepare(attributeSql)
         xpAttrQuery.bindValue(":imp_oid", impOid)
         xpAttrQuery.bindValue(":xp_oid", xpOid)
+
+        if replace != []:
+            xpAttrQuery.bindValue(":replace0", replace[0])
+            xpAttrQuery.bindValue(":replace1", replace[1])
+
         xpAttrQuery.exec_()
 
         if xpAttrQuery.isActive():
@@ -918,10 +960,10 @@ class XPImporter(object):
         return self.__impExecuteSql(insertSql)
 
     def __impUpdateXP(self, impOid, importSchema, impRelname,
-        xpOid, xpNspname, xpRelname, arrayFields, pkField = "gid"):
+        xpOid, xpNspname, xpRelname, arrayFields, pkField = "gid", replace = []):
 
         numUpdate = self.__impPerformUpdateXP(impOid, importSchema, impRelname,
-            xpOid, xpNspname, xpRelname, pkField = pkField)
+            xpOid, xpNspname, xpRelname, pkField = pkField, replace = replace)
 
         if numUpdate == -1:
             return -1
@@ -936,16 +978,22 @@ class XPImporter(object):
                 return numUpdate
 
     def __impPerformUpdateXP(self, impOid, importSchema, impRelname,
-        xpOid, xpNspname, xpRelname, pkField = "gid", arrayFields = []):
+        xpOid, xpNspname, xpRelname, pkField = "gid", arrayFields = [],
+        replace = []):
         '''
         Update xpRelname aus den gleichnamigen Feldern von impRelname
         '''
 
-        attributeSql = self.__impGetMatchingAttributesSql()
+        attributeSql = self.__impGetMatchingAttributesSql(replace = replace)
         xpAttrQuery = QtSql.QSqlQuery(self.db)
         xpAttrQuery.prepare(attributeSql)
         xpAttrQuery.bindValue(":imp_oid", impOid)
         xpAttrQuery.bindValue(":xp_oid", xpOid)
+
+        if replace != []:
+            xpAttrQuery.bindValue(":replace0", replace[0])
+            xpAttrQuery.bindValue(":replace1", replace[1])
+
         xpAttrQuery.exec_()
 
         if xpAttrQuery.isActive():
@@ -1291,13 +1339,25 @@ class XPImporter(object):
                     impOid = objektQuery.value(4)
                     impRelname = objektQuery.value(5)
                     parents = self.__impGetAllParentTables(objektOid)
+                    replace = []
 
                     if parents == None:
                         return False
-                    elif parents == []: # keine Kindklassen, sondern eigenständige
-                        spezialfaelle.append([impOid, impRelname])
-                        continue
-                    else:
+                    elif parents == []:
+                        if impRelname == "hoehenangabe":
+                            objektNspname = "XP_Sonstiges"
+                            objektRelname = "XP_Hoehenangabe"
+                            objektOid = self.__impGetRelationOid(objektNspname, objektRelname)
+                            parents = [[objektOid, objektNspname, objektRelname]]
+                            replace = ["xp_hoehenangabe_", ""]
+                            # im einzigen Testdatensatz mit hoehenangabe wurden alle Felder mit dem
+                            # Präfix xp_hoehenangabe importiert
+                        else:
+                            # keine Kindklassen, sondern eigenständige
+                            spezialfaelle.append([impOid, impRelname])
+                            continue
+
+                    if parents != []:
                         arrayFields = self.__impFindArrayFields(impOid)
                         lastParent = parents[len(parents) - 1] # idR. XP_Objekt
                         parentOid = lastParent[0]
@@ -1322,9 +1382,10 @@ class XPImporter(object):
                         if childs == None:
                             return False
                         elif childs == []:
-                            if self.__impInsertInXP(impOid, importSchema,
+                            numInserted = self.__impInsertInXP(impOid, importSchema,
                                 impRelname, objektOid, objektNspname, objektRelname,
-                                arrayFields, pkField = pkField) == -1:
+                                arrayFields, pkField = pkField, replace = replace)
+                            if numInserted == -1:
                                 return False
                         else:
                             for aChild in childs:
@@ -1334,18 +1395,19 @@ class XPImporter(object):
 
                                 if self.__impInsertInXP(impOid, importSchema,
                                     impRelname, childOid, childNspname, childRelname,
-                                    arrayFields) == -1:
+                                    arrayFields, replace = replace) == -1:
                                     return False
 
                             if self.__impUpdateXP(impOid, importSchema,
                                 impRelname, objektOid, objektNspname, objektRelname,
-                                arrayFields, pkField = pkField) == -1:
+                                arrayFields, pkField = pkField, replace = replace) == -1:
                                 return False
 
-                        if self.__impUpdateGmlId(importSchema,
-                            impRelname, parentNspname, parentRelname,
-                            pkField = pkField) == -1:
-                            return False
+                        if impRelname != "hoehenangabe":
+                            if self.__impUpdateGmlId(importSchema,
+                                impRelname, parentNspname, parentRelname,
+                                pkField = pkField) == -1:
+                                return False
 
                         for aParent in parents:
                             parentOid = aParent[0]
@@ -1354,7 +1416,7 @@ class XPImporter(object):
 
                             numUpdated = self.__impUpdateXP(impOid, importSchema,
                                 impRelname, parentOid, parentNspname, parentRelname,
-                                arrayFields, pkField = pkField)
+                                arrayFields, pkField = pkField, replace = replace)
 
                             if numUpdated == -1:
                                 return False
@@ -1434,6 +1496,25 @@ class XPImporter(object):
                             return -1
 
                     return numInserted
+        elif impRelname.lower() == impPlanRelname + "_gemeinde":
+            insertSql = "INSERT INTO \
+        \"" + modellbereich + "_Basisobjekte\".\"" + modellbereich + "_Plan_gemeinde\" \
+        (\"" + modellbereich + "_Plan_gid\",\"gemeinde\") \
+        SELECT p.xp_gid,g.xp_gid \
+        FROM \"" + importSchema + "\".\"" + impRelname + "\" i \
+        JOIN \"" + importSchema + "\".\"" + impPlanRelname + "\" p \
+            ON i.parent_id = p.id \
+        JOIN \"" + importSchema + "\".\"xp_gemeinde\" g \
+            ON i.xp_gemeinde_pkid = g.ogr_pkid;"
+            return self.__impExecuteSql(insertSql)
+        elif impRelname.lower().find("_hoehenangabe_hoehenangabe") != -1:
+            insertSql = "INSERT INTO \
+        \"XP_Basisobjekte\".\"XP_Objekt_hoehenangabe\" (\"XP_Objekt_gid\", hoehenangabe) \
+        SELECT xp.gid, h.xp_gid \
+        FROM \"" + importSchema + "\".\"" + impRelname + "\" i \
+        JOIN \"XP_Basisobjekte\".\"XP_Objekt\" xp ON i.parent_pkid = xp.gml_id \
+        JOIN \"" + importSchema + "\".hoehenangabe h ON i.child_pkid = h.ogr_pkid;"
+            return self.__impExecuteSql(insertSql)
         elif impRelname.lower().find("_dientzurdarstellungvon") != -1:
             impPoName = impRelname[:6]
             insertSql = "INSERT INTO \
@@ -1450,17 +1531,6 @@ class XPImporter(object):
         elif impRelname.lower().find("wirddargestelltdurch") != -1:
             # Gegenpart zu dientZurDarstellungVon
             return -9999
-        elif impRelname.lower() == impPlanRelname + "_gemeinde":
-            insertSql = "INSERT INTO \
-        \"" + modellbereich + "_Basisobjekte\".\"" + modellbereich + "_Plan_gemeinde\" \
-        (\"" + modellbereich + "_Plan_gid\",\"gemeinde\") \
-        SELECT p.xp_gid,g.xp_gid \
-        FROM \"" + importSchema + "\".\"" + impRelname + "\" i \
-        JOIN \"" + importSchema + "\".\"" + impPlanRelname + "\" p \
-            ON i.parent_id = p.id \
-        JOIN \"" + importSchema + "\".\"xp_gemeinde\" g \
-            ON i.xp_gemeinde_pkid = g.ogr_pkid;"
-            return self.__impExecuteSql(insertSql)
         elif impRelname.lower() == impBereichRelname + "_planinhalt":
             insertSql = "INSERT INTO \"XP_Basisobjekte\".\"XP_Objekt_gehoertZuBereich\" \
             (\"gehoertZuBereich\",\"XP_Objekt_gid\") \
