@@ -915,7 +915,7 @@ class XPImporter(object):
 
         if xpAttrQuery.isActive():
             insertSql = "INSERT INTO \"" + xpNspname + "\".\"" + \
-                        xpRelname + "\" (" + pkField
+                        xpRelname + "\" (\"" + pkField + "\""
             valueSql = " SELECT xp_gid"
 
             while xpAttrQuery.next(): # returns false when all records are done
@@ -1053,8 +1053,8 @@ class XPImporter(object):
         updateSql += ") = "
         valuesSql += " FROM \"" + importSchema + "\".\"" + impRelname + \
                     "\" quelle " + joinSql + \
-                    " WHERE quelle.xp_gid = ziel." + pkField +\
-                    ") WHERE " + pkField + " IN (SELECT xp_gid FROM \"" + \
+                    " WHERE quelle.xp_gid = ziel.\"" + pkField +\
+                    "\") WHERE \"" + pkField + "\" IN (SELECT xp_gid FROM \"" + \
                     importSchema + "\".\"" + impRelname + "\");"
         updateSql += valuesSql
 
@@ -1316,7 +1316,7 @@ class XPImporter(object):
         '''
         tableSql = self.__impGetTableSql()
         objektSql = tableSql + " WHERE (c2.relname not ILIKE '%_bereich' \
-        AND c2.relname not ILIKE '%_plan') OR c2.relname IS NULL \
+        AND c2.relname not ILIKE '%p_plan') OR c2.relname IS NULL \
         ORDER BY c1.relname DESC" # damit xp_gemeinde (falls vorh.) vor bla_plan_gemeinde kommt
         objektQuery = QtSql.QSqlQuery(self.db)
         objektQuery.prepare(objektSql)
@@ -1352,6 +1352,11 @@ class XPImporter(object):
                             replace = ["xp_hoehenangabe_", ""]
                             # im einzigen Testdatensatz mit hoehenangabe wurden alle Felder mit dem
                             # Präfix xp_hoehenangabe importiert
+                        elif impRelname == "xp_verbundenerplan":
+                            objektNspname = "XP_Basisobjekte"
+                            objektRelname = "XP_VerbundenerPlan"
+                            objektOid = self.__impGetRelationOid(objektNspname, objektRelname)
+                            parents = [[objektOid, objektNspname, objektRelname]]
                         else:
                             # keine Kindklassen, sondern eigenständige
                             spezialfaelle.append([impOid, impRelname])
@@ -1373,9 +1378,10 @@ class XPImporter(object):
                             else:
                                 pkField = pkFields[0]
 
-                        if self.__impUpdateGidField(importSchema, impRelname,
-                            parentNspname, parentRelname, pkField = pkField) == -1:
-                            return False
+                        if impRelname not in ["xp_verbundenerplan"]:
+                            if self.__impUpdateGidField(importSchema, impRelname,
+                                parentNspname, parentRelname, pkField = pkField) == -1:
+                                return False
 
                         childs = self.__impGetChildTables(objektOid)
 
@@ -1403,7 +1409,7 @@ class XPImporter(object):
                                 arrayFields, pkField = pkField, replace = replace) == -1:
                                 return False
 
-                        if impRelname != "hoehenangabe":
+                        if impRelname not in ["hoehenangabe", "xp_verbundenerplan"]:
                             if self.__impUpdateGmlId(importSchema,
                                 impRelname, parentNspname, parentRelname,
                                 pkField = pkField) == -1:
@@ -1413,6 +1419,14 @@ class XPImporter(object):
                             parentOid = aParent[0]
                             parentNspname = aParent[1]
                             parentRelname = aParent[2]
+
+                            if impRelname == "xp_verbundenerplan":
+                                # den PK in die Importtabelle rüberholen, Verknüpfung über den Namen
+                                updateSql = "UPDATE \"" + importSchema + "\".\"" + impRelname + "\" i \
+                        SET xp_gid = (SELECT \"verbundenerPlan\" FROM \
+                        \"XP_Basisobjekte\".\"XP_VerbundenerPlan\" xp WHERE i.planname = xp.\"planName\") \
+                        WHERE i.planname IS NOT NULL;"
+                                self.__impExecuteSql(updateSql)
 
                             numUpdated = self.__impUpdateXP(impOid, importSchema,
                                 impRelname, parentOid, parentNspname, parentRelname,
@@ -1515,6 +1529,28 @@ class XPImporter(object):
         JOIN \"XP_Basisobjekte\".\"XP_Objekt\" xp ON i.parent_pkid = xp.gml_id \
         JOIN \"" + importSchema + "\".hoehenangabe h ON i.child_pkid = h.ogr_pkid;"
             return self.__impExecuteSql(insertSql)
+        elif impRelname.lower().find("_aendert_aendert") != -1:
+            insertSql = "INSERT INTO \"XP_Basisobjekte\".\"XP_Plan_aendert\" \
+        (\"XP_Plan_gid\",\"aendert\") \
+        SELECT p.gid ,vp.xp_gid \
+        FROM \"XP_Basisobjekte\".\"XP_Plan\" p \
+        JOIN \"" + importSchema + "\".\"" + impRelname + "\" i ON p.gml_id = i.parent_pkid \
+        JOIN \"" + importSchema + "\".\"aendert\" ae ON i.child_pkid = ae.ogr_pkid \
+        JOIN \"" + importSchema + "\".\"xp_verbundenerplan\" vp ON ae.xp_verbundenerplan_pkid = vp.ogr_pkid;"
+            return self.__impExecuteSql(insertSql)
+        elif impRelname.lower() == "aendert":
+            return -9999
+        elif impRelname.lower().find("_wurdegeaendertvon_wurdegeaendertvon") != -1 :
+            insertSql = "INSERT INTO \"XP_Basisobjekte\".\"XP_Plan_wurdeGeaendertVon\" \
+        (\"XP_Plan_gid\",\"wurdeGeaendertVon\") \
+        SELECT p.gid ,vp.xp_gid \
+        FROM \"XP_Basisobjekte\".\"XP_Plan\" p \
+        JOIN \"" + importSchema + "\".\"" + impRelname + "\" i ON p.gml_id = i.parent_pkid \
+        JOIN \"" + importSchema + "\".\"wurdegeaendertvon\" ae ON i.child_pkid = ae.ogr_pkid \
+        JOIN \"" + importSchema + "\".\"xp_verbundenerplan\" vp ON ae.xp_verbundenerplan_pkid = vp.ogr_pkid;"
+            return self.__impExecuteSql(insertSql)
+        elif impRelname.lower() == "wurdegeaendertvon":
+            return -9999
         elif impRelname.lower().find("_reftextinhalt") != -1:
             insertSql =  "INSERT INTO \
         \"" + modellbereich + "_Basisobjekte\".\"" + modellbereich + "_Objekt_refTextInhalt\" \
