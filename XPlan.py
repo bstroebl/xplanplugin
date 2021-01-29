@@ -863,9 +863,6 @@ class XPlan(object):
                                         geomColumn, displayName = displayName)
 
                                 if displayLayer != None:
-                                    if nurAktiveBereiche:
-                                        self.layerFilterBereich(displayLayer, aktiveBereiche)
-
                                     self.app.xpManager.moveLayerToGroup(displayLayer, schemaName)
 
                                     if stile != None:
@@ -876,6 +873,9 @@ class XPlan(object):
                                             self.tools.useStyle(displayLayer, stil)
 
                                     self.displayLayers[displayLayer.id()] = [displayLayer, None, None, nurAktiveBereiche]
+
+                                    if nurAktiveBereiche:
+                                        self.layerFilterBereich(displayLayer, aktiveBereiche)
 
     def loadTable(self,  schemaName, tableName, geomColumn,
             displayName = None, filter = None):
