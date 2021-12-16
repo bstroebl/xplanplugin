@@ -808,6 +808,10 @@ class XPImporter(object):
                 return False
         elif codeListField ==  "massnahme":
             return xpRelname == "LP_Landschaftsbild"
+        elif codeListField ==  "nutzung":
+            return xpRelname != "BP_Immissionsschutz"
+        elif codeListField ==  "typ":
+            return xpRelname != "BP_Immissionsschutz"
         else:
             return True
 
