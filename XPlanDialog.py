@@ -58,6 +58,12 @@ REFERENZMANAGER_CLASS, _ = uic.loadUiType(os.path.join(
 IMPORT_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'Ui_Import.ui'))
 
+EXPORT_CLASS, _ = uic.loadUiType(os.path.join(
+    os.path.dirname(__file__), 'Ui_Export.ui'))
+
+EXPORTAUSWAHL_CLASS, _ = uic.loadUiType(os.path.join(
+    os.path.dirname(__file__), 'Ui_Export_Plan_Bereichsauswahl.ui'))
+
 class XP_Chooser(QtWidgets.QDialog, CHOOSER_CLASS):
     '''Ein Dialog mit einem TreeWidget um ein Element auszuwählen, abstrakt'''
 
@@ -897,19 +903,19 @@ class ImportDialog(QtWidgets.QDialog, IMPORT_CLASS):
 
     def __getSchemas(self):
         '''
-        Abfrage, die alle User-erzeugten nicht-Xplanungs-Schemas in der DB liefert
+        SQL, das alle nicht-Xplanungs-Schemas in der DB liefert
         '''
         schemaSql = "SELECT nspname from pg_namespace \
-            WHERE nspname not in ('information_schema', 'pg_catalog', 'public', 'QGIS') \
-            AND nspname not like 'pg_toast%' \
-            AND nspname not like 'pg_temp_%' \
+            WHERE nspowner != 10 \
             AND nspname not like 'BP_%' \
             AND nspname not like 'FP_%' \
             AND nspname not like 'LP_%' \
             AND nspname not like 'RP_%'\
             AND nspname not like 'SO_%' \
-            AND nspname not like 'XP_%';"
-
+            AND nspname not like 'XP_%' \
+            AND nspname != 'QGIS' \
+            AND nspname != 'public' \
+            ORDER BY 1;"
         schemaQuery = QtSql.QSqlQuery(self.xplanplugin.db)
         schemaQuery.prepare(schemaSql)
         schemaQuery.exec_()
@@ -1115,3 +1121,295 @@ class ImportDialog(QtWidgets.QDialog, IMPORT_CLASS):
     @QtCore.pyqtSlot()
     def reject(self):
         self.done(0)
+
+# Export Dialog
+class ExportDialog(QtWidgets.QDialog, EXPORT_CLASS):
+    # Initialisieren der GUI
+    def __init__(self, xplanplugin):
+        QtWidgets.QDialog.__init__(self)
+        # Set up the user interface from Designer.
+        self.setupUi(self)
+        self.xplanplugin = xplanplugin
+        self.versions = {}
+        self.initialize()
+        self.txlAusgabe.textChanged.connect(self.enableOk)
+        self.cBoxVersion.currentIndexChanged.connect(self.enableOk)
+        self.enableOk()
+        
+    # Initalisieren der Variablen in der GUI
+    def initialize(self):
+        s = QtCore.QSettings( "XPlanung", "XPlanung-Erweiterung" )
+        s.beginGroup("export")
+        plangebiet = ( s.value( "plangebiet", "kein Plangebiet ausgewählt" ) )
+        xsd = ( s.value( "xsd", "" ) )
+        xsdNr = ( s.value( "xsdNr", "" ) )
+        datei = ( s.value( "datei", "" ) )
+        s.endGroup()
+
+        self.txlAusgabe.setText(datei)
+        self.labPlanauswahl.setText(plangebiet)
+
+        xsdPath = os.path.abspath(os.path.dirname(__file__) + '/schema')
+        versions = glob.glob(xsdPath + "/*")
+        showIndex = 0
+
+        for i in range(len(versions)):
+            v = versions[i]
+            self.versionNumber = v[(len(v) - 3):]
+            self.versions[self.versionNumber] = v
+            self.cBoxVersion.addItem(self.versionNumber)
+
+            if len(versions)>0:
+                showIndex = len(versions)-1
+
+        self.cBoxVersion.setCurrentIndex(showIndex)
+  
+    # Verändern der dargestellten Texte für die Gebietsangabe
+    def chooseGebietChanged(self):
+        if len(self.xplanplugin.auswahlPlan) == 0 :
+            grpTitle = "Auswahl Plangebiet"
+            lblPlanText = "kein Plangebiet ausgewählt"
+            lblPlanToolTip = "z.Zt. ist kein Plangebiet ausgewählt"
+            aendernToolTip = u"Gebietsauswahl ändern"
+        else:
+            lblPlanText = ""
+            
+            if len(self.xplanplugin.auswahlPlan) == 1:
+                grpTitle = "Auswahl Plangebiet"
+                lblPlanToolTip = "z.Zt. ausgewähltes Plangebiet"
+                aendernToolTip = u"Gebietsauswahl ändern"
+            else:
+                grpTitle = "Auswahl Plangebiet"
+                lblPlanToolTip = "z.Zt. ausgewählte Plangebiete"
+                aendernToolTip = u"Gebietsauswahl ändern"
+            
+            for key, value in list(self.xplanplugin.auswahlPlan.items()):
+                if value == -1:
+                    lblPlanText = "kein Plangebiet ausgewählt"
+                    lblPlanToolTip = "z.Zt. ist kein Plangebiet ausgewählt"
+                elif lblPlanText == "":
+                    lblPlanText = self.xplanplugin.auswahlPlanart + ": " + value
+                    self.planname = value
+
+        # Setzen der Texte in die GUI die zuvor zugewissen wurden
+        self.grbAuswahlGebiet.setTitle(grpTitle)
+        self.labPlanauswahl.setText(lblPlanText)
+        self.labPlanauswahl.setToolTip(lblPlanToolTip)
+        self.tButtAuswahlGebietAendern.setToolTip(aendernToolTip)
+        
+    # OK-Button zum Exportieren der Datei aktivieren, wenn alle relavanten Daten angegeben sind
+    def enableOk(self):
+        saveBtn = self.buttonBox.button(QtWidgets.QDialogButtonBox.Save)
+        # Abfragen ob alle wichtigen Felder gefüllt sind?
+        datei = self.txlAusgabe.text().strip() != ""
+        gebiet = self.labPlanauswahl.text().strip() != "kein Plangebiet ausgewählt"
+        # Variable zuvor auf False setzen
+        doEnable = False
+        # Abfrage ob alle relevanten Filter im Dialog ausgefühlt sind
+        if datei and gebiet:
+            doEnable = True
+        # OK-Button aktivieren
+        saveBtn.setEnabled(doEnable)
+
+
+    # Button Auswahl des Gebiets
+    @QtCore.pyqtSlot(   )
+    def on_tButtAuswahlGebietAendern_clicked(self):
+        if self.xplanplugin.exportGebiete():
+            self.chooseGebietChanged()
+
+    # Button Ausgabedatei-Pfad
+    @QtCore.pyqtSlot(   )
+    def on_tButtAusgabe_clicked(self):
+        wasFileName = self.txlAusgabe.text()
+
+        if  wasFileName != "":
+            usePath = os.path.abspath(os.path.dirname(wasFileName))
+        else:
+            usePath = os.path.abspath(os.path.dirname("$HOME"))
+        # Angabe Dateipfad mit dem Dateiformat GML
+        fileName, selFilter = QtWidgets.QFileDialog.getSaveFileName( \
+            caption = u"XPlanGML-Datei wählen",
+            directory = usePath, filter = "GML-Dateien (*.gml)")
+
+        if fileName != "":
+            self.txlAusgabe.setText(fileName)
+
+    # Ausführung des Buttons Speichern
+    @QtCore.pyqtSlot()
+    def accept(self):
+        plangebiet = self.planname
+        xsd_nummer = self.cBoxVersion.currentText()
+        datei = self.txlAusgabe.text()
+        
+        s = QtCore.QSettings( "XPlanung", "XPlanung-Erweiterung" )
+        s.beginGroup("export")
+        s.value( "plangebiet", plangebiet)
+        s.value( "xsdNr", xsd_nummer)
+        s.value( "datei", datei)
+        s.endGroup()
+
+        self.params = {}
+        self.params["plangebiet"] = plangebiet
+        self.params["xsdNr"] = xsd_nummer
+        self.params["datei"] = datei
+
+        self.done(1)
+
+    def reject(self):
+        self.done(0)
+
+
+### Dialogfenster für die Gebietsauswahl
+class GebietsauswahlDialog(QtWidgets.QDialog, EXPORTAUSWAHL_CLASS):
+    def __init__(self, iface, db,  multiSelect,  title = "Exportauswahl"):
+        QtWidgets.QDialog.__init__(self)
+        # Set up the user interface from Designer.
+        self.setupUi(self)
+        self.setWindowTitle(title)
+        self.iface = iface
+        self.db = db
+        self.selectedPlan = {} # dict, das id: Name der ausgewählten Plaene enthält
+        self.selectedPlanart = "" # Wiedergabe der Planart
+        self.okBtn = self.buttonBox.button(QtWidgets.QDialogButtonBox.Ok)
+        self.okBtn.setEnabled(False)
+        if multiSelect:
+            self.gebiet.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+
+        self.initializeValues()
+
+    # Initialisieren der Variablen
+    def initializeValues(self):
+        # fülle QGroupBox Plan- und Bereichsauswahl (planArt)
+        planArt = self.planArt
+        lyPlanArt = planArt.layout() # Layout der QGroupBox planArt
+        planArten = []
+
+        for i in range(lyPlanArt.count()):
+            planArten.append(lyPlanArt.itemAt(i).widget().text())
+
+        query = QtSql.QSqlQuery(self.db)
+        query.prepare("SELECT DISTINCT \"planart\"  \
+                    FROM \"QGIS\".\"XP_Bereiche\" \
+                    ORDER BY \"planart\";")
+        query.exec_()
+
+        if query.isActive():
+            firstRecord = True
+
+            while query.next():
+                aPlanArt = query.value(0)
+
+                if aPlanArt not in planArten:
+                    radPlanArt = QtWidgets.QRadioButton(aPlanArt,  planArt)
+                    radPlanArt.setObjectName(aPlanArt)
+
+                    if firstRecord:
+                        radPlanArt.setChecked(True)
+                        firstRecord = False
+
+                    radPlanArt.toggled.connect(self.on_anyRadioButton_toggled)
+                    lyPlanArt.addWidget(radPlanArt)
+
+            query.finish()
+
+        else:
+            self.showQueryError(query)
+            query.finish()
+
+        self.fillGebietTree()
+
+    # Füllen der Radiobutton mit den Planwerke
+    def fillGebietTree(self):
+        self.gebiet.clear()
+        planArt = self.planArt
+        lyPlanArt = planArt.layout() # Layout der QGroupBox planArt
+
+        if lyPlanArt.count() > 0:
+            whereClause = ""
+
+            for i in range(10): # es gibt nicht mehr als 10 Planarten
+                planArtItem = lyPlanArt.itemAt(i)
+
+                if bool(planArtItem):
+                    planArtWidget = planArtItem.widget()
+
+                    if planArtWidget.isChecked():
+
+                        if whereClause == "":
+                            whereClause = " WHERE \"planart\"=\'"
+                        else:
+                            whereClause += " OR \"planart\"=\'"
+
+                        whereClause += planArtWidget.objectName() + "\'"
+                else:
+                    break
+
+            if whereClause != "": # PlanArt ausgewählt
+                sQuery = "SELECT plangid, planname FROM \"QGIS\".\"XP_Bereiche\""
+                sQuery += whereClause
+                sQuery += " ORDER BY planname"
+                query = QtSql.QSqlQuery(self.db)
+                query.prepare(sQuery)
+                query.exec_()
+
+                if query.isActive():
+                    lastGebietId = -9999
+
+                    while query.next():
+                        gebietsId = query.value(0)
+                        gebiet = query.value(1)
+
+                        if gebietsId != lastGebietId:
+                            gebietItem = QtWidgets.QTreeWidgetItem([gebiet])
+                            gebietItem.gebietId = gebietsId
+                            self.gebiet.addTopLevelItem(gebietItem)
+                            lastGebietId = gebietsId
+                    query.finish()
+                else:
+                    self.showQueryError(query)
+                    query.finish()
+    
+    # Bestätigen der Plan-Wahl mit Doppelklick 
+    @QtCore.pyqtSlot(QtWidgets.QTreeWidgetItem,  int)
+    def on_gebiet_itemDoubleClicked(self):
+        self.accept()
+    # Wenn ein Gebiet selektiert wird, kann man den OK-Button klicken
+    @QtCore.pyqtSlot(   )
+    def on_gebiet_itemSelectionChanged(self):
+        enable = len(self.gebiet.selectedItems()) > 0
+        self.okBtn.setEnabled(enable)
+    # Aktualisieren der Plan-Gebiete
+    @QtCore.pyqtSlot(   )
+    def on_btnRefresh_clicked(self):
+        self.initializeValues()
+    # Radiobutton zu den Planwerken
+    def on_anyRadioButton_toggled(self,  isChecked):
+        self.fillGebietTree()
+
+    # Auswahl um Plangebiete erweitern
+    def accept(self):
+        self.selectedPlan = {}
+        # Auswahl des Plangebiets
+        for item in self.gebiet.selectedItems():
+            if item.gebietId:
+                self.selectedPlan[item.gebietId] = item.data(0, 0)
+        # Planart
+        planArt = self.planArt
+        lyPlanArt = planArt.layout()      
+        for i in range(10):
+            lyPlanArt_item = lyPlanArt.itemAt(i)
+            if bool(lyPlanArt_item):
+                planArtWidget = lyPlanArt_item.widget()
+                if planArtWidget.isChecked():
+                    self.selectedPlanart = planArtWidget.objectName()
+        self.done(1)
+
+    def reject(self):
+        self.done(0)
+
+    def showQueryError(self, query):
+        self.iface.messageBar().pushMessage(
+            "DBError",  "Database Error: \
+            %(error)s \n %(query)s" % {"error": query.lastError().text(),
+            "query": query.lastQuery()}, level=Qgis.Critical)

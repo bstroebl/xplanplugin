@@ -40,9 +40,10 @@ BASEDIR = os.path.dirname( str(__file__) )
 from .HandleDb import DbHandler
 from .XPTools import XPTools
 from .XPImport import XPImporter
+from .XPExport import XPExporter
 from .XPlanDialog import XPlanungConf
 from .XPlanDialog import ChooseObjektart
-from .XPlanDialog import XPNutzungsschablone, BereichsmanagerDialog, ReferenzmanagerDialog, ImportDialog
+from .XPlanDialog import XPNutzungsschablone, BereichsmanagerDialog, ReferenzmanagerDialog, ImportDialog, ExportDialog
 
 class XpError(object):
     '''General error'''
@@ -71,6 +72,7 @@ class XPlan(object):
         self.dbHandler = DbHandler(self.iface, self.tools)
         self.db = None
         self.aktiveBereiche = {}
+        self.auswahlPlan = {} # Auswahl der Plangebiete für den Export
         self.xpLayers = {} # dict, key = layerId
             # item = [layer (QgsVectorLayer), maxGid (long),
             # featuresHaveBeenAdded (Boolean), bereichsFilterAktiv (Boolean)]
@@ -204,9 +206,13 @@ class XPlan(object):
         self.action29.triggered.connect(self.konfiguriereStylesheet)
         self.action30 = QtWidgets.QAction(u"Importieren", self.iface.mainWindow())
         self.action30.triggered.connect(self.importData)
+        self.action31 = QtWidgets.QAction(u"Exportieren", self.iface.mainWindow())
+        self.action31.triggered.connect(self.exportData)
+        
+
 
         self.xpMenu.addActions([self.action20, self.action25, self.action29,
-            self.action6, self.action10, self.action30])
+            self.action6, self.action10, self.action30, self.action31])
         self.bereichMenu.addActions([self.action3, self.action1, self.action4])
         self.bpMenu.addActions([self.action21, self.action26, self.action28])
         self.fpMenu.addActions([self.action22])
@@ -231,6 +237,7 @@ class XPlan(object):
         self.databaseMenu.addMenu(self.xpDbMenu)
         self.iface.removePluginDatabaseMenu("tmp", self.tmpAct)
 
+    # Deinstalieren und löschen aus dem Menü
     def unload(self):
         try:
             self.app.xpManager.quit()
@@ -249,9 +256,11 @@ class XPlan(object):
         except:
             pass
 
+    # Methode zum debuggen von Fehlern mit Tool aus XPTools
     def debug(self, msg):
         self.tools.log("Debug" + "\n" + msg)
 
+    # ???:  Funktion mit der geschaut wird ob Layer in den Tabellen geladen werden kann
     def loadLayerLayer(self):
         self.layerLayer = self.getLayerForTable("QGIS", "layer")
 
@@ -262,7 +271,7 @@ class XPlan(object):
             self.layerLayer.destroyed.connect(self.onLayerLayerDeleted)
             return True
 
-
+    # Ausgabe der Style ID
     def getStyleId(self, schemaName, tableName, bereich):
         sel = "SELECT id, COALESCE(\"XP_Bereich_gid\",-9999) \
             FROM \"QGIS\".\"layer\" l \
@@ -298,6 +307,7 @@ class XPlan(object):
             self.showQueryError(query)
             return None
 
+    # Nutrzungsschablone
     def erzeugeNutzungsschablone(self, gid):
         '''
         die Werte für die Nutzungsschablone aus der DB auslesen
@@ -429,6 +439,7 @@ class XPlan(object):
             returnValue = [anzSpalten, anzZeilen, schablonenText]
         return returnValue
 
+    # 
     def plaziereNutzungsschablone(self, gid, x, y):
         ''' gid von BP_Baugebietsteilflaeche'''
 
@@ -539,11 +550,57 @@ class XPlan(object):
                 else:
                     self.tools.showError("Import fehlgeschlagen")
 
-                # db-Anmeldung ernneuern
+                # db-Anmeldung erneuern
                 self.dbHandler.dbDisconnect(self.db)
                 self.db = None
                 self.db = self.dbHandler.dbConnect()
 
+##############################################################################################################
+############################### Export-Bereich ###############################################################
+##############################################################################################################
+
+    def exportData(self):
+        # Abfrage der Datenbankverbindung
+        if self.db == None:
+            self.initialize(False) # False: Dialog "aktive Bereiche auswählen" wird nicht geöffnet
+        # Aufruf GUI Export
+        dlg = ExportDialog(self)
+        dlg.show()
+        result = dlg.exec_()
+        # Erzeugen der Klasse Exporter
+        exp = None
+        if result == 1:
+            exporter = XPExporter(self.db, self.tools, dlg.params, self.auswahlPlanart)
+            # Ausführen der Funktion für den Export
+            exp = exporter.exportGml()
+        # Abfrage ob der Export erfolgreich durchgeführt wurde
+        if exp != None:
+            self.tools.showInfo('Export des Plan-Gebiets "'+ exp +'" erfolgreich!')
+        else:
+             self.tools.showInfo('Export wurde abgebrochen!!!')
+    
+    # Fenster für die Auswahl des Plangebiets im Export
+    def exportGebiete(self):
+        '''Gebietsauswahl für den Export'''
+        if self.db == None:
+            self.initialize(False)
+        
+        if self.db:
+            planAuswahl, planartAuswahl = self.tools.chooseGebiete(self.db,  False,  u"Gebietsauswahl für den Export")
+            
+            # Auswahl der Gebiete zum Export wurde getroffen oder es wurde abgebrochen
+            if len(planAuswahl) > 0:
+                self.auswahlPlan = planAuswahl
+                self.auswahlPlanart = planartAuswahl
+                return True
+            else:
+                return None  
+##############################################################################################################
+##############################################################################################################
+##############################################################################################################
+
+
+    # Nutzungsschablone konfigurieren
     def konfiguriereNutzungsschablone(self):
         dlg = XPNutzungsschablone(self.nutzungsschablone)
         dlg.show()
@@ -552,6 +609,7 @@ class XPlan(object):
         if result == 1:
             self.nutzungsschablone = dlg.nutzungsschablone
 
+    #
     def konfiguriereStylesheet(self, isChecked = False, forCode = None):
         if self.db == None:
             self.initialize()
@@ -863,6 +921,9 @@ class XPlan(object):
                                         geomColumn, displayName = displayName)
 
                                 if displayLayer != None:
+                                    if nurAktiveBereiche:
+                                        self.layerFilterBereich(displayLayer, aktiveBereiche)
+
                                     self.app.xpManager.moveLayerToGroup(displayLayer, schemaName)
 
                                     if stile != None:
@@ -873,9 +934,6 @@ class XPlan(object):
                                             self.tools.useStyle(displayLayer, stil)
 
                                     self.displayLayers[displayLayer.id()] = [displayLayer, None, None, nurAktiveBereiche]
-
-                                    if nurAktiveBereiche:
-                                        self.layerFilterBereich(displayLayer, aktiveBereiche)
 
     def loadTable(self,  schemaName, tableName, geomColumn,
             displayName = None, filter = None):
@@ -955,6 +1013,8 @@ class XPlan(object):
                 self.aktiveBereiche = bereichsAuswahl # keine Auswahl => keine aktiven Bereiche
 
         return True
+    
+
 
     def layerInitializeSlot(self):
         layer = self.iface.activeLayer()

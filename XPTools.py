@@ -29,6 +29,7 @@ from qgis.PyQt import QtSql, QtXml
 from qgis.core import *
 from qgis.gui import *
 from .XPlanDialog import BereichsauswahlDialog
+from .XPlanDialog import GebietsauswahlDialog
 from .XPlanDialog import StilauswahlDialog
 
 class XPTools():
@@ -38,8 +39,10 @@ class XPTools():
         self.simpleStyleName = simpleStyleName
         self.bereiche = {}
         self.bereichsAuswahlDlg = None
+        self.gebietsAuswahlDlg = None
         # dictionary, um den Typ eines Bereichs zu speichern, so dass nur
         # einmal pro Session und Bereich eine SQL-Abfrage nötig ist
+        self.exportAuswahlDlg = None
 
     def chooseBereich(self,  db,  multiSelect = False,  title = "Bereichsauswahl"):
         '''Starte Dialog zur Bereichsauswahl'''
@@ -54,6 +57,19 @@ class XPTools():
             return {-1: -1}
         else:
             return self.bereichsAuswahlDlg.selected
+    # Starte Dialog zur Gebietsauswahl für den Export
+    def chooseGebiete(self,  db,  multiSelect = False,  title = "Gebietsauswahl"):
+
+        if self.gebietsAuswahlDlg == None:
+            self.gebietsAuswahlDlg = GebietsauswahlDialog(self.iface,  db,  multiSelect,  title)
+        
+        self.gebietsAuswahlDlg.show()
+        result = self.gebietsAuswahlDlg.exec_()
+
+        if result == 0: #Abbruch
+            return {-1: -1}
+        else:
+            return self.gebietsAuswahlDlg.selectedPlan, self.gebietsAuswahlDlg.selectedPlanart
 
     def chooseStyle(self, layer):
         '''
