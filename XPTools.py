@@ -568,11 +568,25 @@ class XPTools():
                 newFeaturesetId(fid)
 
             provider = layer.dataProvider()
+            
+            
             fields = layer.fields()
             newFeature.initAttributes(fields.count())
 
             for i in range(fields.count()):
-                newFeature.setAttribute(i,provider.defaultValue(i))
+                ## bad fix for bug in Default retrieval from postgres 
+                ## (defaultValue won't give 9999 integer for e.g. XP_ExterneReferenz default value, 
+                ## but defaultValueClause does. Though defaultValueClause will return '' 
+                ## where None/NULL is correct)
+                ## REALLY DON'T KNOW IF THERE IS SOMEWHERE A CORRECT DEFAULT EMPTY STRING, WHICH 
+                ## SHOULDN'T BE FIXED...
+                if provider.defaultValueClause(i)=='':
+                    newFeature.setAttribute(i,provider.defaultValue(i))
+                else:
+                    newFeature.setAttribute(i,provider.defaultValueClause(i))
+                ## end fix
+                ## old:
+                ## newFeature.setAttribute(i,provider.defaultValue(i))
 
             return newFeature
         else:
