@@ -55,6 +55,9 @@ BEREICHSMANAGER_CLASS, _ = uic.loadUiType(os.path.join(
 REFERENZMANAGER_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'Ui_Referenzmanager.ui'))
 
+HOEHENMANAGER_CLASS, _ = uic.loadUiType(os.path.join(
+    os.path.dirname(__file__), 'Ui_Hoehenmanager.ui'))
+
 IMPORT_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'Ui_Import.ui'))
 
@@ -734,6 +737,145 @@ class BereichsmanagerDialog(QtWidgets.QDialog, BEREICHSMANAGER_CLASS):
                 self.selected = item.id
 
         self.done(self.selected)
+
+class HoehenmanagerDialog(QtWidgets.QDialog, HOEHENMANAGER_CLASS):
+    def __init__(self, xplanplugin, hoehenLayer):
+        QtWidgets.QDialog.__init__(self)
+        # Set up the user interface from Designer.
+        self.setupUi(self)
+        self.xplanplugin = xplanplugin
+        self.hoehenLayer = hoehenLayer
+        self.hoehen.customContextMenuRequested.connect(self.on_hoehen_customContextMenuRequested)
+        self.hoehen.contextMenu = QtWidgets.QMenu(self.hoehen)
+        self.editAction = QtWidgets.QAction("Bearbeiten", self.hoehen.contextMenu)
+        self.editAction.triggered.connect(self.editHoehen)
+        self.hoehen.contextMenu.addAction(self.editAction)
+        self.removeAction = QtWidgets.QAction(u"Löschen", self.hoehen.contextMenu)
+        self.removeAction.triggered.connect(self.removeHoehen)
+        self.hoehen.contextMenu.addAction(self.removeAction)
+        self.newAction = QtWidgets.QAction("Neue externeHoehen", self.hoehen.contextMenu)
+        self.newAction.triggered.connect(self.newHoehen)
+        self.hoehen.contextMenu.addAction(self.newAction)
+        self.buttonBox.button(QtWidgets.QDialogButtonBox.Reset).clicked.connect(self.initialize)
+        self.initialize()
+
+    def initialize(self):
+        self.txlFilter.setText("")
+        #self.btnFilter.setEnabled(False)
+        self.setTitle = "Hoehenmanager"
+        self.fillHoehen()
+
+    def fillHoehen(self):
+        self.hoehen.clear()
+        filter = self.txlFilter.text()
+
+        if filter == "":
+            self.hoehenLayer.removeSelection()
+            self.hoehenLayer.invertSelection()
+        else:
+            abfrage = "\"id\" like '%" + filter + "%'"
+            self.hoehenLayer.selectByExpression(abfrage)
+
+        for aFeat in self.hoehenLayer.selectedFeatures():
+            if aFeat.id() > 0:
+                anItem = QtWidgets.QListWidgetItem(str( ( aFeat["id"], aFeat['hoehenbezug'], aFeat['bezugspunkt'], (aFeat['h'],aFeat['hMin'],aFeat['hMax'],aFeat['hZwingend']))))
+                anItem.feature = aFeat
+                self.hoehen.addItem(anItem)
+
+        self.hoehen.sortItems()
+
+    def editFeature(self, thisFeature):
+        self.xplanplugin.app.xpManager.showFeatureForm(self.hoehenLayer, thisFeature)
+        self.fillHoehen()
+
+    def editHoehen(self):
+        self.editFeature(self.hoehen.currentItem().feature)
+
+    def newHoehen(self):
+        if self.xplanplugin.db == None:
+            self.showError(u"Es ist keine Datenbank verbunden")
+            self.done(0)
+        else:
+            refSchema = "XP_Basisobjekte"
+            refTable = "XP_Objekt_hoehenangabe"
+            hoehenAngLayer = self.xplanplugin.getLayerForTable(refSchema, refTable)
+
+            if hoehenAngLayer != None:
+                maxId = self.xplanplugin.tools.getMaxGid(self.xplanplugin.db, refSchema,
+                    refTable, pkFieldName = "XP_Objekt_gid")
+
+                if maxId != None:
+                    newFeat = self.xplanplugin.tools.createFeature(hoehenAngLayer)
+
+                    if self.xplanplugin.tools.setEditable(hoehenAngLayer, True, self.xplanplugin.iface):
+                        if hoehenAngLayer.addFeature(newFeat):
+                            if hoehenAngLayer.commitChanges(): ## THIS doesn't work, because if using XP_Objekt_hohenangabe, 
+                                                               ## the related XP_Objekt must be known (and associated) already. 
+                                                               ## So wee need a chooser dialog in between 
+                                                               ## ("click the XP_Object you like to relate to"?)
+                                hoehenAngLayer.reload()
+                                self.hoehenLayer.reload()
+                                expr = '"XP_Objekt_gid" > ' + str(maxId)
+                                self.hoehenLayer.selectByExpression(expr)
+
+                                if len(self.hoehenLayer.selectedFeatures()) == 1:
+                                    thisFeat = self.hoehenLayer.selectedFeatures()[0]
+                                    self.editFeature(thisFeat)
+                                else:
+                                    self.showError(u"Neues Feature nicht gefunden! " + expr)
+                        else:
+                            self.showError(u"Kann in Tabelle " + refSchema + "." + refTable + \
+                                u" kein Feature einfügen!")
+
+    def removeHoehen(self):
+        feat2Remove = self.hoehen.currentItem().feature
+
+        if self.xplanplugin.tools.setEditable(self.hoehenLayer, True, self.xplanplugin.iface):
+            if self.hoehenLayer.deleteFeature(feat2Remove.id()):
+                if self.hoehenLayer.commitChanges():
+                    self.fillHoehen()
+                else:
+                    self.showError(u"Konnte Änderungen nicht speichern")
+            else:
+                self.showError(u"Konnte Hoehen nicht löschen")
+        else:
+            self.showError(u"Kann Layer " + self.hoehenLayer.name() + " nicht editieren")
+
+    def showError(self, msg):
+        self.xplanplugin.tools.showError(msg)
+
+    @QtCore.pyqtSlot( str )
+    def on_txlFilter_textChanged(self, currentText):
+        self.btnFilter.setEnabled(len(currentText) > 0)
+
+    @QtCore.pyqtSlot(  )
+    def on_txlFilter_returnPressed(self):
+        if len(self.txlFilter.text()) > 3:
+            self.btnFilter.click()
+
+    @QtCore.pyqtSlot(  )
+    def on_btnFilter_clicked(self):
+        self.fillHoehen()
+
+    @QtCore.pyqtSlot( QtWidgets.QListWidgetItem )
+    def on_hoehen_itemDoubleClicked(self, clickedItem):
+        self.editFeature(clickedItem.feature)
+
+    @QtCore.pyqtSlot( QtCore.QPoint)
+    def on_hoehen_customContextMenuRequested(self, atPoint):
+        clickedItem = self.hoehen.itemAt(atPoint)
+        self.editAction.setVisible(clickedItem != None)
+        self.removeAction.setVisible(clickedItem != None)
+
+        if clickedItem != None:
+            self.hoehen.setCurrentItem(clickedItem)
+
+        self.hoehen.contextMenu.resize(self.hoehen.contextMenu.sizeHint())
+        self.hoehen.contextMenu.popup(self.hoehen.mapToGlobal(QtCore.QPoint(atPoint)))
+
+    @QtCore.pyqtSlot()
+    def reject(self):
+        self.done(0)
 
 class ReferenzmanagerDialog(QtWidgets.QDialog, REFERENZMANAGER_CLASS):
     def __init__(self, xplanplugin, referenzenLayer):

@@ -27,8 +27,10 @@ from builtins import object
 from qgis.PyQt import QtCore, QtWidgets, QtSql
 from qgis.core import *
 from qgis.gui import *
+# import importlib
 
 try:
+    ## importlib.reload(DataDrivenInputMask)
     from DataDrivenInputMask.ddattribute import DdTable
 except:
     pass
@@ -42,7 +44,7 @@ from .XPTools import XPTools
 from .XPImport import XPImporter
 from .XPlanDialog import XPlanungConf
 from .XPlanDialog import ChooseObjektart
-from .XPlanDialog import XPNutzungsschablone, BereichsmanagerDialog, ReferenzmanagerDialog, ImportDialog
+from .XPlanDialog import XPNutzungsschablone, BereichsmanagerDialog, ReferenzmanagerDialog, HoehenmanagerDialog, ImportDialog
 
 class XpError(object):
     '''General error'''
@@ -193,6 +195,8 @@ class XPlan(object):
         self.action24.triggered.connect(self.loadSO)
         self.action25 = QtWidgets.QAction(u"ExterneReferenzen bearbeiten", self.iface.mainWindow())
         self.action25.triggered.connect(self.referenzmanagerStarten)
+        self.action25b = QtWidgets.QAction(u"Hoehenangaben bearbeiten", self.iface.mainWindow())
+        self.action25b.triggered.connect(self.hoehenmanagerStarten)
         self.action26 = QtWidgets.QAction(u"räuml. Geltungsbereiche neu berechnen",
             self.iface.mainWindow())
         self.action26.triggered.connect(self.geltungsbereichBerechnen)
@@ -205,7 +209,7 @@ class XPlan(object):
         self.action30 = QtWidgets.QAction(u"Importieren", self.iface.mainWindow())
         self.action30.triggered.connect(self.importData)
 
-        self.xpMenu.addActions([self.action20, self.action25, self.action29,
+        self.xpMenu.addActions([self.action20, self.action25, self.action25b, self.action29,
             self.action6, self.action10, self.action30])
         self.bereichMenu.addActions([self.action3, self.action1, self.action4])
         self.bpMenu.addActions([self.action21, self.action26, self.action28])
@@ -706,6 +710,21 @@ class XPlan(object):
                 dlg.show()
                 dlg.exec_()
 
+    def hoehenmanagerStarten(self):
+        if self.db == None:
+            self.initialize(False)
+
+        if self.db != None:
+            refSchema = "XP_Sonstiges"
+            refTable = "XP_Hoehenangabe"
+            extRefLayer = self.getLayerForTable(refSchema, refTable)
+
+            if extRefLayer != None:
+                self.app.xpManager.moveLayerToGroup(extRefLayer, refSchema)
+                dlg = HoehenmanagerDialog(self, extRefLayer)
+                dlg.show()
+                dlg.exec_()
+                
     def onLayerDestroyed(self, layer):
         '''Slot, der aufgerufen wird wenn ein XP-Layer aus dem Projekt entfernt wird
         erst in QGIS3 wird das Layerobjekt übergeben'''
