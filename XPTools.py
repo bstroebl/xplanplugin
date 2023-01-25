@@ -568,8 +568,6 @@ class XPTools():
                 newFeaturesetId(fid)
 
             provider = layer.dataProvider()
-            
-            
             fields = layer.fields()
             newFeature.initAttributes(fields.count())
 

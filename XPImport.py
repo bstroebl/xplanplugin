@@ -68,7 +68,7 @@ class XPImporter(object):
             commands = ['ogr2ogr'] + arguments
 
         fused_command = ' '.join([str(c) for c in commands])
-
+        self.tools.showWarning(fused_command) 
         try:
             proc = subprocess.check_output(
                 fused_command,

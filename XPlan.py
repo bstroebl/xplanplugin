@@ -27,10 +27,8 @@ from builtins import object
 from qgis.PyQt import QtCore, QtWidgets, QtSql
 from qgis.core import *
 from qgis.gui import *
-# import importlib
 
 try:
-    ## importlib.reload(DataDrivenInputMask)
     from DataDrivenInputMask.ddattribute import DdTable
 except:
     pass
@@ -910,16 +908,21 @@ class XPlan(object):
                 schemaName, tableName, withOid = False,
                 withComment = False)
 
-            isView = ddTable == None
+            isView = ddTable is None
 
             if isView:
                 ddTable = DdTable(schemaName = schemaName, tableName = tableName)
 
             if self.app.xpManager.existsInDb(ddTable, self.db):
-                thisLayer = self.app.xpManager.loadPostGISLayer(self.db,
-                    ddTable, displayName = displayName,
-                    geomColumn = geomColumn, keyColumn = "gid",
-                    whereClause = filter,  intoDdGroup = False)
+                thisLayer = self.app.xpManager.loadPostGISLayer(
+                    self.db,
+                    ddTable, 
+                    displayName = displayName,
+                    geomColumn = geomColumn, 
+                    keyColumn = "gid",
+                    whereClause = filter,  
+                    intoDdGroup = False
+                )
 
         return [thisLayer, isView]
 
@@ -1129,7 +1132,7 @@ class XPlan(object):
                     self.tools.useStyle(layer, stil)
 
     def getLayerForTable(self, schemaName, tableName,
-        geomColumn = None, showMsg = True):
+        geomColumn = None, showMsg = True, filterOnNew=""):
         '''Den Layer schemaName.tableName finden bzw. laden.
         Wenn geomColumn == None wird geoemtrielos geladen'''
 
@@ -1143,7 +1146,7 @@ class XPlan(object):
 
             if layer == None:
                 layer = self.loadTable(schemaName, tableName,
-                    geomColumn = geomColumn)[0]
+                    geomColumn = geomColumn, filter=filterOnNew)[0]
 
                 if layer == None:
                     if showMsg:

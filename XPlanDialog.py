@@ -21,6 +21,7 @@ email                : bernhard.stroebl@jena.de
 """
 # Import the PyQt and QGIS libraries
 from qgis.PyQt import QtCore, QtWidgets, QtSql, uic
+from qgis.PyQt.QtWidgets import QAction
 from builtins import str
 from builtins import range
 from qgis.core import *
@@ -737,7 +738,7 @@ class BereichsmanagerDialog(QtWidgets.QDialog, BEREICHSMANAGER_CLASS):
                 self.selected = item.id
 
         self.done(self.selected)
-
+        
 class HoehenmanagerDialog(QtWidgets.QDialog, HOEHENMANAGER_CLASS):
     def __init__(self, xplanplugin, hoehenLayer):
         QtWidgets.QDialog.__init__(self)
@@ -745,6 +746,41 @@ class HoehenmanagerDialog(QtWidgets.QDialog, HOEHENMANAGER_CLASS):
         self.setupUi(self)
         self.xplanplugin = xplanplugin
         self.hoehenLayer = hoehenLayer
+        
+        #canvas
+        self.canvas.setCanvasColor(QtCore.Qt.white) #does this work like this?
+        self.canvas.enableAntiAliasing(True)
+        
+        # self.setCentralWidget(self.canvas)
+        
+        self.actionZoomIn = QAction("Zoom in", self)
+        self.actionZoomOut = QAction("Zoom out", self)
+        self.actionPan = QAction("Pan", self)
+
+        self.actionZoomIn.setCheckable(True)
+        self.actionZoomOut.setCheckable(True)
+        self.actionPan.setCheckable(True)
+
+        self.actionZoomIn.triggered.connect(self.zoomIn)
+        self.actionZoomOut.triggered.connect(self.zoomOut)
+        self.actionPan.triggered.connect(self.pan)
+#
+        # self.toolbar = self.addToolBar("Canvas actions")
+        # self.toolbar.addAction(self.actionZoomIn)
+        # self.toolbar.addAction(self.actionZoomOut)
+        # self.toolbar.addAction(self.actionPan)
+
+        # create the map tools
+        self.toolPan = QgsMapToolPan(self.canvas)
+        self.toolPan.setAction(self.actionPan)
+        self.toolZoomIn = QgsMapToolZoom(self.canvas, False) # false = in
+        self.toolZoomIn.setAction(self.actionZoomIn)
+        self.toolZoomOut = QgsMapToolZoom(self.canvas, True) # true = out
+        self.toolZoomOut.setAction(self.actionZoomOut)
+
+        self.pan()
+        #!canvas
+        
         self.hoehen.customContextMenuRequested.connect(self.on_hoehen_customContextMenuRequested)
         self.hoehen.contextMenu = QtWidgets.QMenu(self.hoehen)
         self.editAction = QtWidgets.QAction("Bearbeiten", self.hoehen.contextMenu)
@@ -758,7 +794,16 @@ class HoehenmanagerDialog(QtWidgets.QDialog, HOEHENMANAGER_CLASS):
         self.hoehen.contextMenu.addAction(self.newAction)
         self.buttonBox.button(QtWidgets.QDialogButtonBox.Reset).clicked.connect(self.initialize)
         self.initialize()
+        
+    def zoomIn(self):
+        self.canvas.setMapTool(self.toolZoomIn)
 
+    def zoomOut(self):
+        self.canvas.setMapTool(self.toolZoomOut)
+
+    def pan(self):
+        self.canvas.setMapTool(self.toolPan)
+        
     def initialize(self):
         self.txlFilter.setText("")
         #self.btnFilter.setEnabled(False)
@@ -781,13 +826,77 @@ class HoehenmanagerDialog(QtWidgets.QDialog, HOEHENMANAGER_CLASS):
                 anItem = QtWidgets.QListWidgetItem(str( ( aFeat["id"], aFeat['hoehenbezug'], aFeat['bezugspunkt'], (aFeat['h'],aFeat['hMin'],aFeat['hMax'],aFeat['hZwingend']))))
                 anItem.feature = aFeat
                 self.hoehen.addItem(anItem)
+                
+        #necessary data
+        """ 
+        select * from "XP_Sonstiges"."XP_Hoehenangabe" a
+        right join 
+        (select * from "XP_Basisobjekte"."XP_Objekt_hoehenangabe") b
+        on a.id=b.hoehenangabe
+        right join
+        (select * from "XP_Basisobjekte"."XP_Objekt") c
+        on b."XP_Objekt_gid"=c.gid
+        left join
+        (select * from "BP_Basisobjekte"."BP_Flaechenobjekte") d
+        on c.gid=d.gid
+        --left join
+        --(select * from "BP_Basisobjekte"."BP_Linienobjekte") e
+        --on c.gid=e.gid
+        --left join
+        --(select * from "BP_Basisobjekte"."BP_Punktobjekte") f
+        --on c.gid=f.gid
+        left join
+        (select * from "XP_Basisobjekte"."XP_Objekt_gehoertZuBereich") g
+        on c.gid=g."XP_Objekt_gid"
+        left join 
+        (select gid, nummer, name from "XP_Basisobjekte"."XP_Bereich") h
+        on g."gehoertZuBereich"=h.gid
+        """
+        # refSchema = "XP_Basisobjekte"
+        # refTable = "XP_Objekt_hoehenangabe"
+        # hoehenAngLayer = self.xplanplugin.getLayerForTable(refSchema, refTable)
+        
+        
+        refSchema = "BP_Basisobjekte"
+        refTable = "BP_Flaechenobjekte" #this is a view for qgis!
+        if list(self.xplanplugin.aktiveBereicheGids())==[]:
+            filter=''
+        else:
+            filter = self.xplanplugin.getBereichFilter(refSchema, refTable, self.xplanplugin.aktiveBereicheGids())
+        # filter = filter + """ AND "Objektartengruppe"=='BP_Bebauung'"""
+        # self.showError(filter)
+        # flaechenobjekteLayer = self.xplanplugin.getLayerForTable(
+            # refSchema, 
+            # refTable, 
+            # # filterOnNew=filter
+        # )
+        flaechenobjekteLayer, isView = self.xplanplugin.loadTable(
+            refSchema, 
+            refTable,  
+            'position',
+            displayName = refTable + " (nur Objektgruppe BP_Bebauung)", 
+            filter = filter
+        )
+        #self.tools.showWarning(u"")
+        self.canvas.setExtent(flaechenobjekteLayer.extent())
+        self.canvas.setLayers([flaechenobjekteLayer])
+        # QgsProject.instance().removeMapLayer(flaechenobjekteLayer)
+        
+        
+        # refSchema = "XP_Basisobjekte"
+        # refTable = "XP_Objekt_hoehenangabe"
+        # hoehenAngLayer = self.xplanplugin.getLayerForTable(refSchema, refTable)
+        # self.canvas.setLayers([hoehenAngLayer])
 
         self.hoehen.sortItems()
 
     def editFeature(self, thisFeature):
         self.xplanplugin.app.xpManager.showFeatureForm(self.hoehenLayer, thisFeature)
         self.fillHoehen()
-
+        
+    def highlightFeature(self, thisFeature):
+        pass
+        
     def editHoehen(self):
         self.editFeature(self.hoehen.currentItem().feature)
 
@@ -799,7 +908,7 @@ class HoehenmanagerDialog(QtWidgets.QDialog, HOEHENMANAGER_CLASS):
             refSchema = "XP_Basisobjekte"
             refTable = "XP_Objekt_hoehenangabe"
             hoehenAngLayer = self.xplanplugin.getLayerForTable(refSchema, refTable)
-
+            
             if hoehenAngLayer != None:
                 maxId = self.xplanplugin.tools.getMaxGid(self.xplanplugin.db, refSchema,
                     refTable, pkFieldName = "XP_Objekt_gid")
@@ -860,6 +969,10 @@ class HoehenmanagerDialog(QtWidgets.QDialog, HOEHENMANAGER_CLASS):
     @QtCore.pyqtSlot( QtWidgets.QListWidgetItem )
     def on_hoehen_itemDoubleClicked(self, clickedItem):
         self.editFeature(clickedItem.feature)
+        
+    @QtCore.pyqtSlot( QtWidgets.QListWidgetItem )
+    def on_hoehen_itemClicked(self, clickedItem):
+        self.highlightFeature(clickedItem.feature)
 
     @QtCore.pyqtSlot( QtCore.QPoint)
     def on_hoehen_customContextMenuRequested(self, atPoint):
