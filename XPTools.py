@@ -565,7 +565,7 @@ class XPTools():
             newFeature = QgsVectorLayerUtils.createFeature(layer)
 
             if fid:
-                newFeaturesetId(fid)
+                newFeaturesetId(fid) #is this defined?
 
             provider = layer.dataProvider()
             fields = layer.fields()

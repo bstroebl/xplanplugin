@@ -845,8 +845,9 @@ class HoehenmanagerDialog(QtWidgets.QDialog, HOEHENMANAGER_CLASS):
     def identify(self):
         self.canvas.setMapTool(self.toolIdentify)
         
-    def showRelatedHoehen(self, sfeature):
+    def showRelatedHoehen(self, sfeature=None):
         """Code called when the feature is selected by the user"""
+        if sfeature is None: sfeature =self.selectedFeature
         self.selectedFeature = sfeature
         self.flaechenobjekteLayer.deselect(self.flaechenobjekteLayer.selectedFeatureIds())
         self.flaechenobjekteLayer.select([sfeature.id()]) #id is correct
@@ -966,7 +967,7 @@ on g."gehoertZuBereich"=h.gid
         # self.showError(str(thisFeature.attributes()))
         # self.showError(str(self.hoehenLayer))
         self.xplanplugin.app.xpManager.showFeatureForm(self.hoehenLayer, thisFeature)
-        self.fillHoehen()
+        self.showRelatedHoehen()
         
     def highlightFeature(self, thisFeature):
         pass
@@ -979,44 +980,67 @@ on g."gehoertZuBereich"=h.gid
             self.showError(u"Es ist keine Datenbank verbunden")
             self.done(0)
         else:
-            refSchema = "XP_Basisobjekte"
-            refTable = "XP_Objekt_hoehenangabe"
-            hoehenAngLayer = self.xplanplugin.getLayerForTable(refSchema, refTable)
+            if not (self.selectedFeature is None):
+                
+                firstItem = next(self.hoehenLayer.getFeatures())
+                self.showError(str(dict(firstItem.attributeMap())))
+                newFeat = QgsFeature(firstItem.fields(),-1)
+                
+                if self.xplanplugin.tools.setEditable(self.hoehenLayer, True, self.xplanplugin.iface):
+                    self.hoehenLayer.addFeature(newFeat)
+                    if self.hoehenLayer.commitChanges():
+                        maxIdHoehe = self.xplanplugin.tools.getMaxGid(self.xplanplugin.db, "XP_Sonstiges",
+                            "XP_Hoehenangabe", pkFieldName = "id")
+                        expr = '"id" >= ' + str(maxIdHoehe)
+                        self.hoehenLayer.selectByExpression(expr)
+                        
+                        if len(self.hoehenLayer.selectedFeatures()) == 1:
+                            thisFeat = self.hoehenLayer.selectedFeatures()[0]
+                            self.editFeature(thisFeat)
+                        
+                        
+                        refSchema = "XP_Basisobjekte"
+                        refTable = "XP_Objekt_hoehenangabe"
+                        hoehenAngLayer = self.xplanplugin.getLayerForTable(refSchema, refTable)
+                        
+                        if hoehenAngLayer != None:
+                            maxId = self.xplanplugin.tools.getMaxGid(self.xplanplugin.db, refSchema,
+                                refTable, pkFieldName = "XP_Objekt_gid")
+                                
+                            if not (maxId is None):
+                                newLink = self.xplanplugin.tools.createFeature(hoehenAngLayer)
+                                newLink.setAttribute("XP_Objekt_gid", self.selectedFeature['gid'])
+                                newLink.setAttribute("hoehenangabe", thisFeat['id'])
+                        
+                                if self.xplanplugin.tools.setEditable(hoehenAngLayer, True, self.xplanplugin.iface):
+                                    if hoehenAngLayer.addFeature(newLink):
+                                        
+                                        if hoehenAngLayer.commitChanges(): ## THIS doesn't work, because if using XP_Objekt_hohenangabe, 
+                                                                           ## the related XP_Objekt must be known (and associated) already. 
+                                                                           ## So wee need a chooser dialog in between 
+                                                                           ## ("click the XP_Object you like to relate to"?)
+                                            hoehenAngLayer.reload()
+                                            expr = '"XP_Objekt_gid" >= ' + str(maxId)
+                                            hoehenAngLayer.selectByExpression(expr)
             
-            if hoehenAngLayer != None:
-                maxId = self.xplanplugin.tools.getMaxGid(self.xplanplugin.db, refSchema,
-                    refTable, pkFieldName = "XP_Objekt_gid")
-
-                if maxId != None:
-                    newFeat = self.xplanplugin.tools.createFeature(hoehenAngLayer)
-
-                    if self.xplanplugin.tools.setEditable(hoehenAngLayer, True, self.xplanplugin.iface):
-                        if hoehenAngLayer.addFeature(newFeat):
-                            if hoehenAngLayer.commitChanges(): ## THIS doesn't work, because if using XP_Objekt_hohenangabe, 
-                                                               ## the related XP_Objekt must be known (and associated) already. 
-                                                               ## So wee need a chooser dialog in between 
-                                                               ## ("click the XP_Object you like to relate to"?)
-                                hoehenAngLayer.reload()
-                                self.hoehenLayer.reload()
-                                expr = '"XP_Objekt_gid" > ' + str(maxId)
-                                self.hoehenLayer.selectByExpression(expr)
-
-                                if len(self.hoehenLayer.selectedFeatures()) == 1:
-                                    thisFeat = self.hoehenLayer.selectedFeatures()[0]
-                                    self.editFeature(thisFeat)
+                                            if len(hoehenAngLayer.selectedFeatures()) == 1:
+                                                linkFeat = hoehenAngLayer.selectedFeatures()[0]
+                                                self.editFeature(linkFeat)
+                                            else:
+                                                self.showError(u"Neues Feature nicht gefunden! " + expr)
+                                    else:
+                                        self.showError(u"Kann in Tabelle " + refSchema + "." + refTable + \
+                                            u" kein Feature einfügen!")
                                 else:
-                                    self.showError(u"Neues Feature nicht gefunden! " + expr)
-                        else:
-                            self.showError(u"Kann in Tabelle " + refSchema + "." + refTable + \
-                                u" kein Feature einfügen!")
-
+                                    self.showError(u"Zuerst muss ein Bezugsobjekt auf der Karte ausgewählt werden!")
+    
     def removeHoehen(self):
         feat2Remove = self.hoehen.currentItem().feature
 
         if self.xplanplugin.tools.setEditable(self.hoehenLayer, True, self.xplanplugin.iface):
             if self.hoehenLayer.deleteFeature(feat2Remove.id()):
                 if self.hoehenLayer.commitChanges():
-                    self.fillHoehen()
+                    self.showRelatedHoehen()
                 else:
                     self.showError(u"Konnte Änderungen nicht speichern")
             else:
@@ -1132,7 +1156,6 @@ class ReferenzmanagerDialog(QtWidgets.QDialog, REFERENZMANAGER_CLASS):
 
                 if maxId != None:
                     newFeat = self.xplanplugin.tools.createFeature(extRefLayer)
-
                     if self.xplanplugin.tools.setEditable(extRefLayer, True, self.xplanplugin.iface):
                         if extRefLayer.addFeature(newFeat):
                             if extRefLayer.commitChanges():
