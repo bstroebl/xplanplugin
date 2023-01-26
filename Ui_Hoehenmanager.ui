@@ -42,6 +42,16 @@
     </layout>
    </item>
    <item>
+    <widget class="QgsMapCanvas" name="canvas" native="true">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>250</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QListWidget" name="hoehen">
      <property name="contextMenuPolicy">
       <enum>Qt::CustomContextMenu</enum>
@@ -51,16 +61,6 @@
      </property>
      <property name="editTriggers">
       <set>QAbstractItemView::NoEditTriggers</set>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QgsMapCanvas" name="canvas" native="true">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>250</height>
-      </size>
      </property>
     </widget>
    </item>

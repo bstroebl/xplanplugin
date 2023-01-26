@@ -716,7 +716,8 @@ class XPlan(object):
             refSchema = "XP_Sonstiges"
             refTable = "XP_Hoehenangabe"
             extRefLayer = self.getLayerForTable(refSchema, refTable)
-
+            # self.tools.debug(str(type(extRefLayer)))
+            
             if extRefLayer != None:
                 self.app.xpManager.moveLayerToGroup(extRefLayer, refSchema)
                 dlg = HoehenmanagerDialog(self, extRefLayer)
