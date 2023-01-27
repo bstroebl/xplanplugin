@@ -1181,8 +1181,10 @@ class XPlan(object):
             withOid = False, withComment = False)
 
         if (not (ddTable is None)) or ignoreDD:
-            layer = self.findPostgresLayer(
-                self.db, ddTable, schemaName=schemaName, tableName=tableName)
+            layer = self.findPostgresLayer( #not using app.xpManager/ddmanager directly
+                self.db, 
+                ddTable, #if not None, following parameters are ignored
+                schemaName=schemaName, tableName=tableName)
             
             if layer is None:
                 layer = self.loadTable(
@@ -1200,8 +1202,9 @@ class XPlan(object):
                             self.iface)
                     return None
                 else:
-                    self.app.xpManager.createGroup(schemaName, False) #doesn't add group if already exists.
-                    self.app.xpManager.moveLayerToGroup(layer, schemaName)
+                    if (ddTable is None): #for views
+                        self.app.xpManager.createGroup(schemaName, False) #doesn't add group if already exists.
+                        self.app.xpManager.moveLayerToGroup(layer, schemaName)
                     return layer
             else:
                 return layer

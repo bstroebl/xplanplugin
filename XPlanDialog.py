@@ -789,6 +789,11 @@ class HoehenmanagerDialog(QtWidgets.QDialog, HOEHENMANAGER_CLASS):
             # filter=filter,
             filterOnNew = filter
         )
+                    
+        linkSchema = "XP_Basisobjekte"
+        linkTable = "XP_Objekt_hoehenangabe"
+        self.linkLayer = self.xplanplugin.getDDCoveredLayerForTable(linkSchema, linkTable)
+        
         self.canvas.setExtent(self.flaechenobjekteLayer.extent())
         self.canvas.setLayers([self.flaechenobjekteLayer])
         # QgsProject.instance().removeMapLayer(flaechenobjekteLayer)
@@ -974,8 +979,7 @@ on g."gehoertZuBereich"=h.gid
         except Exception as e:
             self.showError(str(e))
             self.showError(str(thisFeature.attributeMap()))
-            self.showError(str(self.xplanplugin.db))
-            self.showError(str(self.hoehenLayer))
+            self.showError(str(self.hoehenLayer.name()))
             raise e
         self.showRelatedHoehen()
         
@@ -1008,33 +1012,25 @@ on g."gehoertZuBereich"=h.gid
                         if len(self.hoehenLayer.selectedFeatures()) == 1:
                             thisFeat = self.hoehenLayer.selectedFeatures()[0]
                             self.editFeature(thisFeat)
-                        
-                        
-                            refSchema = "XP_Basisobjekte"
-                            refTable = "XP_Objekt_hoehenangabe"
-                            linkLayer = self.xplanplugin.getLayerForTable(refSchema, refTable)
                             
-                            if linkLayer != None:
-                                maxId = self.xplanplugin.tools.getMaxGid(self.xplanplugin.db, refSchema,
-                                    refTable, pkFieldName = "XP_Objekt_gid")
+                            if self.linkLayer != None:
+                                maxId = self.xplanplugin.tools.getMaxGid(self.xplanplugin.db, "XP_Basisobjekte",
+                                    "XP_Objekt_hoehenangabe", pkFieldName = "XP_Objekt_gid")
                                     
                                 if not (maxId is None):
                                     newLink = self.xplanplugin.tools.createFeature(linkLayer)
                                     newLink.setAttribute("XP_Objekt_gid", self.selectedFeature['gid'])
                                     newLink.setAttribute("hoehenangabe", thisFeat['id'])
                             
-                                    if self.xplanplugin.tools.setEditable(linkLayer, True, self.xplanplugin.iface):
-                                        if linkLayer.addFeature(newLink):
+                                    if self.xplanplugin.tools.setEditable(self.linkLayer, True, self.xplanplugin.iface):
+                                        if self.linkLayer.addFeature(newLink):
                                             
-                                            if linkLayer.commitChanges(): ## THIS doesn't work, because if using XP_Objekt_hohenangabe, 
-                                                                               ## the related XP_Objekt must be known (and associated) already. 
-                                                                               ## So wee need a chooser dialog in between 
-                                                                               ## ("click the XP_Object you like to relate to"?)
-                                                linkLayer.reload()
+                                            if self.linkLayer.commitChanges(): 
+                                                self.linkLayer.reload()
                                                 expr = '"XP_Objekt_gid" >= ' + str(maxId)
-                                                linkLayer.selectByExpression(expr)
+                                                self.linkLayer.selectByExpression(expr)
                 
-                                                if len(linkLayer.selectedFeatures()) == 1:
+                                                if len(self.linkLayer.selectedFeatures()) == 1:
                                                     self.showError(u"Zuordnung Höhe->Flächenobjekt wurde eingefügt")
                                                     # linkFeat = hoehenAngLayer.selectedFeatures()[0]
                                                     # self.editFeature(linkFeat)
@@ -1048,17 +1044,45 @@ on g."gehoertZuBereich"=h.gid
     
     def removeHoehen(self):
         feat2Remove = self.hoehen.currentItem().feature
-
-        if self.xplanplugin.tools.setEditable(self.hoehenLayer, True, self.xplanplugin.iface):
-            if self.hoehenLayer.deleteFeature(feat2Remove.id()):
-                if self.hoehenLayer.commitChanges():
-                    self.showRelatedHoehen()
+        
+        """Erst Link(s) zerstören..."""
+        if not (self.linkLayer is None):
+            expr = '"hoehenangabe" = ' + str(feat2remove['id'])
+            self.linkLayer.selectByExpression(expr)
+            if self.xplanplugin.tools.setEditable(self.linkLayer, True, self.xplanplugin.iface):
+                if (
+                    (self.selectedFeature is None) or # makes sure entries with a 1:m relation can only be deleted, if no Flächenobjekt is selected. or
+                    len(self.linkLayer.selectedFeatures()) == 1 #fallback: makes sure only entries with a 1:1 relation are deleted easily
+                ):
+                    for link2remove in self.linkLayer.selectedFeatures():
+                        if self.linkLayer.deleteFeature(link2remove['id']):
+                            if self.linkLayer.commitChanges():
+                                self.linkLayer.reload()
+                                self.showRelatedHoehen()
+                                
+                                """... dann die eigenentliche Hoehenangabe entfernen"""
+                                if self.xplanplugin.tools.setEditable(self.hoehenLayer, True, self.xplanplugin.iface):
+                                    if self.hoehenLayer.deleteFeature(feat2Remove.id()):
+                                        if self.hoehenLayer.commitChanges():
+                                            self.showRelatedHoehen()
+                                        else:
+                                            self.showError(u"Konnte Änderungen nicht speichern")
+                                    else:
+                                        self.showError(u"Konnte Hoehen nicht löschen")
+                                else:
+                                    self.showError(u"Kann Layer " + self.hoehenLayer.name() + u" nicht editieren")
+                                    
+                        else:
+                            self.showError(u"Konnte Änderungen in der LinkTabelle nicht speichern")
                 else:
-                    self.showError(u"Konnte Änderungen nicht speichern")
+                    #todo: create button for deselect
+                    self.showError('Die ausgewählte Höhenangabe wird von mehreren Flächenobjekten referenziert und kann aus Sicherheitsgründen nur gelöscht werden, wenn oben in der Karte kein Flächenobjekt ausgewählt ist.')
             else:
-                self.showError(u"Konnte Hoehen nicht löschen")
+                self.showError(u"Kann Layer " + self.linkLayer.name() + u" nicht editieren")
         else:
-            self.showError(u"Kann Layer " + self.hoehenLayer.name() + " nicht editieren")
+            self.showError('')
+            
+        
 
     def showError(self, msg):
         self.xplanplugin.tools.showError(msg)
