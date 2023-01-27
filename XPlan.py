@@ -1132,30 +1132,76 @@ class XPlan(object):
                 if stil != None:
                     self.tools.useStyle(layer, stil)
 
-    def getLayerForTable(self, schemaName, tableName,
-        geomColumn = None, showMsg = True, filterOnNew=""):
+    def findPostgresLayer(self, db,  ddTable=None, schemaName=None, tableName=None):
+        """partly borrowed from ddmanager"""
+        if not (ddTable is None):
+            return self.app.xpManager.findPostgresLayer(self.db, ddTable)
+        elif not (schemaName is None or tableName is None):
+            for aTreeLayer in QgsProject.instance().layerTreeRoot().findLayers():
+                layer = aTreeLayer.layer()
+                if not (layer is None):
+                    if 0 == layer.type(): # vectorLayer
+                        src = layer.source()
+                        if (
+                            ("table=\"" + schemaName + "\".\"" + tableName + "\"" in src) and 
+                            (db.databaseName() in src) and 
+                            (db.hostName() in src)
+                        ):
+                            return layer
+            return None
+        else:
+            return None
+        
+    def getQgisLayerForTable(self, schemaName, tableName, **kwargs):
+        """workaround name for method"""
+        kwargs['ignoreDD']=True
+        return self.getLayerForTable(schemaName, tableName, **kwargs)
+        
+    def getDDCoveredLayerForTable(self, schemaName, tableName, **kwargs):
+        """more name for method"""
+        kwargs['ignoreDD']=False
+        return self.getLayerForTable(schemaName, tableName, **kwargs)
+    
+    def getLayerForTable(self, schemaName, tableName, **kwargs):
         '''Den Layer schemaName.tableName finden bzw. laden.
         Wenn geomColumn == None wird geoemtrielos geladen'''
-
+        
+        #manage defaults/kwargs
+        geomColumn = kwargs.get('geomColumn', None)
+        showMsg = kwargs.get('showMsg', True)
+        filterOnNew = kwargs.get('filterOnNew', "")
+        displayName = kwargs.get('displayName', None)
+        ignoreDD = kwargs.get('ignoreDD', False)
+        #end kwargs
+        
+        if displayName is None:
+            displayName = tableName
         ddTable = self.app.xpManager.createDdTable(
             self.db, schemaName, tableName,
             withOid = False, withComment = False)
 
-        if ddTable != None:
-            layer = self.app.xpManager.findPostgresLayer(
-                self.db, ddTable)
+        if (not (ddTable is None)) or ignoreDD:
+            layer = self.findPostgresLayer(
+                self.db, ddTable, schemaName=schemaName, tableName=tableName)
+            
+            if layer is None:
+                layer = self.loadTable(
+                    schemaName, 
+                    tableName,
+                    geomColumn = geomColumn, 
+                    filter=filterOnNew, 
+                    displayName=displayName
+                )[0]
 
-            if layer == None:
-                layer = self.loadTable(schemaName, tableName,
-                    geomColumn = geomColumn, filter=filterOnNew)[0]
-
-                if layer == None:
+                if layer is None:
                     if showMsg:
                         XpError(u"Kann Tabelle %(schema)s.%(table)s nicht laden!" % \
                             {"schema":schemaName, "table":tableName},
                             self.iface)
                     return None
                 else:
+                    self.app.xpManager.createGroup(schemaName, False) #doesn't add group if already exists.
+                    self.app.xpManager.moveLayerToGroup(layer, schemaName)
                     return layer
             else:
                 return layer

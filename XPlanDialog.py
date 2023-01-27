@@ -779,12 +779,15 @@ class HoehenmanagerDialog(QtWidgets.QDialog, HOEHENMANAGER_CLASS):
             filter=''
         else:
             filter = self.xplanplugin.getBereichFilter(refSchema, refTable, self.xplanplugin.aktiveBereicheGids())
-        self.flaechenobjekteLayer, isView = self.xplanplugin.loadTable(
+        # self.flaechenobjekteLayer, isView = self.xplanplugin.loadTable(
+        self.flaechenobjekteLayer = self.xplanplugin.getQgisLayerForTable(
+            # self, schemaName, tableName, geomColumn = None, showMsg = True, filterOnNew=""):
             refSchema, 
             refTable,  
-            'position',
+            geomColumn='position',
             displayName = refTable + " (für Höheneditor - temporär)", 
-            filter = filter
+            # filter=filter,
+            filterOnNew = filter
         )
         self.canvas.setExtent(self.flaechenobjekteLayer.extent())
         self.canvas.setLayers([self.flaechenobjekteLayer])
@@ -966,7 +969,14 @@ on g."gehoertZuBereich"=h.gid
         # self.showError(str(thisFeature.id()))
         # self.showError(str(thisFeature.attributes()))
         # self.showError(str(self.hoehenLayer))
-        self.xplanplugin.app.xpManager.showFeatureForm(self.hoehenLayer, thisFeature)
+        try:
+            self.xplanplugin.app.xpManager.showFeatureForm(self.hoehenLayer, thisFeature)
+        except Exception as e:
+            self.showError(str(e))
+            self.showError(str(thisFeature.attributeMap()))
+            self.showError(str(self.xplanplugin.db))
+            self.showError(str(self.hoehenLayer))
+            raise e
         self.showRelatedHoehen()
         
     def highlightFeature(self, thisFeature):
@@ -981,14 +991,15 @@ on g."gehoertZuBereich"=h.gid
             self.done(0)
         else:
             if not (self.selectedFeature is None):
-                
                 firstItem = next(self.hoehenLayer.getFeatures())
-                self.showError(str(dict(firstItem.attributeMap())))
+                # self.showError(str(dict(firstItem.attributeMap())))
                 newFeat = QgsFeature(firstItem.fields(),-1)
-                
                 if self.xplanplugin.tools.setEditable(self.hoehenLayer, True, self.xplanplugin.iface):
                     self.hoehenLayer.addFeature(newFeat)
+                    # there should be a block on the db enabled here, so we really get our maxId 
+                    # not the one added by an other person simultaniously...
                     if self.hoehenLayer.commitChanges():
+                        
                         maxIdHoehe = self.xplanplugin.tools.getMaxGid(self.xplanplugin.db, "XP_Sonstiges",
                             "XP_Hoehenangabe", pkFieldName = "id")
                         expr = '"id" >= ' + str(maxIdHoehe)
@@ -999,40 +1010,41 @@ on g."gehoertZuBereich"=h.gid
                             self.editFeature(thisFeat)
                         
                         
-                        refSchema = "XP_Basisobjekte"
-                        refTable = "XP_Objekt_hoehenangabe"
-                        hoehenAngLayer = self.xplanplugin.getLayerForTable(refSchema, refTable)
-                        
-                        if hoehenAngLayer != None:
-                            maxId = self.xplanplugin.tools.getMaxGid(self.xplanplugin.db, refSchema,
-                                refTable, pkFieldName = "XP_Objekt_gid")
-                                
-                            if not (maxId is None):
-                                newLink = self.xplanplugin.tools.createFeature(hoehenAngLayer)
-                                newLink.setAttribute("XP_Objekt_gid", self.selectedFeature['gid'])
-                                newLink.setAttribute("hoehenangabe", thisFeat['id'])
-                        
-                                if self.xplanplugin.tools.setEditable(hoehenAngLayer, True, self.xplanplugin.iface):
-                                    if hoehenAngLayer.addFeature(newLink):
-                                        
-                                        if hoehenAngLayer.commitChanges(): ## THIS doesn't work, because if using XP_Objekt_hohenangabe, 
-                                                                           ## the related XP_Objekt must be known (and associated) already. 
-                                                                           ## So wee need a chooser dialog in between 
-                                                                           ## ("click the XP_Object you like to relate to"?)
-                                            hoehenAngLayer.reload()
-                                            expr = '"XP_Objekt_gid" >= ' + str(maxId)
-                                            hoehenAngLayer.selectByExpression(expr)
-            
-                                            if len(hoehenAngLayer.selectedFeatures()) == 1:
-                                                linkFeat = hoehenAngLayer.selectedFeatures()[0]
-                                                self.editFeature(linkFeat)
-                                            else:
-                                                self.showError(u"Neues Feature nicht gefunden! " + expr)
+                            refSchema = "XP_Basisobjekte"
+                            refTable = "XP_Objekt_hoehenangabe"
+                            linkLayer = self.xplanplugin.getLayerForTable(refSchema, refTable)
+                            
+                            if linkLayer != None:
+                                maxId = self.xplanplugin.tools.getMaxGid(self.xplanplugin.db, refSchema,
+                                    refTable, pkFieldName = "XP_Objekt_gid")
+                                    
+                                if not (maxId is None):
+                                    newLink = self.xplanplugin.tools.createFeature(linkLayer)
+                                    newLink.setAttribute("XP_Objekt_gid", self.selectedFeature['gid'])
+                                    newLink.setAttribute("hoehenangabe", thisFeat['id'])
+                            
+                                    if self.xplanplugin.tools.setEditable(linkLayer, True, self.xplanplugin.iface):
+                                        if linkLayer.addFeature(newLink):
+                                            
+                                            if linkLayer.commitChanges(): ## THIS doesn't work, because if using XP_Objekt_hohenangabe, 
+                                                                               ## the related XP_Objekt must be known (and associated) already. 
+                                                                               ## So wee need a chooser dialog in between 
+                                                                               ## ("click the XP_Object you like to relate to"?)
+                                                linkLayer.reload()
+                                                expr = '"XP_Objekt_gid" >= ' + str(maxId)
+                                                linkLayer.selectByExpression(expr)
+                
+                                                if len(linkLayer.selectedFeatures()) == 1:
+                                                    self.showError(u"Zuordnung Höhe->Flächenobjekt wurde eingefügt")
+                                                    # linkFeat = hoehenAngLayer.selectedFeatures()[0]
+                                                    # self.editFeature(linkFeat)
+                                                else:
+                                                    self.showError(u"Neues Feature nicht gefunden! " + expr)
+                                        else:
+                                            self.showError(u"Kann in Tabelle " + refSchema + "." + refTable + \
+                                                u" kein Feature einfügen!")
                                     else:
-                                        self.showError(u"Kann in Tabelle " + refSchema + "." + refTable + \
-                                            u" kein Feature einfügen!")
-                                else:
-                                    self.showError(u"Zuerst muss ein Bezugsobjekt auf der Karte ausgewählt werden!")
+                                        self.showError(u"Zuerst muss ein Bezugsobjekt auf der Karte ausgewählt werden!")
     
     def removeHoehen(self):
         feat2Remove = self.hoehen.currentItem().feature

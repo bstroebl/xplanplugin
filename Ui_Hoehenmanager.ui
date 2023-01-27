@@ -42,6 +42,19 @@
     </layout>
    </item>
    <item>
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Bitte wählen Sie ein Flächenobjekt aus, um die dazugehörige Höhe zu bearbeiten bzw. ein neues Höhenobjekt anzulegen.</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QgsMapCanvas" name="canvas" native="true">
      <property name="minimumSize">
       <size>
