@@ -6,3 +6,9 @@ tools/*.py
 images/
 Ui*.py
 xplanung.zip
+schema/*
+__pycache__/*
+.settings
+.pydevproject
+.project
+.gitignore

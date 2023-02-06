@@ -21,6 +21,9 @@ email                : bernhard.stroebl@jena.de
 """
 # Import the PyQt and QGIS libraries
 from qgis.PyQt import QtCore, QtWidgets, QtSql, uic
+from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtGui import QFont
+from qgis.core import QgsFillSymbol
 from builtins import str
 from builtins import range
 from qgis.core import *
@@ -54,6 +57,9 @@ BEREICHSMANAGER_CLASS, _ = uic.loadUiType(os.path.join(
 
 REFERENZMANAGER_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'Ui_Referenzmanager.ui'))
+
+HOEHENMANAGER_CLASS, _ = uic.loadUiType(os.path.join(
+    os.path.dirname(__file__), 'Ui_Hoehenmanager.ui'))
 
 IMPORT_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'Ui_Import.ui'))
@@ -111,7 +117,7 @@ class ChoosePlan(XP_Chooser):
                 parentItem.addChild(childItem)
             query.finish()
         else:
-            self.showQueryError(query)
+            self.xplanplugin.tools.showQueryError(query)
             query.finish()
 
         self.layerChooser.resizeColumnToContents(0)
@@ -348,9 +354,6 @@ class BereichsauswahlDialog(QtWidgets.QDialog, BEREICH_CLASS):
             query.finish()
 
         self.fillBereichTree()
-
-    def debug(self,  msg):
-        QtWidgets.QMessageBox.information(None, "Debug",  msg)
 
     def fillBereichTree(self):
         self.bereich.clear()
@@ -734,6 +737,476 @@ class BereichsmanagerDialog(QtWidgets.QDialog, BEREICHSMANAGER_CLASS):
                 self.selected = item.id
 
         self.done(self.selected)
+        
+
+
+class HoehenmanagerDialog(QtWidgets.QDialog, HOEHENMANAGER_CLASS):
+    
+    class featureSelector(QgsMapToolIdentifyFeature):
+        
+        def __init__(self, canvas, layer, manager):
+            super().__init__(canvas)
+            self.layer = layer
+            self.manager = manager
+        
+        def canvasReleaseEvent(self, e):
+            super().canvasReleaseEvent(e)
+            if e.button()==2: #rightclick
+                self.manager.canvas.contextMenu.exec_(e.globalPos())
+            else:
+                ident_result = self.identify(
+                    e.pixelPoint().x(),
+                    e.pixelPoint().y(),
+                    mode = self.IdentifyMode(3),
+                    layerList= [self.layer]
+                )
+                if len(ident_result)>0:
+                    sfeature = ident_result[0].mFeature
+                    self.manager.selectedFeature = sfeature
+                    self.featureIdentified.emit(sfeature)
+    
+    def __init__(self, xplanplugin, hoehenLayer):
+        QtWidgets.QDialog.__init__(self)
+        # Set up the user interface from Designer.
+        self.setupUi(self)
+        self.xplanplugin = xplanplugin
+        self.hoehenLayer = hoehenLayer
+        self.selectedFeature = None
+        self.relator = None
+        
+        self.debug = self.xplanplugin.debug
+        
+        #canvas
+        refSchema = "BP_Basisobjekte"
+        refTable = "BP_Flaechenobjekte" #this is a view for qgis!
+        if list(self.xplanplugin.aktiveBereicheGids())==[]:
+            filter=''
+        else:
+            filter = self.xplanplugin.getBereichFilter(refSchema, refTable, self.xplanplugin.aktiveBereicheGids())
+        
+        text_format = QgsTextFormat()
+        text_format.setFont(QFont("Liberation Mono", 10))
+        text_format.setSize(10)
+        
+        setting  = QgsPalLayerSettings()
+        setting.setFormat(text_format)
+        setting.fieldName = "gid"
+        setting.placement = 0
+        setting.fitInPolygonOnly = 0
+        setting.polygonPlacementFlags = 2
+        setting.centroidWhole = 1
+        setting.enabled = True
+        setting = QgsVectorLayerSimpleLabeling(setting)
+        
+        fsymb = QgsFillSymbol.createSimple({'color': '#c9c9c9', 'outline_color': 'black'})
+        
+        self.flaechenobjekteLayer = self.xplanplugin.getQgisLayerForTable(
+            refSchema, 
+            refTable,  
+            geomColumn='position',
+            displayName = refTable + " (für Höheneditor - temporär)", 
+            filterOnNew = filter
+        )
+        self.flaechenobjekteLayer.setLabeling(setting)
+        self.flaechenobjekteLayer.setLabelsEnabled(True)
+        
+        renderer = self.flaechenobjekteLayer.renderer()
+        renderer.setSymbol(fsymb)
+        
+        self.flaechenobjekteLayer.triggerRepaint()
+        
+        linkSchema = "XP_Basisobjekte"
+        linkTable = "XP_Objekt_hoehenangabe"
+        self.linkLayer = self.xplanplugin.getDDCoveredLayerForTable(linkSchema, linkTable)
+        
+        self.canvas.setExtent(self.flaechenobjekteLayer.extent())
+        self.canvas.setLayers([self.flaechenobjekteLayer])
+        # QgsProject.instance().removeMapLayer(flaechenobjekteLayer)
+        self.canvas.setCanvasColor(QtCore.Qt.white) #does this work like this?
+        self.canvas.enableAntiAliasing(True)
+        
+        # create the map tools
+        # self.actionZoomIn = QAction("Hineinzoomen", self)
+        # self.actionZoomIn.triggered.connect(self.zoomIn)
+        # self.toolZoomIn = QgsMapToolZoom(self.canvas, False) # false = in
+        # self.toolZoomIn.setAction(self.actionZoomIn)
+        #
+        # self.actionZoomOut = QAction("Herauszoomen", self)
+        # self.actionZoomOut.triggered.connect(self.zoomOut)
+        # self.toolZoomOut = QgsMapToolZoom(self.canvas, True) # true = out
+        # self.toolZoomOut.setAction(self.actionZoomOut)
+        
+        self.actionPan = QAction("Pan", self)
+        self.actionPan.triggered.connect(self.pan)
+        self.toolPan = QgsMapToolPan(self.canvas)
+        self.toolPan.setAction(self.actionPan)
+        
+        self.actionDeselect = QAction("Auswahl aufheben", self)
+        self.actionDeselect.triggered.connect(self.deselectFlaeche)
+        
+        self.canvas.contextMenu = QtWidgets.QMenu(self.canvas)
+        self.canvas.contextMenu.addAction(self.actionDeselect)
+        # self.canvas.contextMenu.addAction(self.actionZoomIn)
+        # self.canvas.contextMenu.addAction(self.actionZoomOut)
+        
+        self.toolIdentify = self.featureSelector(self.canvas, self.flaechenobjekteLayer, self)
+        self.toolIdentify.featureIdentified.connect(self.fillRelatedHoehen)
+        
+        self.identify()
+        
+        
+        #!canvas
+        
+        self.hoehen.customContextMenuRequested.connect(self.on_hoehen_customContextMenuRequested)
+        self.hoehen.contextMenu = QtWidgets.QMenu(self.hoehen)
+        
+        self.editAction = QtWidgets.QAction("Bearbeiten", self.hoehen.contextMenu)
+        self.editAction.triggered.connect(self.editHoehen)
+        self.hoehen.contextMenu.addAction(self.editAction)
+        
+        self.removeAction = QtWidgets.QAction(u"Löschen", self.hoehen.contextMenu)
+        self.removeAction.triggered.connect(self.removeHoehen)
+        self.hoehen.contextMenu.addAction(self.removeAction)
+        
+        self.newAction = QtWidgets.QAction("Neue externeHoehen", self.hoehen.contextMenu)
+        self.newAction.triggered.connect(self.newHoehen)
+        self.hoehen.contextMenu.addAction(self.newAction)
+        
+        self.buttonBox.button(QtWidgets.QDialogButtonBox.Reset).clicked.connect(self.initialize)
+        
+        self.initialize()
+    
+    def deselectFlaeche(self):
+        self.flaechenobjekteLayer.removeSelection()
+        
+    def zoomIn(self):
+        self.canvas.setMapTool(self.toolZoomIn)
+
+    def zoomOut(self):
+        self.canvas.setMapTool(self.toolZoomOut)
+
+    def pan(self):
+        self.canvas.setMapTool(self.toolPan)
+    
+    def identify(self):
+        self.canvas.setMapTool(self.toolIdentify)
+        
+    def unselectFeature(self):
+        self.flaechenobjekteLayer.removeSelection()
+        
+    def initialize(self):
+        self.txlFilter.setText("")
+        #self.btnFilter.setEnabled(False)
+        self.setTitle = "Hoehenmanager"
+        self.fillHoehen()
+        
+    def getRelatorTable(self):
+        sql = """ 
+SELECT 
+    a.id,
+    --a.*, 
+    b."XP_Objekt_gid", 
+    --c.uuid, c.gml_id, 
+    --d.position as geom_poly, 
+    --e.position as geom_line, 
+    --f.position as geom_point, 
+    g."gehoertZuBereich"--, 
+    --h."nummer" as nr_bereich, h."name" as name_bereich 
+FROM 
+(select * from "XP_Sonstiges"."XP_Hoehenangabe") a
+    right join 
+(select * from "XP_Basisobjekte"."XP_Objekt_hoehenangabe") b
+on a.id=b.hoehenangabe
+    left join
+(select * from "XP_Basisobjekte"."XP_Objekt") c
+on b."XP_Objekt_gid"=c.gid
+--    left join
+--(select * from "BP_Basisobjekte"."BP_Flaechenobjekte") d
+--on c.gid=d.gid
+--    left join
+--(select * from "BP_Basisobjekte"."BP_Linienobjekte") e
+--on c.gid=e.gid
+--    left join
+--(select * from "BP_Basisobjekte"."BP_Punktobjekte") f
+--on c.gid=f.gid
+    left join
+(select * from "XP_Basisobjekte"."XP_Objekt_gehoertZuBereich") g
+on c.gid=g."XP_Objekt_gid"
+    left join 
+(select gid, nummer, name from "XP_Basisobjekte"."XP_Bereich") h
+on g."gehoertZuBereich"=h.gid
+"""
+        addendum = """where "gehoertZuBereich" = ANY( {}::int[] );
+        """.format("'" + str(tuple(self.xplanplugin.aktiveBereicheGids())).replace('(','{').rsplit(',',1)[0] + "}'")
+        if (len(self.xplanplugin.aktiveBereicheGids())>0):
+            sql = sql + addendum
+        # self.showError(sql)
+        
+        if (self.relator is None):    
+            query = QtSql.QSqlQuery(self.xplanplugin.db)
+            query.prepare(sql)
+            query.exec_()
+    
+            if query.isActive():
+                table = {}
+                lastId = -1
+                while query.next(): # returns false when all records are done
+                    rec_dict = {}
+                    for i in range(query.record().count()):
+                        rec_dict[query.record().field(i).name()] = query.record().value(i)
+                    table[query.record().value("id")] = rec_dict
+                    lastId = query.record().value("id")
+    
+                query.finish()
+                self.relator = table, lastId
+                return self.relator
+            else:
+                self.xplanplugin.tools.showQueryError(query)
+                return None
+        else:
+            # self.showError('relator is loaded from cache')
+            return self.relator
+    
+        
+    def fillRelatedHoehen(self, sfeature=None):
+        """Code called when the feature is selected by the user"""
+        if sfeature is None: sfeature =self.selectedFeature
+        self.selectedFeature = sfeature
+        self.flaechenobjekteLayer.reload()
+        self.flaechenobjekteLayer.deselect(self.flaechenobjekteLayer.selectedFeatureIds())
+        if not (sfeature is None):
+            self.flaechenobjekteLayer.select([sfeature.id()]) #id is correct
+            self.fillHoehen([sfeature['gid']]) #gid is correct
+        else:
+            self.fillHoehen()
+    
+    def fillHoehen(self, xp_objekt_gids =[]):
+        self.hoehen.clear()
+        filter = self.txlFilter.text()
+        
+        if filter == "":
+            self.hoehenLayer.removeSelection()
+            self.hoehenLayer.invertSelection()
+        else:
+            abfrage = "\"id\" like '%" + filter + "%'"
+            self.hoehenLayer.selectByExpression(abfrage)
+        
+        try:
+            relator, lastId = self.getRelatorTable()
+        except TypeError as e:
+            self.showError('An TypeError occured unexpected. Please fix this!')
+            relator = self.getRelatorTable()
+            relator_selector = {}
+        else:
+            if (xp_objekt_gids==[]):
+                relator_selector = relator
+            else:
+                relator_selector = {k: v for k, v in relator.items() if v['XP_Objekt_gid'] in xp_objekt_gids}
+        
+        for i, aFeat in enumerate(self.hoehenLayer.selectedFeatures()):
+            # self.showError('feat nr: ' + str(i))
+            # self.showError('id: ' + str(aFeat["id"]))
+            if aFeat.id() > 0 and aFeat["id"] in relator_selector.keys():
+                # if xp_objekt_gids!=[]: self.showError('found id: ' + str(aFeat["id"]))
+                anItem = QtWidgets.QListWidgetItem(
+                    str( ( 
+                        aFeat["id"], 
+                        aFeat['hoehenbezug'], 
+                        aFeat['bezugspunkt'], 
+                        (
+                            aFeat['h'],
+                            aFeat['hMin'],
+                            aFeat['hMax'],
+                            aFeat['hZwingend']
+                        )
+                    ) )
+                )
+                anItem.feature = aFeat
+                self.hoehen.addItem(anItem)
+        self.hoehen.sortItems()
+        
+    def editFeature(self, thisFeature):
+        # self.showError(str(thisFeature.id()))
+        # self.showError(str(thisFeature.attributes()))
+        # self.showError(str(self.hoehenLayer))
+        try:
+            self.xplanplugin.app.xpManager.showFeatureForm(self.hoehenLayer, thisFeature)
+        except Exception as e:
+            self.showError(str(e))
+            self.showInfo(str(thisFeature.attributeMap()))
+            self.showInfo(str(self.hoehenLayer.name()))
+            raise e
+        self.fillRelatedHoehen()
+        
+    def highlightFeature(self, thisFeature):
+        pass
+        
+    def editHoehen(self):
+        self.editFeature(self.hoehen.currentItem().feature)
+
+    def newHoehen(self):
+        if self.xplanplugin.db == None:
+            self.showError(u"Es ist keine Datenbank verbunden")
+            self.done(0)
+        else:
+            if not (self.selectedFeature is None):
+                firstItem = next(self.hoehenLayer.getFeatures())
+                # self.showError(str(dict(firstItem.attributeMap())))
+                newFeat = QgsFeature(firstItem.fields(),-1)
+                if self.xplanplugin.tools.setEditable(self.hoehenLayer, True, self.xplanplugin.iface):
+                    self.hoehenLayer.addFeature(newFeat)
+                    # there should be a block on the db enabled here, so we really get our maxId 
+                    # not the one added by an other person simultaniously...
+                    if self.hoehenLayer.commitChanges():
+                        try:
+                            self.hoehenLayer.reload()
+                            maxIdHoehe = self.xplanplugin.tools.getMaxGid(self.xplanplugin.db, "XP_Sonstiges",
+                                "XP_Hoehenangabe", pkFieldName = "id")
+                            expr = '"id" >= ' + str(maxIdHoehe)
+                            self.hoehenLayer.selectByExpression(expr)
+                            
+                            if len(self.hoehenLayer.selectedFeatures()) == 1:
+                                thisFeat = self.hoehenLayer.selectedFeatures()[0]
+                                self.editFeature(thisFeat)
+                                
+                                if self.linkLayer != None:
+                                    maxId = self.xplanplugin.tools.getMaxGid(self.xplanplugin.db, "XP_Basisobjekte",
+                                        "XP_Objekt_hoehenangabe", pkFieldName = "XP_Objekt_gid")
+                                        
+                                    if not (maxId is None): #TODO: What happens on empty table?
+                                        newLink = self.xplanplugin.tools.createFeature(self.linkLayer)
+                                        newLink.setAttribute("XP_Objekt_gid", self.selectedFeature['gid'])
+                                        newLink.setAttribute("hoehenangabe", thisFeat['id'])
+                                
+                                        if self.xplanplugin.tools.setEditable(self.linkLayer, True, self.xplanplugin.iface):
+                                            if self.linkLayer.addFeature(newLink):
+                                                
+                                                if self.linkLayer.commitChanges():
+                                                    try:
+                                                        self.linkLayer.reload()
+                                                        expr = '"XP_Objekt_gid" = ' + str(maxId)
+                                                        self.linkLayer.selectByExpression(expr)
+                        
+                                                        if len(self.linkLayer.selectedFeatures()) >= 1:
+                                                            self.showInfo(u"Zuordnung Höhe->Flächenobjekt wurde eingefügt")
+                                                            # linkFeat = hoehenAngLayer.selectedFeatures()[0]
+                                                            # self.editFeature(linkFeat)
+                                                        else:
+                                                            errortext = u"Neues Feature nicht gefunden! " + expr
+                                                            self.showError(errortext)
+                                                            raise Exception(errortext)
+                                                    except Exception as e:
+                                                        self.linkLayer.deleteFeature(newLink.id())
+                                                        self.linkLayer.commitChanges()
+                                                        raise e
+                                                        
+                                            else:
+                                                errortext = u"Kann in Tabelle " + refSchema + "." + refTable + \
+                                                    u" kein Feature einfügen!"
+                                                self.showError(errortext)
+                                                raise Exception(errortext)
+                                else:
+                                    raise Exception('Die Datenbank scheint fehlerhaft zu sein, self.linkLayer ist None')
+                            else:
+                                self.showError(u"Zuerst muss ein Bezugsobjekt auf der Karte ausgewählt werden!")
+                        except:
+                            self.showError('Ein unerwarteter Fehler ist aufgetreten, das Hinzufügen der neuen Höhenangabe wurde zurückgenommen.')
+                            self.hoehenLayer.deleteFeature(newFeat.id())
+                            self.hoehenLayer.commitChanges()
+    
+    def removeHoehen(self):
+        feat2remove = self.hoehen.currentItem().feature
+        
+        """Erst Link(s) zerstören..."""
+        if not (self.linkLayer is None):
+            expr = '"hoehenangabe" = ' + str(feat2remove.id())
+            self.debug(expr)
+            self.linkLayer.selectByExpression(expr)
+            if self.xplanplugin.tools.setEditable(self.linkLayer, True, self.xplanplugin.iface):
+                if (
+                    (self.selectedFeature is None) or # makes sure entries with a 1:m relation can only be deleted, if no Flächenobjekt is selected. or
+                    len(self.linkLayer.selectedFeatures()) == 1 #fallback: makes sure only entries with a 1:1 relation are deleted easily
+                ):
+                    for link2remove in self.linkLayer.selectedFeatures():
+                        if self.linkLayer.deleteFeature(link2remove.id()):
+                            if self.linkLayer.commitChanges():
+                                self.linkLayer.reload()
+                                self.fillRelatedHoehen()
+                                
+                                """... dann die eigenentliche Hoehenangabe entfernen"""
+                                if self.xplanplugin.tools.setEditable(self.hoehenLayer, True, self.xplanplugin.iface):
+                                    if self.hoehenLayer.deleteFeature(feat2remove.id()):
+                                        if self.hoehenLayer.commitChanges():
+                                            self.fillRelatedHoehen()
+                                        else:
+                                            self.showError(u"Konnte Änderungen nicht speichern")
+                                    else:
+                                        self.showError(u"Konnte Hoehen nicht löschen")
+                                else:
+                                    self.showError(u"Kann Layer " + self.hoehenLayer.name() + u" nicht editieren")
+                                    
+                        else:
+                            self.showError(u"Konnte Änderungen in der LinkTabelle nicht speichern")
+                else:
+                    #todo: create button for deselect
+                    self.showError('Die ausgewählte Höhenangabe wird von mehreren Flächenobjekten referenziert '+ 
+                                   'und kann aus Sicherheitsgründen nur gelöscht werden, wenn oben in der Karte '+
+                                   'kein Flächenobjekt ausgewählt ist.')
+            else:
+                self.showError(u"Kann Layer " + self.linkLayer.name() + u" nicht editieren")
+        else:
+            self.showError('')
+            
+        
+
+    def showError(self, msg):
+        self.xplanplugin.tools.showError(msg)
+        
+    def showWarning(self, msg):
+        self.xplanplugin.tools.showWarning(msg)
+        
+    def showInfo(self, msg):
+        self.xplanplugin.tools.showInfo(msg)
+        
+    def debug(self, msg, stacksize=0):
+        self.xplanplugin.tools.debug(msg, stacksize=stacksize)
+
+    @QtCore.pyqtSlot( str )
+    def on_txlFilter_textChanged(self, currentText):
+        self.btnFilter.setEnabled(len(currentText) > 0)
+
+    @QtCore.pyqtSlot(  )
+    def on_txlFilter_returnPressed(self):
+        if len(self.txlFilter.text()) > 3:
+            self.btnFilter.click()
+
+    @QtCore.pyqtSlot(  )
+    def on_btnFilter_clicked(self):
+        self.fillHoehen()
+
+    @QtCore.pyqtSlot( QtWidgets.QListWidgetItem )
+    def on_hoehen_itemDoubleClicked(self, clickedItem):
+        self.editFeature(clickedItem.feature)
+        
+    @QtCore.pyqtSlot( QtWidgets.QListWidgetItem )
+    def on_hoehen_itemClicked(self, clickedItem):
+        self.highlightFeature(clickedItem.feature)
+
+    @QtCore.pyqtSlot( QtCore.QPoint)
+    def on_hoehen_customContextMenuRequested(self, atPoint):
+        clickedItem = self.hoehen.itemAt(atPoint)
+        self.editAction.setVisible(clickedItem != None)
+        self.removeAction.setVisible(clickedItem != None)
+
+        if clickedItem != None:
+            self.hoehen.setCurrentItem(clickedItem)
+
+        self.hoehen.contextMenu.resize(self.hoehen.contextMenu.sizeHint())
+        self.hoehen.contextMenu.popup(self.hoehen.mapToGlobal(QtCore.QPoint(atPoint)))
+
+    @QtCore.pyqtSlot()
+    def reject(self):
+        self.done(0)
 
 class ReferenzmanagerDialog(QtWidgets.QDialog, REFERENZMANAGER_CLASS):
     def __init__(self, xplanplugin, referenzenLayer):
@@ -803,7 +1276,6 @@ class ReferenzmanagerDialog(QtWidgets.QDialog, REFERENZMANAGER_CLASS):
 
                 if maxId != None:
                     newFeat = self.xplanplugin.tools.createFeature(extRefLayer)
-
                     if self.xplanplugin.tools.setEditable(extRefLayer, True, self.xplanplugin.iface):
                         if extRefLayer.addFeature(newFeat):
                             if extRefLayer.commitChanges():
@@ -822,10 +1294,10 @@ class ReferenzmanagerDialog(QtWidgets.QDialog, REFERENZMANAGER_CLASS):
                                 u" kein Feature einfügen!")
 
     def removeReferenz(self):
-        feat2Remove = self.referenzen.currentItem().feature
+        feat2remove = self.referenzen.currentItem().feature
 
         if self.xplanplugin.tools.setEditable(self.referenzenLayer, True, self.xplanplugin.iface):
-            if self.referenzenLayer.deleteFeature(feat2Remove.id()):
+            if self.referenzenLayer.deleteFeature(feat2remove.id()):
                 if self.referenzenLayer.commitChanges():
                     self.fillReferenzen()
                 else:

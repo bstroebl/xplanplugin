@@ -31,6 +31,10 @@ from qgis.gui import *
 from .XPlanDialog import BereichsauswahlDialog
 from .XPlanDialog import StilauswahlDialog
 
+from traceback import format_stack
+import inspect
+from pprint import pformat
+
 class XPTools():
     def __init__(self, iface, standardName, simpleStyleName):
         self.iface = iface
@@ -267,8 +271,8 @@ class XPTools():
 
     def getMaxGid(self, db, schemaName, tableName, pkFieldName = "gid"):
         retValue = -9999
-        sel = "SELECT " + pkFieldName + " FROM \"" + schemaName + "\".\"" + tableName + \
-            "\" ORDER BY 1 DESC LIMIT 1;"
+        sel = 'SELECT "' + pkFieldName + '" FROM \"' + schemaName + '"."' + tableName + \
+            '" ORDER BY 1 DESC LIMIT 1;'
 
         query = QtSql.QSqlQuery(db)
         query.prepare(sel)
@@ -565,14 +569,26 @@ class XPTools():
             newFeature = QgsVectorLayerUtils.createFeature(layer)
 
             if fid:
-                newFeaturesetId(fid)
+                newFeaturesetId(fid) #is this defined?
 
             provider = layer.dataProvider()
             fields = layer.fields()
             newFeature.initAttributes(fields.count())
 
             for i in range(fields.count()):
-                newFeature.setAttribute(i,provider.defaultValue(i))
+                ## bad fix for bug in Default retrieval from postgres 
+                ## (defaultValue won't give 9999 integer for e.g. XP_ExterneReferenz default value, 
+                ## but defaultValueClause does. Though defaultValueClause will return '' 
+                ## where None/NULL is correct)
+                ## REALLY DON'T KNOW IF THERE IS SOMEWHERE A CORRECT DEFAULT EMPTY STRING, WHICH 
+                ## SHOULDN'T BE FIXED...
+                if provider.defaultValueClause(i)=='':
+                    newFeature.setAttribute(i,provider.defaultValue(i))
+                else:
+                    newFeature.setAttribute(i,provider.defaultValueClause(i))
+                ## end fix
+                ## old:
+                ## newFeature.setAttribute(i,provider.defaultValue(i))
 
             return newFeature
         else:
@@ -619,6 +635,27 @@ class XPTools():
     def noActiveLayerWarning(self):
         self.showWarning(u"Kein aktiver Layer")
 
+    def debug(self,  msg, stacksize=0):
+        t_ = [
+            x[0].f_locals for x in inspect.trace()
+        ]
+        if stacksize==0:
+            self.log("Debug" + "\n" + msg)
+        elif len(t_) >=stacksize:
+            t_ = ['...'] + t_[-1*stacksize:]
+            self.log("Debug" + "\n" + msg + ' | ' + pformat( t_ ))
+        else:
+            self.log("Debug" + "\n" + msg + ' | ' + pformat( t_ ))
+
+    def log(self, msg, type = 'info'):
+        if type == 'info':
+            msgType = Qgis.Info
+        if type == 'warn':
+            msgType = Qgis.Warning
+        if type == 'error':
+            msgType = Qgis.Critical
+        QgsMessageLog.logMessage(msg, "XPlanung", msgType)
+        
     def showQueryError(self, query):
         self.showError(
             "%(error)s" % {"error": query.lastError().text()}, "DB-Fehler")
@@ -638,23 +675,12 @@ class XPTools():
 
     def showError(self, msg, title = "XPlanung"):
         self.iface.messageBar().pushMessage(title,
-            msg, level=Qgis.Critical, duration = 10)
-        self.log(msg, "error")
+            msg + " (more in log)", level=Qgis.Critical, duration = 10)
+        self.log(msg +'\n' + str(format_stack()), "error")
+        self.debug(msg, 2)
 
     def noStyleWarning(self, layer):
         self.showWarning(u"Für den Layer " + layer.name() + u" sind keine Stile gespeichert")
-
-    def debug(self,  msg):
-        self.log("Debug" + "\n" + msg)
-
-    def log(self, msg, type = 'info'):
-        if type == 'info':
-            msgType = Qgis.Info
-        if type == 'warn':
-            msgType = Qgis.Warning
-        if type == 'error':
-            msgType = Qgis.Critical
-        QgsMessageLog.logMessage(msg, "XPlanung", msgType)
 
     def getAuthUserNamePassword(self, authcfg):
         username = None

@@ -30,6 +30,7 @@ from qgis.gui import *
 
 try:
     from DataDrivenInputMask.ddattribute import DdTable
+    from DataDrivenInputMask.dderror import FatalError
 except:
     pass
 
@@ -42,7 +43,7 @@ from .XPTools import XPTools
 from .XPImport import XPImporter
 from .XPlanDialog import XPlanungConf
 from .XPlanDialog import ChooseObjektart
-from .XPlanDialog import XPNutzungsschablone, BereichsmanagerDialog, ReferenzmanagerDialog, ImportDialog
+from .XPlanDialog import XPNutzungsschablone, BereichsmanagerDialog, ReferenzmanagerDialog, HoehenmanagerDialog, ImportDialog
 
 class XpError(object):
     '''General error'''
@@ -193,6 +194,8 @@ class XPlan(object):
         self.action24.triggered.connect(self.loadSO)
         self.action25 = QtWidgets.QAction(u"ExterneReferenzen bearbeiten", self.iface.mainWindow())
         self.action25.triggered.connect(self.referenzmanagerStarten)
+        self.action25b = QtWidgets.QAction(u"Hoehenangaben bearbeiten", self.iface.mainWindow())
+        self.action25b.triggered.connect(self.hoehenmanagerStarten)
         self.action26 = QtWidgets.QAction(u"räuml. Geltungsbereiche neu berechnen",
             self.iface.mainWindow())
         self.action26.triggered.connect(self.geltungsbereichBerechnen)
@@ -205,7 +208,7 @@ class XPlan(object):
         self.action30 = QtWidgets.QAction(u"Importieren", self.iface.mainWindow())
         self.action30.triggered.connect(self.importData)
 
-        self.xpMenu.addActions([self.action20, self.action25, self.action29,
+        self.xpMenu.addActions([self.action20, self.action25, self.action25b, self.action29,
             self.action6, self.action10, self.action30])
         self.bereichMenu.addActions([self.action3, self.action1, self.action4])
         self.bpMenu.addActions([self.action21, self.action26, self.action28])
@@ -249,8 +252,8 @@ class XPlan(object):
         except:
             pass
 
-    def debug(self, msg):
-        self.tools.log("Debug" + "\n" + msg)
+    def debug(self, msg, stacksize=0):
+        self.tools.debug(msg, stacksize=stacksize)
 
     def loadLayerLayer(self):
         self.layerLayer = self.getLayerForTable("QGIS", "layer")
@@ -706,6 +709,22 @@ class XPlan(object):
                 dlg.show()
                 dlg.exec_()
 
+    def hoehenmanagerStarten(self):
+        if self.db == None:
+            self.initialize(False)
+
+        if self.db != None:
+            refSchema = "XP_Sonstiges"
+            refTable = "XP_Hoehenangabe"
+            extRefLayer = self.getLayerForTable(refSchema, refTable)
+            # self.tools.debug(str(type(extRefLayer)))
+            
+            if extRefLayer != None:
+                self.app.xpManager.moveLayerToGroup(extRefLayer, refSchema)
+                dlg = HoehenmanagerDialog(self, extRefLayer)
+                dlg.show()
+                dlg.exec_()
+                
     def onLayerDestroyed(self, layer):
         '''Slot, der aufgerufen wird wenn ein XP-Layer aus dem Projekt entfernt wird
         erst in QGIS3 wird das Layerobjekt übergeben'''
@@ -890,17 +909,25 @@ class XPlan(object):
             ddTable = self.app.xpManager.createDdTable(self.db,
                 schemaName, tableName, withOid = False,
                 withComment = False)
-
-            isView = ddTable == None
+            
+            isView = ddTable is None #Why does this not hit on "BP_Basisobjekte.BP_Flaechenobjekte"?
 
             if isView:
                 ddTable = DdTable(schemaName = schemaName, tableName = tableName)
 
             if self.app.xpManager.existsInDb(ddTable, self.db):
-                thisLayer = self.app.xpManager.loadPostGISLayer(self.db,
-                    ddTable, displayName = displayName,
-                    geomColumn = geomColumn, keyColumn = "gid",
-                    whereClause = filter,  intoDdGroup = False)
+                try:
+                    thisLayer = self.app.xpManager.loadPostGISLayer(
+                        self.db,
+                        ddTable, 
+                        displayName = displayName,
+                        geomColumn = geomColumn, 
+                        keyColumn = "gid",
+                        whereClause = filter,  
+                        intoDdGroup = False
+                    )
+                except FatalError as fa:
+                    raise fa
 
         return [thisLayer, isView]
 
@@ -1109,30 +1136,79 @@ class XPlan(object):
                 if stil != None:
                     self.tools.useStyle(layer, stil)
 
-    def getLayerForTable(self, schemaName, tableName,
-        geomColumn = None, showMsg = True):
+    def findPostgresLayer(self, db,  ddTable=None, schemaName=None, tableName=None):
+        """partly borrowed from ddmanager"""
+        if not (ddTable is None):
+            return self.app.xpManager.findPostgresLayer(self.db, ddTable)
+        elif not (schemaName is None or tableName is None):
+            for aTreeLayer in QgsProject.instance().layerTreeRoot().findLayers():
+                layer = aTreeLayer.layer()
+                if not (layer is None):
+                    if 0 == layer.type(): # vectorLayer
+                        src = layer.source()
+                        if (
+                            ("table=\"" + schemaName + "\".\"" + tableName + "\"" in src) and 
+                            (db.databaseName() in src) and 
+                            (db.hostName() in src)
+                        ):
+                            return layer
+            return None
+        else:
+            return None
+        
+    def getQgisLayerForTable(self, schemaName, tableName, **kwargs):
+        """workaround name for method"""
+        kwargs['ignoreDD']=True
+        return self.getLayerForTable(schemaName, tableName, **kwargs)
+        
+    def getDDCoveredLayerForTable(self, schemaName, tableName, **kwargs):
+        """more name for method"""
+        kwargs['ignoreDD']=False
+        return self.getLayerForTable(schemaName, tableName, **kwargs)
+    
+    def getLayerForTable(self, schemaName, tableName, **kwargs):
         '''Den Layer schemaName.tableName finden bzw. laden.
         Wenn geomColumn == None wird geoemtrielos geladen'''
-
+        
+        #manage defaults/kwargs
+        geomColumn = kwargs.get('geomColumn', None)
+        showMsg = kwargs.get('showMsg', True)
+        filterOnNew = kwargs.get('filterOnNew', "")
+        displayName = kwargs.get('displayName', None)
+        ignoreDD = kwargs.get('ignoreDD', False)
+        #end kwargs
+        
+        if displayName is None:
+            displayName = tableName
         ddTable = self.app.xpManager.createDdTable(
             self.db, schemaName, tableName,
             withOid = False, withComment = False)
 
-        if ddTable != None:
-            layer = self.app.xpManager.findPostgresLayer(
-                self.db, ddTable)
+        if (not (ddTable is None)) or ignoreDD:
+            layer = self.findPostgresLayer( #not using app.xpManager/ddmanager directly
+                self.db, 
+                ddTable, #if not None, following parameters are ignored
+                schemaName=schemaName, tableName=tableName)
+            
+            if layer is None:
+                layer = self.loadTable(
+                    schemaName, 
+                    tableName,
+                    geomColumn = geomColumn, 
+                    filter=filterOnNew, 
+                    displayName=displayName
+                )[0]
 
-            if layer == None:
-                layer = self.loadTable(schemaName, tableName,
-                    geomColumn = geomColumn)[0]
-
-                if layer == None:
+                if layer is None:
                     if showMsg:
                         XpError(u"Kann Tabelle %(schema)s.%(table)s nicht laden!" % \
                             {"schema":schemaName, "table":tableName},
                             self.iface)
                     return None
                 else:
+                    if (ddTable is None): #for views
+                        self.app.xpManager.createGroup(schemaName, False) #doesn't add group if already exists.
+                        self.app.xpManager.moveLayerToGroup(layer, schemaName)
                     return layer
             else:
                 return layer
