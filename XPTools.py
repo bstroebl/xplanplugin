@@ -635,6 +635,27 @@ class XPTools():
     def noActiveLayerWarning(self):
         self.showWarning(u"Kein aktiver Layer")
 
+    def debug(self,  msg, stacksize=0):
+        t_ = [
+            x[0].f_locals for x in inspect.trace()
+        ]
+        if stacksize==0:
+            self.log("Debug" + "\n" + msg)
+        elif len(t_) >=stacksize:
+            t_ = ['...'] + t_[-1*stacksize:]
+            self.log("Debug" + "\n" + msg + ' | ' + pformat( t_ ))
+        else:
+            self.log("Debug" + "\n" + msg + ' | ' + pformat( t_ ))
+
+    def log(self, msg, type = 'info'):
+        if type == 'info':
+            msgType = Qgis.Info
+        if type == 'warn':
+            msgType = Qgis.Warning
+        if type == 'error':
+            msgType = Qgis.Critical
+        QgsMessageLog.logMessage(msg, "XPlanung", msgType)
+        
     def showQueryError(self, query):
         self.showError(
             "%(error)s" % {"error": query.lastError().text()}, "DB-Fehler")
@@ -653,30 +674,13 @@ class XPTools():
         #self.log(msg, "warn")
 
     def showError(self, msg, title = "XPlanung"):
-        t_ = [
-            x[0].f_locals for x in inspect.trace()
-        ]
-        if len(t_) >=10:
-            t_ = ['...'] + t_[-10:]
         self.iface.messageBar().pushMessage(title,
             msg + " (more in log)", level=Qgis.Critical, duration = 10)
         self.log(msg +'\n' + str(format_stack()), "error")
-        self.debug( pformat( t_ ) )
+        self.debug(msg, 2)
 
     def noStyleWarning(self, layer):
         self.showWarning(u"Für den Layer " + layer.name() + u" sind keine Stile gespeichert")
-
-    def debug(self,  msg):
-        self.log("Debug" + "\n" + msg)
-
-    def log(self, msg, type = 'info'):
-        if type == 'info':
-            msgType = Qgis.Info
-        if type == 'warn':
-            msgType = Qgis.Warning
-        if type == 'error':
-            msgType = Qgis.Critical
-        QgsMessageLog.logMessage(msg, "XPlanung", msgType)
 
     def getAuthUserNamePassword(self, authcfg):
         username = None

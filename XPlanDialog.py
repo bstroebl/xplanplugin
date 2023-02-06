@@ -355,9 +355,6 @@ class BereichsauswahlDialog(QtWidgets.QDialog, BEREICH_CLASS):
 
         self.fillBereichTree()
 
-    def debug(self,  msg):
-        QtWidgets.QMessageBox.information(None, "Debug",  msg)
-
     def fillBereichTree(self):
         self.bereich.clear()
         planArt = self.planArt
@@ -754,16 +751,19 @@ class HoehenmanagerDialog(QtWidgets.QDialog, HOEHENMANAGER_CLASS):
         
         def canvasReleaseEvent(self, e):
             super().canvasReleaseEvent(e)
-            ident_result = self.identify(
-                e.pixelPoint().x(),
-                e.pixelPoint().y(),
-                mode = self.IdentifyMode(3),
-                layerList= [self.layer]
-            )
-            if len(ident_result)>0:
-                sfeature = ident_result[0].mFeature
-                self.manager.selectedFeature = sfeature
-                self.featureIdentified.emit(sfeature)
+            if e.button()==2: #rightclick
+                self.manager.canvas.contextMenu.exec_(e.globalPos())
+            else:
+                ident_result = self.identify(
+                    e.pixelPoint().x(),
+                    e.pixelPoint().y(),
+                    mode = self.IdentifyMode(3),
+                    layerList= [self.layer]
+                )
+                if len(ident_result)>0:
+                    sfeature = ident_result[0].mFeature
+                    self.manager.selectedFeature = sfeature
+                    self.featureIdentified.emit(sfeature)
     
     def __init__(self, xplanplugin, hoehenLayer):
         QtWidgets.QDialog.__init__(self)
@@ -773,6 +773,8 @@ class HoehenmanagerDialog(QtWidgets.QDialog, HOEHENMANAGER_CLASS):
         self.hoehenLayer = hoehenLayer
         self.selectedFeature = None
         self.relator = None
+        
+        self.debug = self.xplanplugin.debug
         
         #canvas
         refSchema = "BP_Basisobjekte"
@@ -824,25 +826,35 @@ class HoehenmanagerDialog(QtWidgets.QDialog, HOEHENMANAGER_CLASS):
         self.canvas.enableAntiAliasing(True)
         
         # create the map tools
-        self.actionZoomIn = QAction("Zoom in", self)
-        self.actionZoomIn.triggered.connect(self.zoomIn)
-        self.toolZoomIn = QgsMapToolZoom(self.canvas, False) # false = in
-        self.toolZoomIn.setAction(self.actionZoomIn)
-        
-        self.actionZoomOut = QAction("Zoom out", self)
-        self.actionZoomOut.triggered.connect(self.zoomOut)
-        self.toolZoomOut = QgsMapToolZoom(self.canvas, True) # true = out
-        self.toolZoomOut.setAction(self.actionZoomOut)
+        # self.actionZoomIn = QAction("Hineinzoomen", self)
+        # self.actionZoomIn.triggered.connect(self.zoomIn)
+        # self.toolZoomIn = QgsMapToolZoom(self.canvas, False) # false = in
+        # self.toolZoomIn.setAction(self.actionZoomIn)
+        #
+        # self.actionZoomOut = QAction("Herauszoomen", self)
+        # self.actionZoomOut.triggered.connect(self.zoomOut)
+        # self.toolZoomOut = QgsMapToolZoom(self.canvas, True) # true = out
+        # self.toolZoomOut.setAction(self.actionZoomOut)
         
         self.actionPan = QAction("Pan", self)
         self.actionPan.triggered.connect(self.pan)
         self.toolPan = QgsMapToolPan(self.canvas)
         self.toolPan.setAction(self.actionPan)
         
+        self.actionDeselect = QAction("Auswahl aufheben", self)
+        self.actionDeselect.triggered.connect(self.deselectFlaeche)
+        
+        self.canvas.contextMenu = QtWidgets.QMenu(self.canvas)
+        self.canvas.contextMenu.addAction(self.actionDeselect)
+        # self.canvas.contextMenu.addAction(self.actionZoomIn)
+        # self.canvas.contextMenu.addAction(self.actionZoomOut)
+        
         self.toolIdentify = self.featureSelector(self.canvas, self.flaechenobjekteLayer, self)
-        self.toolIdentify.featureIdentified.connect(self.showRelatedHoehen)
+        self.toolIdentify.featureIdentified.connect(self.fillRelatedHoehen)
         
         self.identify()
+        
+        
         #!canvas
         
         self.hoehen.customContextMenuRequested.connect(self.on_hoehen_customContextMenuRequested)
@@ -863,6 +875,9 @@ class HoehenmanagerDialog(QtWidgets.QDialog, HOEHENMANAGER_CLASS):
         self.buttonBox.button(QtWidgets.QDialogButtonBox.Reset).clicked.connect(self.initialize)
         
         self.initialize()
+    
+    def deselectFlaeche(self):
+        self.flaechenobjekteLayer.removeSelection()
         
     def zoomIn(self):
         self.canvas.setMapTool(self.toolZoomIn)
@@ -876,15 +891,6 @@ class HoehenmanagerDialog(QtWidgets.QDialog, HOEHENMANAGER_CLASS):
     def identify(self):
         self.canvas.setMapTool(self.toolIdentify)
         
-    def showRelatedHoehen(self, sfeature=None):
-        """Code called when the feature is selected by the user"""
-        if sfeature is None: sfeature =self.selectedFeature
-        self.selectedFeature = sfeature
-        self.flaechenobjekteLayer.reload()
-        self.flaechenobjekteLayer.deselect(self.flaechenobjekteLayer.selectedFeatureIds())
-        self.flaechenobjekteLayer.select([sfeature.id()]) #id is correct
-        self.fillHoehen([sfeature['gid']]) #gid is correct
-    
     def unselectFeature(self):
         self.flaechenobjekteLayer.removeSelection()
         
@@ -960,7 +966,20 @@ on g."gehoertZuBereich"=h.gid
         else:
             # self.showError('relator is loaded from cache')
             return self.relator
+    
         
+    def fillRelatedHoehen(self, sfeature=None):
+        """Code called when the feature is selected by the user"""
+        if sfeature is None: sfeature =self.selectedFeature
+        self.selectedFeature = sfeature
+        self.flaechenobjekteLayer.reload()
+        self.flaechenobjekteLayer.deselect(self.flaechenobjekteLayer.selectedFeatureIds())
+        if not (sfeature is None):
+            self.flaechenobjekteLayer.select([sfeature.id()]) #id is correct
+            self.fillHoehen([sfeature['gid']]) #gid is correct
+        else:
+            self.fillHoehen()
+    
     def fillHoehen(self, xp_objekt_gids =[]):
         self.hoehen.clear()
         filter = self.txlFilter.text()
@@ -1017,7 +1036,7 @@ on g."gehoertZuBereich"=h.gid
             self.showInfo(str(thisFeature.attributeMap()))
             self.showInfo(str(self.hoehenLayer.name()))
             raise e
-        self.showRelatedHoehen()
+        self.fillRelatedHoehen()
         
     def highlightFeature(self, thisFeature):
         pass
@@ -1101,6 +1120,7 @@ on g."gehoertZuBereich"=h.gid
         """Erst Link(s) zerstören..."""
         if not (self.linkLayer is None):
             expr = '"hoehenangabe" = ' + str(feat2remove.id())
+            self.debug(expr)
             self.linkLayer.selectByExpression(expr)
             if self.xplanplugin.tools.setEditable(self.linkLayer, True, self.xplanplugin.iface):
                 if (
@@ -1111,13 +1131,13 @@ on g."gehoertZuBereich"=h.gid
                         if self.linkLayer.deleteFeature(link2remove.id()):
                             if self.linkLayer.commitChanges():
                                 self.linkLayer.reload()
-                                self.showRelatedHoehen()
+                                self.fillRelatedHoehen()
                                 
                                 """... dann die eigenentliche Hoehenangabe entfernen"""
                                 if self.xplanplugin.tools.setEditable(self.hoehenLayer, True, self.xplanplugin.iface):
                                     if self.hoehenLayer.deleteFeature(feat2remove.id()):
                                         if self.hoehenLayer.commitChanges():
-                                            self.showRelatedHoehen()
+                                            self.fillRelatedHoehen()
                                         else:
                                             self.showError(u"Konnte Änderungen nicht speichern")
                                     else:
@@ -1129,7 +1149,9 @@ on g."gehoertZuBereich"=h.gid
                             self.showError(u"Konnte Änderungen in der LinkTabelle nicht speichern")
                 else:
                     #todo: create button for deselect
-                    self.showError('Die ausgewählte Höhenangabe wird von mehreren Flächenobjekten referenziert und kann aus Sicherheitsgründen nur gelöscht werden, wenn oben in der Karte kein Flächenobjekt ausgewählt ist.')
+                    self.showError('Die ausgewählte Höhenangabe wird von mehreren Flächenobjekten referenziert '+ 
+                                   'und kann aus Sicherheitsgründen nur gelöscht werden, wenn oben in der Karte '+
+                                   'kein Flächenobjekt ausgewählt ist.')
             else:
                 self.showError(u"Kann Layer " + self.linkLayer.name() + u" nicht editieren")
         else:
@@ -1145,6 +1167,9 @@ on g."gehoertZuBereich"=h.gid
         
     def showInfo(self, msg):
         self.xplanplugin.tools.showInfo(msg)
+        
+    def debug(self, msg, stacksize=0):
+        self.xplanplugin.tools.debug(msg, stacksize=stacksize)
 
     @QtCore.pyqtSlot( str )
     def on_txlFilter_textChanged(self, currentText):

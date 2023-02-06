@@ -252,8 +252,8 @@ class XPlan(object):
         except:
             pass
 
-    def debug(self, msg):
-        self.tools.log("Debug" + "\n" + msg)
+    def debug(self, msg, stacksize=0):
+        self.tools.debug(msg, stacksize=stacksize)
 
     def loadLayerLayer(self):
         self.layerLayer = self.getLayerForTable("QGIS", "layer")
