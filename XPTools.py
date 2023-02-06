@@ -31,6 +31,10 @@ from qgis.gui import *
 from .XPlanDialog import BereichsauswahlDialog
 from .XPlanDialog import StilauswahlDialog
 
+from traceback import format_stack
+import inspect
+from pprint import pformat
+
 class XPTools():
     def __init__(self, iface, standardName, simpleStyleName):
         self.iface = iface
@@ -649,9 +653,15 @@ class XPTools():
         #self.log(msg, "warn")
 
     def showError(self, msg, title = "XPlanung"):
+        t_ = [
+            x[0].f_locals for x in inspect.trace()
+        ]
+        if len(t_) >=10:
+            t_ = ['...'] + t_[-10:]
         self.iface.messageBar().pushMessage(title,
-            msg, level=Qgis.Critical, duration = 10)
-        self.log(msg, "error")
+            msg + " (more in log)", level=Qgis.Critical, duration = 10)
+        self.log(msg +'\n' + str(format_stack()), "error")
+        self.debug( pformat( t_ ) )
 
     def noStyleWarning(self, layer):
         self.showWarning(u"Für den Layer " + layer.name() + u" sind keine Stile gespeichert")

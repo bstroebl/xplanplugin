@@ -30,6 +30,7 @@ from qgis.gui import *
 
 try:
     from DataDrivenInputMask.ddattribute import DdTable
+    from DataDrivenInputMask.dderror import FatalError
 except:
     pass
 
@@ -908,22 +909,25 @@ class XPlan(object):
             ddTable = self.app.xpManager.createDdTable(self.db,
                 schemaName, tableName, withOid = False,
                 withComment = False)
-
-            isView = ddTable is None
+            
+            isView = ddTable is None #Why does this not hit on "BP_Basisobjekte.BP_Flaechenobjekte"?
 
             if isView:
                 ddTable = DdTable(schemaName = schemaName, tableName = tableName)
 
             if self.app.xpManager.existsInDb(ddTable, self.db):
-                thisLayer = self.app.xpManager.loadPostGISLayer(
-                    self.db,
-                    ddTable, 
-                    displayName = displayName,
-                    geomColumn = geomColumn, 
-                    keyColumn = "gid",
-                    whereClause = filter,  
-                    intoDdGroup = False
-                )
+                try:
+                    thisLayer = self.app.xpManager.loadPostGISLayer(
+                        self.db,
+                        ddTable, 
+                        displayName = displayName,
+                        geomColumn = geomColumn, 
+                        keyColumn = "gid",
+                        whereClause = filter,  
+                        intoDdGroup = False
+                    )
+                except FatalError as fa:
+                    raise fa
 
         return [thisLayer, isView]
 
